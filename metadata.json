@@ -1,0 +1,6 @@
+{
+  "name": "Sales Analytics & Trend Dashboard",
+  "description": "Interactive, non-technical sales performance and trend dashboard supporting multi-year CSV reports with live analytics, margin tracking, channel breakdowns, and executive insights.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
