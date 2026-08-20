@@ -31,7 +31,11 @@ import { SaleRecord, FilterState } from './types';
 const DEFAULT_FILTERS: FilterState = {
   search: '',
   year: 'ALL',
+  years: [],
   month: 'ALL',
+  months: [],
+  week: 'ALL',
+  weeks: [],
   dateRangePreset: 'ALL',
   startDate: '',
   endDate: '',
@@ -108,6 +112,19 @@ export default function App() {
     });
   }, [records]);
 
+  const availableWeeks = useMemo(() => {
+    const set = new Set<string>();
+    records.forEach((r) => {
+      if (r.week) set.add(r.week);
+    });
+    return Array.from(set).sort((a, b) => {
+      const numA = parseInt(a.replace(/\D/g, ''), 10);
+      const numB = parseInt(b.replace(/\D/g, ''), 10);
+      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+      return a.localeCompare(b);
+    });
+  }, [records]);
+
   const availableChannels = useMemo(() => {
     const set = new Set<string>();
     records.forEach((r) => {
@@ -176,9 +193,10 @@ export default function App() {
       channelMetrics,
       categoryMetrics,
       productMetrics,
-      zoneMetrics
+      zoneMetrics,
+      filteredRecords
     );
-  }, [metrics, channelMetrics, categoryMetrics, productMetrics, zoneMetrics]);
+  }, [metrics, channelMetrics, categoryMetrics, productMetrics, zoneMetrics, filteredRecords]);
 
   // Export Filtered CSV
   const handleExportFilteredCsv = () => {
@@ -241,6 +259,7 @@ export default function App() {
           onFilterChange={setFilters}
           availableYears={availableYears}
           availableMonths={availableMonths}
+          availableWeeks={availableWeeks}
           availableChannels={availableChannels}
           availableCategories={availableCategories}
           availableZones={availableZones}

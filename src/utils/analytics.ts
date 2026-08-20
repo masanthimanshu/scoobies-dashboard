@@ -27,12 +27,27 @@ export function filterRecords(records: SaleRecord[], filters: FilterState): Sale
     }
 
     // Year
-    if (filters.year !== 'ALL' && String(r.year) !== String(filters.year)) {
+    if (filters.years && filters.years.length > 0 && !filters.years.includes('ALL')) {
+      if (!filters.years.map(String).includes(String(r.year))) {
+        return false;
+      }
+    } else if (filters.year && filters.year !== 'ALL' && String(r.year) !== String(filters.year)) {
       return false;
     }
 
     // Month
-    if (filters.month !== 'ALL' && r.month.toLowerCase() !== filters.month.toLowerCase()) {
+    if (filters.months && filters.months.length > 0 && !filters.months.includes('ALL')) {
+      const monthMatch = filters.months.some((m) => m.toLowerCase() === r.month.toLowerCase());
+      if (!monthMatch) return false;
+    } else if (filters.month && filters.month !== 'ALL' && r.month.toLowerCase() !== filters.month.toLowerCase()) {
+      return false;
+    }
+
+    // Week
+    if (filters.weeks && filters.weeks.length > 0 && !filters.weeks.includes('ALL')) {
+      const weekMatch = filters.weeks.some((w) => w.toLowerCase() === r.week.toLowerCase());
+      if (!weekMatch) return false;
+    } else if (filters.week && filters.week !== 'ALL' && r.week.toLowerCase() !== filters.week.toLowerCase()) {
       return false;
     }
 
@@ -513,9 +528,159 @@ export function generateExecutiveInsights(
   channels: ChannelMetric[],
   categories: CategoryMetric[],
   products: ProductMetric[],
-  zones: GeoMetric[]
+  zones: GeoMetric[],
+  records?: SaleRecord[]
 ): ExecutiveInsight[] {
   const insights: ExecutiveInsight[] = [];
+
+  // Most Profitable Month & Most Profitable Week
+  if (records && records.length > 0) {
+    // 1. Month Aggregation
+    const monthMap = new Map<
+      string,
+      {
+        label: string;
+        profit: number;
+        exGstProfit: number;
+        netSales: number;
+        grossSales: number;
+        orders: Set<string>;
+        units: number;
+      }
+    >();
+
+    // 2. Week Aggregation
+    const weekMap = new Map<
+      string,
+      {
+        label: string;
+        profit: number;
+        exGstProfit: number;
+        netSales: number;
+        grossSales: number;
+        orders: Set<string>;
+        units: number;
+      }
+    >();
+
+    records.forEach((r) => {
+      const isReturn = r.status === 'Return' || r.qty < 0 || r.saleValue < 0;
+      const val = Math.abs(r.saleValue || r.mrp * r.qty);
+      const qty = Math.abs(r.qty || 1);
+      const profitVal = r.scoobiesMargin || 0;
+      const exGstVal = r.exGstMargin || 0;
+
+      // Month
+      let monthName = r.month || '';
+      if (!monthName && r.dateStr) {
+        const d = new Date(r.dateStr);
+        if (!isNaN(d.getTime())) {
+          monthName = d.toLocaleString('default', { month: 'long' });
+        }
+      }
+      if (!monthName) monthName = 'August';
+      const yr = r.year || (r.timestamp ? new Date(r.timestamp).getFullYear() : 2026);
+      const monthLabel = `${monthName} ${yr}`;
+      const monthKey = `${yr}-${monthName}`;
+
+      const currMonth = monthMap.get(monthKey) || {
+        label: monthLabel,
+        profit: 0,
+        exGstProfit: 0,
+        netSales: 0,
+        grossSales: 0,
+        orders: new Set<string>(),
+        units: 0,
+      };
+
+      // Week
+      const weekName = r.week || `Week ${Math.ceil(r.day / 7)}`;
+      const weekLabel = r.month ? `${weekName} (${r.month})` : weekName;
+      const weekKey = `${yr}-${r.month || 'Aug'}-${weekName}`;
+
+      const currWeek = weekMap.get(weekKey) || {
+        label: weekLabel,
+        profit: 0,
+        exGstProfit: 0,
+        netSales: 0,
+        grossSales: 0,
+        orders: new Set<string>(),
+        units: 0,
+      };
+
+      if (isReturn) {
+        currMonth.netSales -= val;
+        currMonth.units -= qty;
+        currWeek.netSales -= val;
+        currWeek.units -= qty;
+      } else {
+        currMonth.grossSales += val;
+        currMonth.netSales += val;
+        currMonth.units += qty;
+        currWeek.grossSales += val;
+        currWeek.netSales += val;
+        currWeek.units += qty;
+      }
+
+      currMonth.profit += profitVal;
+      currMonth.exGstProfit += exGstVal;
+      if (r.orderNumber) currMonth.orders.add(r.orderNumber);
+      monthMap.set(monthKey, currMonth);
+
+      currWeek.profit += profitVal;
+      currWeek.exGstProfit += exGstVal;
+      if (r.orderNumber) currWeek.orders.add(r.orderNumber);
+      weekMap.set(weekKey, currWeek);
+    });
+
+    // Most Profitable Month
+    const monthlyList = Array.from(monthMap.values())
+      .map((m) => ({
+        ...m,
+        orderCount: m.orders.size,
+        marginPct: m.netSales > 0 ? (m.profit / m.netSales) * 100 : 0,
+      }))
+      .sort((a, b) => {
+        if (b.profit !== a.profit) return b.profit - a.profit;
+        return b.netSales - a.netSales;
+      });
+
+    if (monthlyList.length > 0 && monthlyList[0].profit > 0) {
+      const topMonth = monthlyList[0];
+      const marginPctStr = topMonth.marginPct > 0 ? ` (${topMonth.marginPct.toFixed(1)}% margin)` : '';
+      insights.push({
+        type: 'positive',
+        title: `Most Profitable Month: ${topMonth.label}`,
+        description: `Delivered ₹${Math.round(topMonth.profit).toLocaleString()} in profit${marginPctStr} on ₹${Math.round(topMonth.netSales).toLocaleString()} net sales across ${topMonth.orderCount} orders.`,
+        metric: `₹${Math.round(topMonth.profit).toLocaleString()} Profit`,
+        iconName: 'Calendar',
+      });
+    }
+
+    // Most Profitable Week
+    const weeklyList = Array.from(weekMap.values())
+      .map((w) => ({
+        ...w,
+        orderCount: w.orders.size,
+        marginPct: w.netSales > 0 ? (w.profit / w.netSales) * 100 : 0,
+      }))
+      .sort((a, b) => {
+        if (b.profit !== a.profit) return b.profit - a.profit;
+        return b.netSales - a.netSales;
+      });
+
+    if (weeklyList.length > 0 && weeklyList[0].profit > 0) {
+      const topWeek = weeklyList[0];
+      const marginPctStr = topWeek.marginPct > 0 ? ` (${topWeek.marginPct.toFixed(1)}% margin)` : '';
+      insights.push({
+        type: 'positive',
+        title: `Most Profitable Week: ${topWeek.label}`,
+        description: `Delivered ₹${Math.round(topWeek.profit).toLocaleString()} in profit${marginPctStr} on ₹${Math.round(topWeek.netSales).toLocaleString()} net sales across ${topWeek.orderCount} orders.`,
+        metric: `₹${Math.round(topWeek.profit).toLocaleString()} Profit`,
+        iconName: 'TrendingUp',
+      });
+    }
+  }
 
   // Top Channel Driver
   if (channels.length > 0) {

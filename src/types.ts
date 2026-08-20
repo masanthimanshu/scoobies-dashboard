@@ -30,7 +30,11 @@ export interface SaleRecord {
 export interface FilterState {
   search: string;
   year: string; // 'ALL' or specific year like '2026'
+  years: string[]; // multi-select array e.g. ['2025', '2026'] (empty = all)
   month: string; // 'ALL' or specific month
+  months: string[]; // multi-select array e.g. ['August', 'September'] (empty = all)
+  week: string; // 'ALL' or specific week like 'Week 1'
+  weeks: string[]; // multi-select array e.g. ['Week 1', 'Week 2'] (empty = all)
   dateRangePreset: 'ALL' | '7D' | '15D' | '30D' | 'MTD' | 'YTD' | 'CUSTOM';
   startDate: string; // YYYY-MM-DD
   endDate: string; // YYYY-MM-DD
