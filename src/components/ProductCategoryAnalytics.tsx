@@ -8,7 +8,7 @@ import {
   Tooltip, 
   ResponsiveContainer 
 } from 'recharts';
-import { ShoppingBag, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { ShoppingBag, AlertCircle, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 import { CategoryMetric, ProductMetric } from '../types';
 
 interface ProductCategoryAnalyticsProps {
@@ -177,20 +177,48 @@ export const ProductCategoryAnalytics: React.FC<ProductCategoryAnalyticsProps> =
             {displayedCategories.map((cat) => (
               <div
                 key={cat.category}
-                className="bg-[#F9F7F2] border border-[#EBE5D9] rounded-2xl p-4 hover:bg-[#F1EDE5] transition-colors"
+                className="bg-[#F9F7F2] border border-[#EBE5D9] rounded-2xl p-4 hover:bg-[#F1EDE5] transition-colors flex flex-col justify-between"
               >
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-black text-[#2D2A26] uppercase tracking-wide truncate max-w-[140px]">
-                    {cat.category}
-                  </span>
-                  <span className="text-xs font-bold text-[#AF8260]">
-                    {cat.sharePct.toFixed(1)}%
-                  </span>
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-black text-[#2D2A26] uppercase tracking-wide truncate max-w-[140px]" title={cat.category}>
+                      {cat.category}
+                    </span>
+                    <span className="text-xs font-bold text-[#AF8260]">
+                      {cat.sharePct.toFixed(1)}%
+                    </span>
+                  </div>
+
+                  <div className="text-xl font-black text-[#5F7161]">
+                    ₹{cat.sales.toLocaleString()}
+                  </div>
+
+                  {/* Returns Metric Display inside Category Box */}
+                  <div className="mt-2">
+                    {cat.returns > 0 ? (
+                      <div className="flex items-center justify-between text-[11px] font-semibold text-[#AF8260] bg-[#FAF0E6] px-2.5 py-1 rounded-lg border border-[#E8D2C2]">
+                        <span className="flex items-center gap-1">
+                          <RotateCcw className="w-3 h-3 text-[#AF8260]" />
+                          Returns
+                        </span>
+                        <span className="font-bold">
+                          ₹{cat.returns.toLocaleString()}
+                          {cat.returnUnits !== undefined && cat.returnUnits > 0 ? ` (${cat.returnUnits} ${cat.returnUnits === 1 ? 'unit' : 'units'})` : ''}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between text-[11px] font-medium text-[#8C8376] bg-[#F1EDE5]/60 px-2.5 py-1 rounded-lg border border-[#EBE5D9]">
+                        <span className="flex items-center gap-1">
+                          <RotateCcw className="w-3 h-3 text-[#A89F91]" />
+                          Returns
+                        </span>
+                        <span>₹0 (0%)</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="text-xl font-black text-[#5F7161]">
-                  ₹{cat.sales.toLocaleString()}
-                </div>
-                <div className="flex justify-between items-center text-[11px] text-[#8C8376] font-medium mt-2.5 pt-2.5 border-t border-[#EBE5D9]">
+
+                <div className="flex justify-between items-center text-[11px] text-[#8C8376] font-medium mt-3 pt-2.5 border-t border-[#EBE5D9]">
                   <span>{cat.units.toLocaleString()} units sold</span>
                   <span>{cat.orders} orders</span>
                 </div>
@@ -277,3 +305,4 @@ export const ProductCategoryAnalytics: React.FC<ProductCategoryAnalyticsProps> =
     </div>
   );
 };
+

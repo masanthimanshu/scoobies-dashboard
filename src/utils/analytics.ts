@@ -378,7 +378,10 @@ export function computeChannelMetrics(records: SaleRecord[], totalNetSales: numb
 }
 
 export function computeCategoryMetrics(records: SaleRecord[], totalNetSales: number): CategoryMetric[] {
-  const map = new Map<string, { gross: number; net: number; returns: number; units: number; orders: Set<string>; margin: number }>();
+  const map = new Map<
+    string,
+    { gross: number; net: number; returns: number; units: number; returnUnits: number; orders: Set<string>; margin: number }
+  >();
 
   records.forEach((r) => {
     const cat = r.category || 'OTHER';
@@ -391,6 +394,7 @@ export function computeCategoryMetrics(records: SaleRecord[], totalNetSales: num
       net: 0,
       returns: 0,
       units: 0,
+      returnUnits: 0,
       orders: new Set<string>(),
       margin: 0,
     };
@@ -401,6 +405,7 @@ export function computeCategoryMetrics(records: SaleRecord[], totalNetSales: num
       curr.returns += val;
       curr.net -= val;
       curr.units -= qty;
+      curr.returnUnits += qty;
     } else {
       curr.gross += val;
       curr.net += val;
@@ -414,12 +419,16 @@ export function computeCategoryMetrics(records: SaleRecord[], totalNetSales: num
   return Array.from(map.entries())
     .map(([category, data]) => {
       const sharePct = totalNetSales > 0 ? (Math.max(0, data.net) / totalNetSales) * 100 : 0;
+      const totalAttempted = data.units + data.returnUnits;
+      const returnRate = totalAttempted > 0 ? (data.returnUnits / totalAttempted) * 100 : 0;
       return {
         category,
         sales: Math.round(data.net),
         grossSales: Math.round(data.gross),
         returns: Math.round(data.returns),
         units: data.units,
+        returnUnits: data.returnUnits,
+        returnRate: Number(returnRate.toFixed(1)),
         orders: data.orders.size,
         margin: Math.round(data.margin),
         sharePct,

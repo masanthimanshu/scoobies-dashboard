@@ -106,6 +106,8 @@ export interface CategoryMetric {
   sales: number;
   grossSales: number;
   returns: number;
+  returnUnits?: number;
+  returnRate?: number;
   units: number;
   orders: number;
   margin: number;
