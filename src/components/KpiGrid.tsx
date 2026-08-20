@@ -139,7 +139,7 @@ export const KpiGrid: React.FC<KpiGridProps> = ({
             />
           </div>
           <div className="text-[11px] text-[#D9E3D8] mt-1.5 flex justify-between font-medium">
-            <span>{remainingToTarget > 0 ? `₹{Math.round(remainingToTarget).toLocaleString()} left` : 'Goal Met!'}</span>
+            <span>{remainingToTarget > 0 ? `₹${Math.round(remainingToTarget).toLocaleString()} left` : 'Goal Met!'}</span>
             <span className="underline font-bold">Edit Goal</span>
           </div>
         </div>

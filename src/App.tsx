@@ -4,6 +4,7 @@ import { Navbar } from './components/Navbar';
 import { FilterBar } from './components/FilterBar';
 import { KpiGrid } from './components/KpiGrid';
 import { ExecutiveSummary } from './components/ExecutiveSummary';
+import { BasketSizeAov } from './components/BasketSizeAov';
 import { SalesTrendChart } from './components/SalesTrendChart';
 import { ChannelBreakdown } from './components/ChannelBreakdown';
 import { ProductCategoryAnalytics } from './components/ProductCategoryAnalytics';
@@ -53,26 +54,21 @@ export default function App() {
   const [isUploadOpen, setIsUploadOpen] = useState<boolean>(false);
   const [isGoalOpen, setIsGoalOpen] = useState<boolean>(false);
   const [isPrintOpen, setIsPrintOpen] = useState<boolean>(false);
-  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
 
   // Load default dataset on mount
   useEffect(() => {
     async function loadInitial() {
-      setIsInitialLoading(true);
       const parsed = await parseSalesCsv(INITIAL_CSV_DATA);
       setRecords(parsed.records);
-      setIsInitialLoading(false);
     }
     loadInitial();
   }, []);
 
   const handleResetToSample = async () => {
-    setIsInitialLoading(true);
     const parsed = await parseSalesCsv(INITIAL_CSV_DATA);
     setRecords(parsed.records);
     setFileName('15-Days-Sales-Report.csv');
     setFilters(DEFAULT_FILTERS);
-    setIsInitialLoading(false);
   };
 
   const handleNewDataLoaded = (newRecords: SaleRecord[], uploadedName: string) => {
@@ -123,14 +119,6 @@ export default function App() {
     const set = new Set<string>();
     records.forEach((r) => {
       if (r.zone) set.add(r.zone);
-    });
-    return Array.from(set).sort();
-  }, [records]);
-
-  const availableStates = useMemo(() => {
-    const set = new Set<string>();
-    records.forEach((r) => {
-      if (r.state) set.add(r.state);
     });
     return Array.from(set).sort();
   }, [records]);
@@ -246,7 +234,6 @@ export default function App() {
           availableChannels={availableChannels}
           availableCategories={availableCategories}
           availableZones={availableZones}
-          availableStates={availableStates}
         />
 
         {/* KPI Cards */}
@@ -262,6 +249,12 @@ export default function App() {
           totalRecordsCount={filteredRecords.length}
         />
 
+        {/* Basket Size & AOV across Channels */}
+        <BasketSizeAov
+          channels={channelMetrics}
+          metrics={metrics}
+        />
+
         {/* Main Sales Trend Chart */}
         <SalesTrendChart
           data={timeSeriesData}
@@ -272,7 +265,6 @@ export default function App() {
         {/* Marketplace Channel Breakdown */}
         <ChannelBreakdown
           channels={channelMetrics}
-          totalNetSales={metrics.totalNetSales}
         />
 
         {/* Products & Category Intelligence */}

@@ -155,17 +155,34 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
               scoobiesMargin * 0.85
             );
 
-            const deliveryPlace = String(
-              findValue(row, ['Delivery Place', 'City', 'Location', 'Delivery City']) || 'Unspecified'
-            ).trim();
+            const cleanString = (val: any, fallback: string = '') => {
+              if (val === null || val === undefined) return fallback;
+              const s = String(val).trim();
+              if (s === '#N/A' || s === 'N/A' || s === '#VALUE!' || s === '#REF!' || s === 'null' || s === 'undefined' || s === '') {
+                return fallback;
+              }
+              return s;
+            };
 
-            const state = String(findValue(row, ['State', 'Province', 'Region']) || 'Unassigned').trim();
-            const websiteRaw = String(
-              findValue(row, ['Website', 'Channel', 'Platform', 'Portal', 'Source']) || 'Direct'
-            ).trim();
+            const deliveryPlace = cleanString(
+              findValue(row, ['Delivery Place', 'City', 'Location', 'Delivery City']),
+              'Unspecified'
+            );
+
+            const state = cleanString(
+              findValue(row, ['State', 'Province', 'Region']),
+              'Unassigned'
+            );
+            const websiteRaw = cleanString(
+              findValue(row, ['Website', 'Channel', 'Platform', 'Portal', 'Source']),
+              'Direct'
+            );
             const channel = websiteRaw || 'Direct Website';
 
-            const rawStatus = String(findValue(row, ['Status', 'Order Status', 'Delivery Status']) || 'Dispatched').trim();
+            const rawStatus = cleanString(
+              findValue(row, ['Status', 'Order Status', 'Delivery Status']),
+              'Dispatched'
+            );
             let status: 'Dispatched' | 'Return' | 'Cancelled' | 'Other' = 'Dispatched';
             if (rawStatus.toLowerCase().includes('return') || qty < 0) {
               status = 'Return';
@@ -175,11 +192,15 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
               status = 'Dispatched';
             }
 
-            const backToSchool = String(
-              findValue(row, ['Back To School', 'Back to School', 'Campaign', 'B2S']) || 'Standard'
-            ).trim();
+            const backToSchool = cleanString(
+              findValue(row, ['Back To School', 'Back to School', 'Campaign', 'B2S']),
+              'Standard'
+            );
 
-            const zone = String(findValue(row, ['Zone', 'Sales Zone', 'Area']) || 'General').trim();
+            const zone = cleanString(
+              findValue(row, ['Zone', 'Sales Zone', 'Area']),
+              'Unassigned'
+            );
             
             const saleValue = cleanNumber(
               findValue(row, ['Sale Value', 'Sale_Value', 'Net Sales', 'Sales', 'Total Value']),

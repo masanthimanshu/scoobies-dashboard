@@ -3,9 +3,7 @@ import {
   TrendingUp, 
   AlertTriangle, 
   Sparkles, 
-  MapPin, 
-  CheckCircle2, 
-  Percent
+  CheckCircle2
 } from 'lucide-react';
 import { ExecutiveInsight } from '../types';
 

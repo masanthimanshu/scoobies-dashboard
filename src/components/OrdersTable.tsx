@@ -110,12 +110,6 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                   <ArrowUpDown className="w-3 h-3 text-[#CEC4B5]" />
                 </div>
               </th>
-              <th className="py-2.5 px-3 cursor-pointer" onClick={() => handleSort('orderNumber')}>
-                <div className="flex items-center gap-1">
-                  <span>Order #</span>
-                  <ArrowUpDown className="w-3 h-3 text-[#CEC4B5]" />
-                </div>
-              </th>
               <th className="py-2.5 px-3 cursor-pointer" onClick={() => handleSort('channel')}>
                 <div className="flex items-center gap-1">
                   <span>Channel</span>
@@ -163,7 +157,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
           <tbody className="divide-y divide-[#F1EDE5]">
             {paginatedRecords.length === 0 ? (
               <tr>
-                <td colSpan={9} className="py-8 text-center text-[#8C8376] font-medium">
+                <td colSpan={8} className="py-8 text-center text-[#8C8376] font-medium">
                   No records match your selected filters.
                 </td>
               </tr>
@@ -172,9 +166,6 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                 <tr key={r.id} className="hover:bg-[#FAF8F5] transition-colors">
                   <td className="py-2.5 px-3 text-[#433E37] font-medium whitespace-nowrap">
                     {r.dateStr}
-                  </td>
-                  <td className="py-2.5 px-3 font-mono font-bold text-[#2D2A26] whitespace-nowrap">
-                    {r.orderNumber}
                   </td>
                   <td className="py-2.5 px-3 text-[#433E37] whitespace-nowrap">
                     <span className="inline-block px-2 py-0.5 bg-[#F1EDE5] border border-[#EBE5D9] rounded-md text-[11px] font-bold text-[#2D2A26]">

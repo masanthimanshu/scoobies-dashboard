@@ -78,8 +78,13 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#2D2A26]/60 backdrop-blur-xs p-4">
-      <div className="bg-white rounded-[32px] max-w-xl w-full p-7 shadow-2xl border border-[#EBE5D9] relative animate-in fade-in zoom-in-95 duration-200">
+    <div 
+      className="fixed inset-0 z-50 overflow-y-auto bg-[#2D2A26]/60 backdrop-blur-xs p-4 flex items-start sm:items-center justify-center min-h-screen py-8"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="bg-white rounded-[32px] max-w-xl w-full p-7 shadow-2xl border border-[#EBE5D9] relative animate-in fade-in zoom-in-95 duration-200 my-auto">
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -95,10 +100,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({
           </div>
           <div>
             <h3 className="text-lg font-black text-[#2D2A26] tracking-tight">
-              Import Multi-Year Sales CSV
+              Import Sales Data
             </h3>
             <p className="text-xs text-[#8C8376] font-medium">
-              Seamlessly sync your latest CSV sales reports into the 4-year archive
+              Seamlessly sync your latest CSV.
             </p>
           </div>
         </div>
@@ -159,14 +164,14 @@ export const UploadModal: React.FC<UploadModalProps> = ({
         <div className="mt-5 pt-4 border-t border-[#EBE5D9] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-[#8C8376] font-medium">
           <div className="flex items-center gap-1.5 text-[#433E37]">
             <Info className="w-3.5 h-3.5 text-[#5F7161]" />
-            <span>Auto-detects columns: Date, Order, Product, Category, QTY, Margins, Website...</span>
+            <span>Auto-detects columns.</span>
           </div>
           <button
             onClick={downloadSampleTemplate}
             className="inline-flex items-center gap-1 text-[#AF8260] hover:underline font-bold"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Download CSV Template</span>
+            <span>Download Sample CSV</span>
           </button>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Target, X, Check, TrendingUp } from 'lucide-react';
+import { Target, X, Check } from 'lucide-react';
 
 interface GoalModalProps {
   isOpen: boolean;
@@ -38,8 +38,13 @@ export const GoalModal: React.FC<GoalModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#2D2A26]/60 backdrop-blur-xs p-4">
-      <div className="bg-white rounded-[32px] max-w-md w-full p-7 shadow-2xl border border-[#EBE5D9] relative animate-in fade-in zoom-in-95 duration-200">
+    <div 
+      className="fixed inset-0 z-50 overflow-y-auto bg-[#2D2A26]/60 backdrop-blur-xs p-4 flex items-start sm:items-center justify-center min-h-screen py-8"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="bg-white rounded-[32px] max-w-md w-full p-7 shadow-2xl border border-[#EBE5D9] relative animate-in fade-in zoom-in-95 duration-200 my-auto">
         <button
           onClick={onClose}
           className="absolute right-5 top-5 p-2 text-[#8C8376] hover:text-[#2D2A26] hover:bg-[#F1EDE5] rounded-xl transition-colors"

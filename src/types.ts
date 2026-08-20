@@ -1,32 +1,3 @@
-export interface RawSaleRecord {
-  Year?: string | number;
-  Month?: string;
-  Week?: string;
-  Day?: string | number;
-  Date?: string;
-  'Order Number'?: string;
-  'Customer name'?: string;
-  'Bar Code'?: string;
-  'Product name'?: string;
-  Color?: string;
-  'PRODUCT CATEGORY'?: string;
-  QTY?: string | number;
-  MRP?: string | number;
-  'MRP Value'?: string | number;
-  'Scoobies Margin'?: string | number;
-  'Retailers Margin'?: string | number;
-  'EX-GST Scoobies Margin'?: string | number;
-  'Delivery Place'?: string;
-  State?: string;
-  Website?: string;
-  Status?: string;
-  'Received Payment'?: string;
-  'Back To School'?: string;
-  Zone?: string;
-  'Sale Value'?: string | number;
-  [key: string]: any;
-}
-
 export interface SaleRecord {
   id: string;
   year: number;

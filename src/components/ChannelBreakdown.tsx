@@ -11,7 +11,6 @@ import { ChannelMetric } from '../types';
 
 interface ChannelBreakdownProps {
   channels: ChannelMetric[];
-  totalNetSales: number;
 }
 
 const NATURAL_COLORS = [
@@ -27,7 +26,6 @@ const NATURAL_COLORS = [
 
 export const ChannelBreakdown: React.FC<ChannelBreakdownProps> = ({
   channels,
-  totalNetSales,
 }) => {
   const pieData = channels
     .filter((c) => c.netSales > 0)
