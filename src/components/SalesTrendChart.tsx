@@ -24,7 +24,7 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
   granularity,
   onGranularityChange,
 }) => {
-  const [chartType, setChartType] = useState<'area' | 'bar'>('area');
+  const [chartType, setChartType] = useState<'area' | 'bar'>('bar');
   const [metricView, setMetricView] = useState<'revenue' | 'units' | 'margin'>('revenue');
 
   const CustomTooltip = ({ active, payload, label }: any) => {

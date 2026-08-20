@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { X, Printer, CheckCircle2, Download, Loader2 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
-import { DashboardMetrics, ChannelMetric, CategoryMetric, ProductMetric } from '../types';
+import { DashboardMetrics, ChannelMetric, CategoryMetric, ProductMetric, GeoMetric } from '../types';
 
 interface PrintReportViewProps {
   isOpen: boolean;
@@ -11,6 +11,7 @@ interface PrintReportViewProps {
   channels: ChannelMetric[];
   categories: CategoryMetric[];
   topProducts: ProductMetric[];
+  cities?: GeoMetric[];
   fileName: string;
   totalRecordsCount: number;
 }
@@ -22,6 +23,7 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
   channels,
   categories,
   topProducts,
+  cities = [],
   fileName,
   totalRecordsCount,
 }) => {
@@ -206,10 +208,10 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
           </div>
 
           {/* Channels & Top Categories */}
-          <div className="grid grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
               <h4 className="text-xs font-black uppercase text-[#8C8376] tracking-wider mb-2 pb-1 border-b border-[#EBE5D9]">
-                Marketplace Performance
+                Marketplace Performance (Top 10)
               </h4>
               <table className="w-full text-xs">
                 <thead>
@@ -220,7 +222,7 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#F1EDE5]">
-                  {channels.slice(0, 6).map((c) => (
+                  {channels.slice(0, 10).map((c) => (
                     <tr key={c.channel}>
                       <td className="py-1.5 font-bold text-[#2D2A26]">{c.channel}</td>
                       <td className="py-1.5 text-right font-black text-[#5F7161]">₹{c.netSales.toLocaleString()}</td>
@@ -233,7 +235,7 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
 
             <div>
               <h4 className="text-xs font-black uppercase text-[#8C8376] tracking-wider mb-2 pb-1 border-b border-[#EBE5D9]">
-                Top Categories
+                Top 10 Categories
               </h4>
               <table className="w-full text-xs">
                 <thead>
@@ -244,7 +246,7 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#F1EDE5]">
-                  {categories.slice(0, 6).map((cat) => (
+                  {categories.slice(0, 10).map((cat) => (
                     <tr key={cat.category}>
                       <td className="py-1.5 font-bold text-[#2D2A26]">{cat.category}</td>
                       <td className="py-1.5 text-right text-[#433E37]">{cat.units.toLocaleString()}</td>
@@ -284,6 +286,39 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
               </tbody>
             </table>
           </div>
+
+          {/* Top 10 Delivery Cities */}
+          {cities && cities.length > 0 && (
+            <div className="mb-6">
+              <h4 className="text-xs font-black uppercase text-[#8C8376] tracking-wider mb-2 pb-1 border-b border-[#EBE5D9]">
+                Top 10 Delivery Cities
+              </h4>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-[#8C8376] text-left">
+                    <th className="pb-1">#</th>
+                    <th className="pb-1">City / Destination</th>
+                    <th className="pb-1 text-right">Orders</th>
+                    <th className="pb-1 text-right">Units</th>
+                    <th className="pb-1 text-right">Net Sales</th>
+                    <th className="pb-1 text-right">Share</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#F1EDE5]">
+                  {cities.slice(0, 10).map((c, idx) => (
+                    <tr key={`${c.name}-${idx}`}>
+                      <td className="py-1.5 text-[#8C8376] font-bold">{idx + 1}</td>
+                      <td className="py-1.5 font-bold text-[#2D2A26]">{c.name || 'Unassigned'}</td>
+                      <td className="py-1.5 text-right text-[#433E37]">{c.orders.toLocaleString()}</td>
+                      <td className="py-1.5 text-right font-semibold">{c.units.toLocaleString()}</td>
+                      <td className="py-1.5 text-right font-black text-[#5F7161]">₹{c.sales.toLocaleString()}</td>
+                      <td className="py-1.5 text-right text-[#AF8260] font-bold">{c.sharePct.toFixed(1)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {/* Footer note */}
           <div className="pt-4 border-t border-[#EBE5D9] flex items-center justify-between text-[11px] text-[#8C8376] font-medium">

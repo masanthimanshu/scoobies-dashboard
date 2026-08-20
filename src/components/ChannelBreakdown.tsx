@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   PieChart,
   Pie,
@@ -6,7 +6,7 @@ import {
   ResponsiveContainer,
   Tooltip
 } from 'recharts';
-import { Store } from 'lucide-react';
+import { Store, ChevronDown, ChevronUp } from 'lucide-react';
 import { ChannelMetric } from '../types';
 
 interface ChannelBreakdownProps {
@@ -27,8 +27,14 @@ const NATURAL_COLORS = [
 export const ChannelBreakdown: React.FC<ChannelBreakdownProps> = ({
   channels,
 }) => {
+  const [showAll, setShowAll] = useState(false);
+
+  const displayedChannels = showAll ? channels : channels.slice(0, 10);
+  const hasMoreThan10 = channels.length > 10;
+
   const pieData = channels
     .filter((c) => c.netSales > 0)
+    .slice(0, 8)
     .map((c) => ({
       name: c.channel,
       value: c.netSales,
@@ -107,7 +113,7 @@ export const ChannelBreakdown: React.FC<ChannelBreakdownProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-[#F1EDE5]">
-              {channels.map((ch, idx) => (
+              {displayedChannels.map((ch, idx) => (
                 <tr key={ch.channel} className="hover:bg-[#FAF8F5] transition-colors">
                   <td className="py-2.5 font-bold text-[#2D2A26] flex items-center gap-2">
                     <span 
@@ -143,6 +149,26 @@ export const ChannelBreakdown: React.FC<ChannelBreakdownProps> = ({
               ))}
             </tbody>
           </table>
+
+          {hasMoreThan10 && (
+            <div className="mt-3.5 pt-2.5 border-t border-[#F1EDE5] flex justify-center">
+              <button
+                onClick={() => setShowAll(!showAll)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#433E37] bg-[#F9F7F2] hover:bg-[#F1EDE5] border border-[#EBE5D9] rounded-xl transition-colors cursor-pointer"
+              >
+                <span>
+                  {showAll
+                    ? 'Show Top 10 Channels'
+                    : `View All Channels (${channels.length})`}
+                </span>
+                {showAll ? (
+                  <ChevronUp className="w-3.5 h-3.5 text-[#8C8376]" />
+                ) : (
+                  <ChevronDown className="w-3.5 h-3.5 text-[#8C8376]" />
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

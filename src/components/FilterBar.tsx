@@ -16,6 +16,7 @@ interface FilterBarProps {
   filters: FilterState;
   onFilterChange: (newFilters: FilterState) => void;
   availableYears: number[];
+  availableMonths?: string[];
   availableChannels: string[];
   availableCategories: string[];
   availableZones: string[];
@@ -25,6 +26,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   filters,
   onFilterChange,
   availableYears,
+  availableMonths = [],
   availableChannels,
   availableCategories,
   availableZones,
@@ -33,6 +35,10 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
   const handleYearChange = (year: string) => {
     onFilterChange({ ...filters, year });
+  };
+
+  const handleMonthChange = (month: string) => {
+    onFilterChange({ ...filters, month });
   };
 
   const handleStatusChange = (status: FilterState['status']) => {
@@ -102,11 +108,17 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   const recentYears = showCompactYears ? availableYears : availableYears.slice(0, 3);
   const isOlderYearSelected = !showCompactYears && filters.year !== 'ALL' && !recentYears.includes(Number(filters.year));
 
+  // Determine month options
+  const validMonths = availableMonths.filter((m) => m && m !== '#N/A' && m !== 'N/A');
+  const showCompactMonths = validMonths.length <= 4;
+  const recentMonths = showCompactMonths ? validMonths : validMonths.slice(0, 3);
+  const isOlderMonthSelected = !showCompactMonths && filters.month !== 'ALL' && !recentMonths.some(m => m.toLowerCase() === filters.month.toLowerCase());
+
   return (
     <div className="bg-white border border-[#EBE5D9] rounded-[24px] shadow-sm p-4 sm:p-5 mb-6">
       {/* Primary Row - Clean, Spacious, No Search Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* Left Section: Year filter & Status filter */}
+        {/* Left Section: Year filter, Month filter & Status filter */}
         <div className="flex flex-wrap items-center gap-4">
           {/* Year Filter Controls */}
           <div className="flex items-center gap-1.5 shrink-0">
@@ -168,6 +180,69 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               )}
             </div>
           </div>
+
+          {/* Month Filter Controls */}
+          {validMonths.length > 0 && (
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-xs font-bold text-[#8C8376] uppercase tracking-wider mr-1">Month:</span>
+              
+              <div className="flex items-center gap-1 bg-[#F1EDE5] p-1 rounded-xl border border-[#EBE5D9]">
+                <button
+                  onClick={() => handleMonthChange('ALL')}
+                  className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                    filters.month === 'ALL'
+                      ? 'bg-[#2D2A26] text-white shadow-2xs font-extrabold'
+                      : 'text-[#8C8376] hover:text-[#2D2A26]'
+                  }`}
+                >
+                  All Months
+                </button>
+
+                {recentMonths.map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => handleMonthChange(m)}
+                    className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                      filters.month.toLowerCase() === m.toLowerCase()
+                        ? 'bg-[#5F7161] text-white shadow-2xs'
+                        : 'text-[#8C8376] hover:text-[#2D2A26]'
+                    }`}
+                  >
+                    {m}
+                  </button>
+                ))}
+
+                {/* Dropdown for extra months when dataset spans > 4 months */}
+                {!showCompactMonths && (
+                  <div className="relative inline-flex items-center">
+                    <select
+                      value={isOlderMonthSelected ? filters.month : ''}
+                      onChange={(e) => {
+                        if (e.target.value) handleMonthChange(e.target.value);
+                      }}
+                      className={`pl-2.5 pr-7 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer appearance-none focus:outline-none ${
+                        isOlderMonthSelected
+                          ? 'bg-[#5F7161] text-white shadow-2xs'
+                          : 'bg-transparent text-[#8C8376] hover:text-[#2D2A26]'
+                      }`}
+                    >
+                      <option value="" disabled className="bg-white text-[#2D2A26]">
+                        {isOlderMonthSelected ? filters.month : 'More ▾'}
+                      </option>
+                      {validMonths.map((m) => (
+                        <option key={m} value={m} className="bg-white text-[#2D2A26]">
+                          {m}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className={`w-3 h-3 absolute right-2 pointer-events-none ${
+                      isOlderMonthSelected ? 'text-white' : 'text-[#8C8376]'
+                    }`} />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Status Filter */}
           <div className="flex items-center gap-1.5 shrink-0">
@@ -396,8 +471,24 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           {filters.year !== 'ALL' && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E9EFEA] text-[#5F7161] font-semibold border border-[#C5D5C7]">
               Year: {filters.year}
-              <button onClick={() => onFilterChange({ ...filters, year: 'ALL' })}>
+              <button onClick={() => onFilterChange({ ...filters, year: 'ALL' })} className="cursor-pointer">
                 <X className="w-3 h-3 text-[#5F7161] hover:text-[#2D2A26]" />
+              </button>
+            </span>
+          )}
+          {filters.month !== 'ALL' && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E9EFEA] text-[#5F7161] font-semibold border border-[#C5D5C7]">
+              Month: {filters.month}
+              <button onClick={() => onFilterChange({ ...filters, month: 'ALL' })} className="cursor-pointer">
+                <X className="w-3 h-3 text-[#5F7161] hover:text-[#2D2A26]" />
+              </button>
+            </span>
+          )}
+          {(filters.startDate || filters.endDate) && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#F1EDE5] text-[#2D2A26] font-semibold border border-[#E4DCD0]">
+              Date: {filters.startDate || 'Start'} to {filters.endDate || 'End'}
+              <button onClick={() => onFilterChange({ ...filters, startDate: '', endDate: '' })} className="cursor-pointer">
+                <X className="w-3 h-3 text-[#8C8376] hover:text-[#2D2A26]" />
               </button>
             </span>
           )}

@@ -30,11 +30,13 @@ export const GoalModal: React.FC<GoalModalProps> = ({
   };
 
   const presets = [
-    { label: '₹2 Lakh', value: 200000 },
     { label: '₹5 Lakh', value: 500000 },
     { label: '₹10 Lakh', value: 1000000 },
     { label: '₹25 Lakh', value: 2500000 },
     { label: '₹50 Lakh', value: 5000000 },
+    { label: '₹60 Lakh', value: 6000000 },
+    { label: '₹75 Lakh', value: 7500000 },
+    { label: '₹1 Crore', value: 10000000 },
   ];
 
   return (

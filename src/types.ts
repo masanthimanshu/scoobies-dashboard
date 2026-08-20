@@ -120,6 +120,7 @@ export interface ProductMetric {
   returnRate: number;
   mrp: number;
   margin: number;
+  sharePct: number;
 }
 
 export interface GeoMetric {

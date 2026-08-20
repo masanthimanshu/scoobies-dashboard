@@ -8,7 +8,7 @@ import {
   Tooltip, 
   ResponsiveContainer 
 } from 'recharts';
-import { ShoppingBag, AlertCircle } from 'lucide-react';
+import { ShoppingBag, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { CategoryMetric, ProductMetric } from '../types';
 
 interface ProductCategoryAnalyticsProps {
@@ -21,12 +21,15 @@ export const ProductCategoryAnalytics: React.FC<ProductCategoryAnalyticsProps> =
   products,
 }) => {
   const [activeTab, setActiveTab] = useState<'topProducts' | 'categories' | 'returns'>('topProducts');
+  const [showAllCategories, setShowAllCategories] = useState(false);
 
-  const topProductsList = products.slice(0, 8);
+  const topProductsList = products.slice(0, 10);
+  const displayedCategories = showAllCategories ? categories : categories.slice(0, 12);
+  const hasMoreThan12Categories = categories.length > 12;
   const highReturnProducts = products
     .filter((p) => p.returnUnits > 0)
     .sort((a, b) => b.returnUnits - a.returnUnits)
-    .slice(0, 8);
+    .slice(0, 10);
 
   return (
     <div className="bg-white border border-[#EBE5D9] rounded-[28px] p-6 shadow-sm mb-6">
@@ -80,7 +83,7 @@ export const ProductCategoryAnalytics: React.FC<ProductCategoryAnalyticsProps> =
       {activeTab === 'topProducts' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Chart View */}
-          <div className="lg:col-span-6 h-[280px]">
+          <div className="lg:col-span-6 h-[380px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={topProductsList}
@@ -103,7 +106,11 @@ export const ProductCategoryAnalytics: React.FC<ProductCategoryAnalyticsProps> =
                   tickFormatter={(name) => (name.length > 18 ? `${name.substring(0, 16)}...` : name)}
                 />
                 <Tooltip
-                  formatter={(val: any) => [`₹${Number(val).toLocaleString()}`, 'Net Sales']}
+                  formatter={(val: any, _name: any, item: any) => {
+                    const share = item?.payload?.sharePct;
+                    const shareText = share !== undefined ? ` • ${share}% of total sales` : '';
+                    return [`₹${Number(val).toLocaleString()}${shareText}`, 'Net Sales'];
+                  }}
                   contentStyle={{
                     backgroundColor: '#2D2A26',
                     borderRadius: '12px',
@@ -127,27 +134,33 @@ export const ProductCategoryAnalytics: React.FC<ProductCategoryAnalyticsProps> =
                   <th className="pb-2">Category</th>
                   <th className="pb-2 text-right">Units</th>
                   <th className="pb-2 text-right">Net Sales</th>
+                  <th className="pb-2 text-right">Share</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#F1EDE5]">
                 {topProductsList.map((p, idx) => (
                   <tr key={p.productName} className="hover:bg-[#FAF8F5] transition-colors">
-                    <td className="py-2.5 font-bold text-[#2D2A26] flex items-center gap-2">
+                    <td className="py-2 font-bold text-[#2D2A26] flex items-center gap-2">
                       <span className="w-5 h-5 rounded-full bg-[#E9EFEA] text-[#5F7161] text-[10px] font-bold flex items-center justify-center shrink-0">
                         {idx + 1}
                       </span>
-                      <span className="truncate max-w-[170px]" title={p.productName}>
+                      <span className="truncate max-w-[150px]" title={p.productName}>
                         {p.productName}
                       </span>
                     </td>
-                    <td className="py-2.5 text-[#8C8376] text-[11px]">
-                      <span className="bg-[#F1EDE5] px-2 py-0.5 rounded-md font-semibold text-[#433E37]">{p.category}</span>
+                    <td className="py-2 text-[#8C8376] text-[11px]">
+                      <span className="bg-[#F1EDE5] px-2 py-0.5 rounded-md font-semibold text-[#433E37] truncate max-w-[90px] inline-block">{p.category}</span>
                     </td>
-                    <td className="py-2.5 text-right text-[#433E37] font-bold">
+                    <td className="py-2 text-right text-[#433E37] font-bold">
                       {p.units.toLocaleString()}
                     </td>
-                    <td className="py-2.5 text-right font-black text-[#5F7161]">
+                    <td className="py-2 text-right font-black text-[#5F7161]">
                       ₹{p.netSales.toLocaleString()}
+                    </td>
+                    <td className="py-2 text-right">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-[#FAF0E6] text-[#AF8260] border border-[#E8D2C2] text-[10px] font-bold">
+                        {p.sharePct ? `${p.sharePct.toFixed(1)}%` : '0.0%'}
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -159,29 +172,51 @@ export const ProductCategoryAnalytics: React.FC<ProductCategoryAnalyticsProps> =
 
       {/* Tab 2: Categories */}
       {activeTab === 'categories' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {categories.map((cat) => (
-            <div
-              key={cat.category}
-              className="bg-[#F9F7F2] border border-[#EBE5D9] rounded-2xl p-4 hover:bg-[#F1EDE5] transition-colors"
-            >
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-black text-[#2D2A26] uppercase tracking-wide truncate max-w-[140px]">
-                  {cat.category}
+        <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {displayedCategories.map((cat) => (
+              <div
+                key={cat.category}
+                className="bg-[#F9F7F2] border border-[#EBE5D9] rounded-2xl p-4 hover:bg-[#F1EDE5] transition-colors"
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-black text-[#2D2A26] uppercase tracking-wide truncate max-w-[140px]">
+                    {cat.category}
+                  </span>
+                  <span className="text-xs font-bold text-[#AF8260]">
+                    {cat.sharePct.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="text-xl font-black text-[#5F7161]">
+                  ₹{cat.sales.toLocaleString()}
+                </div>
+                <div className="flex justify-between items-center text-[11px] text-[#8C8376] font-medium mt-2.5 pt-2.5 border-t border-[#EBE5D9]">
+                  <span>{cat.units.toLocaleString()} units sold</span>
+                  <span>{cat.orders} orders</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {hasMoreThan12Categories && (
+            <div className="mt-5 pt-3.5 border-t border-[#F1EDE5] flex justify-center">
+              <button
+                onClick={() => setShowAllCategories(!showAllCategories)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-[#433E37] bg-[#F9F7F2] hover:bg-[#F1EDE5] border border-[#EBE5D9] rounded-xl transition-colors cursor-pointer"
+              >
+                <span>
+                  {showAllCategories
+                    ? 'Show Top 12 Categories'
+                    : `View All Categories (${categories.length})`}
                 </span>
-                <span className="text-xs font-bold text-[#AF8260]">
-                  {cat.sharePct.toFixed(1)}%
-                </span>
-              </div>
-              <div className="text-xl font-black text-[#5F7161]">
-                ₹{cat.sales.toLocaleString()}
-              </div>
-              <div className="flex justify-between items-center text-[11px] text-[#8C8376] font-medium mt-2.5 pt-2.5 border-t border-[#EBE5D9]">
-                <span>{cat.units.toLocaleString()} units sold</span>
-                <span>{cat.orders} orders</span>
-              </div>
+                {showAllCategories ? (
+                  <ChevronUp className="w-3.5 h-3.5 text-[#8C8376]" />
+                ) : (
+                  <ChevronDown className="w-3.5 h-3.5 text-[#8C8376]" />
+                )}
+              </button>
             </div>
-          ))}
+          )}
         </div>
       )}
 

@@ -48,7 +48,7 @@ export default function App() {
   const [fileName, setFileName] = useState<string>('15-Days-Sales-Report.csv');
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [granularity, setGranularity] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
-  const [salesTarget, setSalesTarget] = useState<number>(500000); // default ₹5 Lakh target
+  const [salesTarget, setSalesTarget] = useState<number>(2500000); // default ₹25 Lakh target
 
   // Modals
   const [isUploadOpen, setIsUploadOpen] = useState<boolean>(false);
@@ -75,16 +75,7 @@ export default function App() {
     setRecords(newRecords);
     setFileName(uploadedName);
     setFilters(DEFAULT_FILTERS);
-
-    // If data spans multiple years/months, adjust default timeline granularity appropriately
-    const uniqueYears = new Set(newRecords.map((r) => r.year));
-    if (uniqueYears.size > 2) {
-      setGranularity('monthly');
-    } else if (newRecords.length > 500) {
-      setGranularity('weekly');
-    } else {
-      setGranularity('daily');
-    }
+    setGranularity('daily');
   };
 
   // Available metadata for filters
@@ -97,6 +88,24 @@ export default function App() {
       }
     });
     return Array.from(yearsSet).sort((a: number, b: number) => b - a);
+  }, [records]);
+
+  const availableMonths = useMemo(() => {
+    const MONTH_ORDER = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const set = new Set<string>();
+    records.forEach((r) => {
+      if (r.month) set.add(r.month);
+    });
+    return Array.from(set).sort((a, b) => {
+      const idxA = MONTH_ORDER.findIndex(
+        (m) => m.toLowerCase() === a.toLowerCase() || a.toLowerCase().startsWith(m.toLowerCase())
+      );
+      const idxB = MONTH_ORDER.findIndex(
+        (m) => m.toLowerCase() === b.toLowerCase() || b.toLowerCase().startsWith(m.toLowerCase())
+      );
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      return a.localeCompare(b);
+    });
   }, [records]);
 
   const availableChannels = useMemo(() => {
@@ -146,8 +155,8 @@ export default function App() {
   }, [filteredRecords, metrics.totalNetSales]);
 
   const productMetrics = useMemo(() => {
-    return computeProductMetrics(filteredRecords);
-  }, [filteredRecords]);
+    return computeProductMetrics(filteredRecords, metrics.totalNetSales);
+  }, [filteredRecords, metrics.totalNetSales]);
 
   const zoneMetrics = useMemo(() => {
     return computeGeoMetrics(filteredRecords, 'zone', metrics.totalNetSales);
@@ -231,6 +240,7 @@ export default function App() {
           filters={filters}
           onFilterChange={setFilters}
           availableYears={availableYears}
+          availableMonths={availableMonths}
           availableChannels={availableChannels}
           availableCategories={availableCategories}
           availableZones={availableZones}
@@ -311,6 +321,7 @@ export default function App() {
         channels={channelMetrics}
         categories={categoryMetrics}
         topProducts={productMetrics}
+        cities={cityMetrics}
         fileName={fileName}
         totalRecordsCount={filteredRecords.length}
       />

@@ -413,7 +413,7 @@ export function computeCategoryMetrics(records: SaleRecord[], totalNetSales: num
     .sort((a, b) => b.sales - a.sales);
 }
 
-export function computeProductMetrics(records: SaleRecord[]): ProductMetric[] {
+export function computeProductMetrics(records: SaleRecord[], totalNetSales: number = 0): ProductMetric[] {
   const map = new Map<string, { barCode: string; category: string; gross: number; net: number; returns: number; units: number; returnUnits: number; mrp: number; margin: number }>();
 
   records.forEach((r) => {
@@ -453,6 +453,7 @@ export function computeProductMetrics(records: SaleRecord[]): ProductMetric[] {
     .map(([productName, data]) => {
       const grossUnits = data.units + data.returnUnits;
       const returnRate = grossUnits > 0 ? (data.returnUnits / grossUnits) * 100 : 0;
+      const sharePct = totalNetSales > 0 ? (Math.max(0, data.net) / totalNetSales) * 100 : 0;
       return {
         productName,
         barCode: data.barCode,
@@ -465,6 +466,7 @@ export function computeProductMetrics(records: SaleRecord[]): ProductMetric[] {
         returnRate: Math.round(returnRate * 10) / 10,
         mrp: data.mrp,
         margin: Math.round(data.margin),
+        sharePct: Math.round(sharePct * 10) / 10,
       };
     })
     .sort((a, b) => b.netSales - a.netSales);
