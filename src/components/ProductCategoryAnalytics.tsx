@@ -8,7 +8,7 @@ import {
   Tooltip, 
   ResponsiveContainer 
 } from 'recharts';
-import { ShoppingBag, AlertCircle, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
+import { ShoppingBag, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 import { CategoryMetric, ProductMetric } from '../types';
 
 interface ProductCategoryAnalyticsProps {
@@ -20,16 +20,12 @@ export const ProductCategoryAnalytics: React.FC<ProductCategoryAnalyticsProps> =
   categories,
   products,
 }) => {
-  const [activeTab, setActiveTab] = useState<'topProducts' | 'categories' | 'returns'>('topProducts');
+  const [activeTab, setActiveTab] = useState<'topProducts' | 'categories'>('topProducts');
   const [showAllCategories, setShowAllCategories] = useState(false);
 
   const topProductsList = products.slice(0, 10);
   const displayedCategories = showAllCategories ? categories : categories.slice(0, 12);
   const hasMoreThan12Categories = categories.length > 12;
-  const highReturnProducts = products
-    .filter((p) => p.returnUnits > 0)
-    .sort((a, b) => b.returnUnits - a.returnUnits)
-    .slice(0, 10);
 
   return (
     <div className="bg-white border border-[#EBE5D9] rounded-[28px] p-6 shadow-sm mb-6">
@@ -41,7 +37,7 @@ export const ProductCategoryAnalytics: React.FC<ProductCategoryAnalyticsProps> =
             Product & Category Intelligence
           </h3>
           <p className="text-xs text-[#8C8376] font-medium mt-0.5">
-            Identify top revenue drivers, best seller items, and high return SKUs
+            Identify top revenue drivers, best seller items, and category performance
           </p>
         </div>
 
@@ -65,16 +61,6 @@ export const ProductCategoryAnalytics: React.FC<ProductCategoryAnalyticsProps> =
             }`}
           >
             Categories
-          </button>
-          <button
-            onClick={() => setActiveTab('returns')}
-            className={`px-3 py-1 rounded-lg font-bold transition-all ${
-              activeTab === 'returns'
-                ? 'bg-white text-[#2D2A26] shadow-2xs font-extrabold'
-                : 'text-[#8C8376] hover:text-[#2D2A26]'
-            }`}
-          >
-            Return Analysis
           </button>
         </div>
       </div>
@@ -245,61 +231,6 @@ export const ProductCategoryAnalytics: React.FC<ProductCategoryAnalyticsProps> =
               </button>
             </div>
           )}
-        </div>
-      )}
-
-      {/* Tab 3: Return Analysis */}
-      {activeTab === 'returns' && (
-        <div className="space-y-3.5">
-          <div className="p-3.5 rounded-2xl bg-[#FAF0E6] border border-[#E8D2C2] text-[#AF8260] text-xs flex items-center gap-2.5 font-medium">
-            <AlertCircle className="w-4 h-4 text-[#AF8260] shrink-0" />
-            <span>
-              Items with high return rates may require packaging checks, customer description updates, or quality inspections.
-            </span>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead>
-                <tr className="border-b border-[#EBE5D9] text-[#8C8376] font-bold uppercase tracking-wider text-[11px]">
-                  <th className="pb-2.5">Product Name</th>
-                  <th className="pb-2.5">Category</th>
-                  <th className="pb-2.5 text-right">Units Returned</th>
-                  <th className="pb-2.5 text-right">Return Rate</th>
-                  <th className="pb-2.5 text-right">Refunded Value</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#F1EDE5]">
-                {highReturnProducts.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="text-center py-6 text-[#8C8376]">
-                      No returns recorded in this filter window.
-                    </td>
-                  </tr>
-                ) : (
-                  highReturnProducts.map((p) => (
-                    <tr key={p.productName} className="hover:bg-[#FAF8F5] transition-colors">
-                      <td className="py-2.5 font-bold text-[#2D2A26] truncate max-w-[220px]">
-                        {p.productName}
-                      </td>
-                      <td className="py-2.5 text-[#8C8376] font-medium">{p.category}</td>
-                      <td className="py-2.5 text-right font-black text-[#AF8260]">
-                        {p.returnUnits} units
-                      </td>
-                      <td className="py-2.5 text-right">
-                        <span className="px-2.5 py-0.5 rounded-full bg-[#FAF0E6] text-[#AF8260] border border-[#E8D2C2] font-bold text-[11px]">
-                          {p.returnRate}%
-                        </span>
-                      </td>
-                      <td className="py-2.5 text-right font-bold text-[#433E37]">
-                        ₹{p.returns.toLocaleString()}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
         </div>
       )}
     </div>

@@ -108,6 +108,27 @@ export function filterRecords(records: SaleRecord[], filters: FilterState): Sale
   });
 }
 
+/**
+ * Shared helper to extract normalized transaction values and return status from a SaleRecord.
+ * Consolidates duplicated calculations across metrics, aggregation, and UI views.
+ */
+export function getRecordMetrics(r: SaleRecord) {
+  const isReturn = r.status === 'Return' || r.qty < 0 || r.saleValue < 0;
+  const val = Math.abs(r.saleValue || (r.mrp * r.qty) || 0);
+  const qty = Math.abs(r.qty || 1);
+  const margin = r.scoobiesMargin || 0;
+  const exGstMargin = r.exGstMargin || 0;
+  return { isReturn, val, qty, margin, exGstMargin };
+}
+
+/**
+ * Shared helper to calculate percentage safely.
+ */
+export function computeSharePct(val: number, total: number, decimals = 1): number {
+  if (!total || total <= 0) return 0;
+  return Number(((Math.max(0, val) / total) * 100).toFixed(decimals));
+}
+
 export function computeDashboardMetrics(records: SaleRecord[]): DashboardMetrics {
   let totalGrossSales = 0;
   let totalNetSales = 0;
@@ -136,9 +157,7 @@ export function computeDashboardMetrics(records: SaleRecord[]): DashboardMetrics
     if (r.productName) productsSet.add(r.productName);
     if (r.state) statesSet.add(r.state);
 
-    const isReturn = r.status === 'Return' || r.qty < 0 || r.saleValue < 0;
-    const val = Math.abs(r.saleValue || (r.mrp * r.qty));
-    const qty = Math.abs(r.qty || 1);
+    const { isReturn, val, qty } = getRecordMetrics(r);
 
     if (isReturn) {
       totalReturnedSales += val;
@@ -191,7 +210,7 @@ export function computeDashboardMetrics(records: SaleRecord[]): DashboardMetrics
     if (sales > topChannel.sales) topChannel = { name, sales, share: 0 };
   });
   if (totalNetSales > 0) {
-    topChannel.share = (topChannel.sales / totalNetSales) * 100;
+    topChannel.share = computeSharePct(topChannel.sales, totalNetSales);
   }
 
   let topCategory = { name: 'N/A', sales: 0, share: 0 };
@@ -199,7 +218,7 @@ export function computeDashboardMetrics(records: SaleRecord[]): DashboardMetrics
     if (sales > topCategory.sales) topCategory = { name, sales, share: 0 };
   });
   if (totalNetSales > 0) {
-    topCategory.share = (topCategory.sales / totalNetSales) * 100;
+    topCategory.share = computeSharePct(topCategory.sales, totalNetSales);
   }
 
   let topProduct = { name: 'N/A', sales: 0, units: 0 };
@@ -212,7 +231,7 @@ export function computeDashboardMetrics(records: SaleRecord[]): DashboardMetrics
     if (sales > topZone.sales) topZone = { name, sales, share: 0 };
   });
   if (totalNetSales > 0) {
-    topZone.share = (topZone.sales / totalNetSales) * 100;
+    topZone.share = computeSharePct(topZone.sales, totalNetSales);
   }
 
   return {
@@ -263,9 +282,7 @@ export function computeTimeSeries(
       label = `${r.year}`;
     }
 
-    const isReturn = r.status === 'Return' || r.qty < 0 || r.saleValue < 0;
-    const val = Math.abs(r.saleValue || (r.mrp * r.qty));
-    const qty = Math.abs(r.qty || 1);
+    const { isReturn, val, qty } = getRecordMetrics(r);
 
     const curr = map.get(key) || {
       gross: 0,
@@ -321,9 +338,7 @@ export function computeChannelMetrics(records: SaleRecord[], totalNetSales: numb
 
   records.forEach((r) => {
     const ch = r.channel || 'Direct';
-    const isReturn = r.status === 'Return' || r.qty < 0 || r.saleValue < 0;
-    const val = Math.abs(r.saleValue || (r.mrp * r.qty));
-    const qty = Math.abs(r.qty || 1);
+    const { isReturn, val, qty } = getRecordMetrics(r);
 
     const curr = map.get(ch) || {
       gross: 0,
@@ -358,7 +373,7 @@ export function computeChannelMetrics(records: SaleRecord[], totalNetSales: numb
       const avgOrderValue = orderCount > 0 ? data.net / orderCount : 0;
       const totalAttempted = data.units + data.returnUnits * 2;
       const returnRate = totalAttempted > 0 ? (data.returnUnits / (data.units + data.returnUnits)) * 100 : 0;
-      const sharePct = totalNetSales > 0 ? (Math.max(0, data.net) / totalNetSales) * 100 : 0;
+      const sharePct = computeSharePct(data.net, totalNetSales);
 
       return {
         channel,
@@ -385,9 +400,7 @@ export function computeCategoryMetrics(records: SaleRecord[], totalNetSales: num
 
   records.forEach((r) => {
     const cat = r.category || 'OTHER';
-    const isReturn = r.status === 'Return' || r.qty < 0 || r.saleValue < 0;
-    const val = Math.abs(r.saleValue || (r.mrp * r.qty));
-    const qty = Math.abs(r.qty || 1);
+    const { isReturn, val, qty } = getRecordMetrics(r);
 
     const curr = map.get(cat) || {
       gross: 0,
@@ -418,7 +431,7 @@ export function computeCategoryMetrics(records: SaleRecord[], totalNetSales: num
 
   return Array.from(map.entries())
     .map(([category, data]) => {
-      const sharePct = totalNetSales > 0 ? (Math.max(0, data.net) / totalNetSales) * 100 : 0;
+      const sharePct = computeSharePct(data.net, totalNetSales);
       const totalAttempted = data.units + data.returnUnits;
       const returnRate = totalAttempted > 0 ? (data.returnUnits / totalAttempted) * 100 : 0;
       return {
@@ -438,17 +451,33 @@ export function computeCategoryMetrics(records: SaleRecord[], totalNetSales: num
 }
 
 export function computeProductMetrics(records: SaleRecord[], totalNetSales: number = 0): ProductMetric[] {
-  const map = new Map<string, { barCode: string; category: string; gross: number; net: number; returns: number; units: number; returnUnits: number; mrp: number; margin: number }>();
+  const map = new Map<
+    string,
+    {
+      barCode: string;
+      category: string;
+      channels: Set<string>;
+      returnChannels: Set<string>;
+      gross: number;
+      net: number;
+      returns: number;
+      units: number;
+      returnUnits: number;
+      mrp: number;
+      margin: number;
+    }
+  >();
 
   records.forEach((r) => {
     const name = r.productName;
-    const isReturn = r.status === 'Return' || r.qty < 0 || r.saleValue < 0;
-    const val = Math.abs(r.saleValue || (r.mrp * r.qty));
-    const qty = Math.abs(r.qty || 1);
+    const { isReturn, val, qty } = getRecordMetrics(r);
+    const ch = r.channel ? r.channel.trim() : 'Direct';
 
     const curr = map.get(name) || {
       barCode: r.barCode,
       category: r.category,
+      channels: new Set<string>(),
+      returnChannels: new Set<string>(),
       gross: 0,
       net: 0,
       returns: 0,
@@ -458,11 +487,18 @@ export function computeProductMetrics(records: SaleRecord[], totalNetSales: numb
       margin: 0,
     };
 
+    if (ch) {
+      curr.channels.add(ch);
+    }
+
     if (isReturn) {
       curr.returns += val;
       curr.net -= val;
       curr.returnUnits += qty;
       curr.units -= qty;
+      if (ch) {
+        curr.returnChannels.add(ch);
+      }
     } else {
       curr.gross += val;
       curr.net += val;
@@ -477,11 +513,20 @@ export function computeProductMetrics(records: SaleRecord[], totalNetSales: numb
     .map(([productName, data]) => {
       const grossUnits = data.units + data.returnUnits;
       const returnRate = grossUnits > 0 ? (data.returnUnits / grossUnits) * 100 : 0;
-      const sharePct = totalNetSales > 0 ? (Math.max(0, data.net) / totalNetSales) * 100 : 0;
+      const sharePct = computeSharePct(data.net, totalNetSales);
+      const channelArray = Array.from(data.channels);
+      const returnChannelArray = Array.from(data.returnChannels);
+      const primaryChannel = returnChannelArray.length > 0 
+        ? returnChannelArray.join(', ') 
+        : (channelArray.length > 0 ? channelArray.join(', ') : 'Direct');
+
       return {
         productName,
         barCode: data.barCode,
         category: data.category,
+        channel: primaryChannel,
+        channels: channelArray,
+        returnChannels: returnChannelArray,
         netSales: Math.round(data.net),
         grossSales: Math.round(data.gross),
         returns: Math.round(data.returns),
@@ -490,7 +535,7 @@ export function computeProductMetrics(records: SaleRecord[], totalNetSales: numb
         returnRate: Math.round(returnRate * 10) / 10,
         mrp: data.mrp,
         margin: Math.round(data.margin),
-        sharePct: Math.round(sharePct * 10) / 10,
+        sharePct,
       };
     })
     .sort((a, b) => b.netSales - a.netSales);
@@ -504,9 +549,7 @@ export function computeGeoMetrics(records: SaleRecord[], type: 'zone' | 'state' 
     if (type === 'state') key = r.state || 'Unassigned';
     if (type === 'city') key = r.deliveryPlace || 'Unassigned';
 
-    const isReturn = r.status === 'Return' || r.qty < 0 || r.saleValue < 0;
-    const val = Math.abs(r.saleValue || (r.mrp * r.qty));
-    const qty = Math.abs(r.qty || 1);
+    const { isReturn, val, qty } = getRecordMetrics(r);
 
     const curr = map.get(key) || {
       sales: 0,
@@ -527,7 +570,7 @@ export function computeGeoMetrics(records: SaleRecord[], type: 'zone' | 'state' 
       sales: Math.round(data.sales),
       orders: data.orders.size,
       units: data.units,
-      sharePct: totalNetSales > 0 ? (Math.max(0, data.sales) / totalNetSales) * 100 : 0,
+      sharePct: computeSharePct(data.sales, totalNetSales),
     }))
     .sort((a, b) => b.sales - a.sales);
 }
@@ -573,9 +616,7 @@ export function generateExecutiveInsights(
     >();
 
     records.forEach((r) => {
-      const isReturn = r.status === 'Return' || r.qty < 0 || r.saleValue < 0;
-      const val = Math.abs(r.saleValue || r.mrp * r.qty);
-      const qty = Math.abs(r.qty || 1);
+      const { isReturn, val, qty } = getRecordMetrics(r);
       const profitVal = r.scoobiesMargin || 0;
       const exGstVal = r.exGstMargin || 0;
 

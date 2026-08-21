@@ -668,14 +668,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               </button>
             </span>
           ))}
-          {filters.status !== 'ALL' && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#F1EDE5] text-[#2D2A26] font-semibold border border-[#E4DCD0]">
-              Status: {filters.status}
-              <button onClick={() => onFilterChange({ ...filters, status: 'ALL' })}>
-                <X className="w-3 h-3 text-[#8C8376] hover:text-[#2D2A26]" />
-              </button>
-            </span>
-          )}
           {filters.campaign !== 'ALL' && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FAF0E6] text-[#AF8260] font-semibold border border-[#E8D2C2]">
               Campaign: {filters.campaign === 'B2S' ? 'Back To School' : 'Standard'}

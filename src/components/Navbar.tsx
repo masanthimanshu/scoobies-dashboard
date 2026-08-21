@@ -81,14 +81,14 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div 
               onClick={onOpenGoal}
               className="hidden md:flex items-center gap-2.5 px-3.5 py-1.5 rounded-2xl border border-[#EBE5D9] bg-[#FAF8F5] hover:bg-[#F1EDE5] hover:border-[#D9CFC1] cursor-pointer transition-all group"
-              title="Click to edit sales target quota"
+              title="Click to edit margin target quota"
             >
               <div className="w-6 h-6 rounded-full bg-[#FAF0E6] flex items-center justify-center text-[#AF8260] shrink-0 group-hover:bg-[#F3E5D4] transition-colors">
                 <Target className="w-3.5 h-3.5" />
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-bold text-[#2D2A26] whitespace-nowrap">
-                  Target: ₹{salesTarget.toLocaleString()}
+                  Margin Target: ₹{salesTarget.toLocaleString()}
                 </span>
                 <Pencil className="w-3 h-3 text-[#8C8376] group-hover:text-[#AF8260] transition-colors shrink-0" />
               </div>

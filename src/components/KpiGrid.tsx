@@ -20,8 +20,9 @@ export const KpiGrid: React.FC<KpiGridProps> = ({
   salesTarget,
   onOpenGoalModal,
 }) => {
-  const targetPct = salesTarget > 0 ? (metrics.totalNetSales / salesTarget) * 100 : 0;
-  const remainingToTarget = Math.max(0, salesTarget - metrics.totalNetSales);
+  const currentAchieved = metrics.totalScoobiesMargin;
+  const targetPct = salesTarget > 0 ? (currentAchieved / salesTarget) * 100 : 0;
+  const remainingToTarget = Math.max(0, salesTarget - currentAchieved);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">

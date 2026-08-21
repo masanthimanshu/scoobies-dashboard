@@ -171,9 +171,9 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                 Net Revenue
               </span>
               <div className="text-xl font-black text-[#5F7161] mt-1">
-                ₹{Math.round(metrics.totalNetSales).toLocaleString()}
+                ₹{Math.round(metrics?.totalNetSales || 0).toLocaleString()}
               </div>
-              <span className="text-[10px] text-[#8C8376]">Gross: ₹{Math.round(metrics.totalGrossSales).toLocaleString()}</span>
+              <span className="text-[10px] text-[#8C8376]">Gross: ₹{Math.round(metrics?.totalGrossSales || 0).toLocaleString()}</span>
             </div>
 
             <div className="bg-[#FAF8F5] p-4 rounded-2xl border border-[#EBE5D9]">
@@ -181,9 +181,9 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                 Units Sold
               </span>
               <div className="text-xl font-black text-[#AF8260] mt-1">
-                {metrics.totalUnitsSold.toLocaleString()}
+                {(metrics?.totalUnitsSold || 0).toLocaleString()}
               </div>
-              <span className="text-[10px] text-[#8C8376]">{metrics.totalOrders} total orders</span>
+              <span className="text-[10px] text-[#8C8376]">{(metrics?.totalOrders || 0).toLocaleString()} total orders</span>
             </div>
 
             <div className="bg-[#FAF8F5] p-4 rounded-2xl border border-[#EBE5D9]">
@@ -191,9 +191,9 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                 Scoobies Margin
               </span>
               <div className="text-xl font-black text-[#5F7161] mt-1">
-                ₹{Math.round(metrics.totalScoobiesMargin).toLocaleString()}
+                ₹{Math.round(metrics?.totalScoobiesMargin || 0).toLocaleString()}
               </div>
-              <span className="text-[10px] font-bold text-[#5F7161]">{metrics.marginPercentage.toFixed(1)}% margin rate</span>
+              <span className="text-[10px] font-bold text-[#5F7161]">{(metrics?.marginPercentage || 0).toFixed(1)}% margin rate</span>
             </div>
 
             <div className="bg-[#FAF8F5] p-4 rounded-2xl border border-[#EBE5D9]">
@@ -201,9 +201,9 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                 Returns Rate
               </span>
               <div className="text-xl font-black text-[#AF8260] mt-1">
-                {metrics.returnRateQtyPct.toFixed(1)}%
+                {(metrics?.returnRateQtyPct || 0).toFixed(1)}%
               </div>
-              <span className="text-[10px] text-[#8C8376]">₹{Math.round(metrics.totalReturnedSales).toLocaleString()} refunded</span>
+              <span className="text-[10px] text-[#8C8376]">₹{Math.round(metrics?.totalReturnedSales || 0).toLocaleString()} refunded</span>
             </div>
           </div>
 

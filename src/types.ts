@@ -118,6 +118,9 @@ export interface ProductMetric {
   productName: string;
   barCode: string;
   category: string;
+  channel?: string;
+  channels?: string[];
+  returnChannels?: string[];
   netSales: number;
   grossSales: number;
   returns: number;

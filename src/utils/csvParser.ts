@@ -76,6 +76,18 @@ export function parseDateComponents(dateStr: string, yearHint?: number, monthHin
 }
 
 /**
+ * Normalizes strings by trimming and stripping null / error values.
+ */
+export function cleanString(val: any, fallback = ''): string {
+  if (val === null || val === undefined) return fallback;
+  const s = String(val).trim();
+  if (s === '#N/A' || s === 'N/A' || s === '#VALUE!' || s === '#REF!' || s === 'null' || s === 'undefined' || s === '') {
+    return fallback;
+  }
+  return s;
+}
+
+/**
  * Normalizes column header keys regardless of case, extra whitespace, or slight differences
  */
 function findValue(row: Record<string, any>, possibleKeys: string[]): any {
@@ -154,15 +166,6 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
               findValue(row, ['EX-GST Scoobies Margin', 'Ex-GST Margin', 'Ex GST Margin', 'EX GST']),
               scoobiesMargin * 0.85
             );
-
-            const cleanString = (val: any, fallback: string = '') => {
-              if (val === null || val === undefined) return fallback;
-              const s = String(val).trim();
-              if (s === '#N/A' || s === 'N/A' || s === '#VALUE!' || s === '#REF!' || s === 'null' || s === 'undefined' || s === '') {
-                return fallback;
-              }
-              return s;
-            };
 
             const deliveryPlace = cleanString(
               findValue(row, ['Delivery Place', 'City', 'Location', 'Delivery City']),

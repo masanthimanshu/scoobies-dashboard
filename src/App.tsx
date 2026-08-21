@@ -8,6 +8,7 @@ import { BasketSizeAov } from './components/BasketSizeAov';
 import { SalesTrendChart } from './components/SalesTrendChart';
 import { ChannelBreakdown } from './components/ChannelBreakdown';
 import { ProductCategoryAnalytics } from './components/ProductCategoryAnalytics';
+import { ReturnAnalysis } from './components/ReturnAnalysis';
 import { GeoAnalytics } from './components/GeoAnalytics';
 import { OrdersTable } from './components/OrdersTable';
 import { UploadModal } from './components/UploadModal';
@@ -302,6 +303,14 @@ export default function App() {
           products={productMetrics}
         />
 
+        {/* Dedicated Return & Refund Analysis Section */}
+        <ReturnAnalysis
+          records={filteredRecords}
+          products={productMetrics}
+          channels={channelMetrics}
+          metrics={metrics}
+        />
+
         {/* Regional & Geographic Leaderboard */}
         <GeoAnalytics
           zones={zoneMetrics}
@@ -328,7 +337,7 @@ export default function App() {
         isOpen={isGoalOpen}
         onClose={() => setIsGoalOpen(false)}
         currentGoal={salesTarget}
-        currentSales={metrics.totalNetSales}
+        currentMargin={metrics.totalScoobiesMargin}
         onSaveGoal={setSalesTarget}
       />
 

@@ -5,7 +5,7 @@ interface GoalModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentGoal: number;
-  currentSales: number;
+  currentMargin: number;
   onSaveGoal: (goal: number) => void;
 }
 
@@ -13,7 +13,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({
   isOpen,
   onClose,
   currentGoal,
-  currentSales,
+  currentMargin,
   onSaveGoal,
 }) => {
   const [goalInput, setGoalInput] = useState<string>(String(currentGoal));
@@ -60,10 +60,10 @@ export const GoalModal: React.FC<GoalModalProps> = ({
           </div>
           <div>
             <h3 className="text-lg font-black text-[#2D2A26] tracking-tight">
-              Set Sales Revenue Goal
+              Set Scoobies Margin Goal
             </h3>
             <p className="text-xs text-[#8C8376] font-medium">
-              Define the team's revenue quota for this period
+              Define the team's gross/net margin quota for this period
             </p>
           </div>
         </div>
@@ -71,7 +71,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-[#8C8376] uppercase tracking-wider mb-1.5">
-              Sales Target (INR ₹)
+              Margin Target (INR ₹)
             </label>
             <div className="relative">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-[#8C8376]">
@@ -116,10 +116,10 @@ export const GoalModal: React.FC<GoalModalProps> = ({
           {/* Progress Preview */}
           <div className="p-3.5 bg-[#FAF8F5] rounded-2xl border border-[#EBE5D9] text-xs">
             <div className="flex justify-between font-bold text-[#2D2A26] mb-1">
-              <span>Current Achievement:</span>
+              <span>Margin Achievement:</span>
               <span className="text-[#5F7161]">
                 {goalInput && Number(goalInput) > 0
-                  ? `${((currentSales / Number(goalInput)) * 100).toFixed(1)}%`
+                  ? `${((currentMargin / Number(goalInput)) * 100).toFixed(1)}%`
                   : '0%'}
               </span>
             </div>
@@ -130,11 +130,15 @@ export const GoalModal: React.FC<GoalModalProps> = ({
                   width: `${Math.min(
                     100,
                     goalInput && Number(goalInput) > 0
-                      ? (currentSales / Number(goalInput)) * 100
+                      ? (currentMargin / Number(goalInput)) * 100
                       : 0
                   )}%`,
                 }}
               />
+            </div>
+            <div className="flex justify-between text-[11px] text-[#8C8376] mt-1.5 font-medium">
+              <span>Current Margin: ₹{Math.round(currentMargin).toLocaleString()}</span>
+              <span>Target: ₹{Number(goalInput || 0).toLocaleString()}</span>
             </div>
           </div>
 

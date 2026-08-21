@@ -9,7 +9,6 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
-  SlidersHorizontal,
   Check,
   RotateCcw,
   Pencil
