@@ -1,27 +1,12 @@
 import Papa from "papaparse";
 import { SaleRecord } from "../types";
-import { isValidFilterOption } from "./formatters";
+import { isValidFilterOption, MONTHS_SHORT } from "./formatters";
 
 export interface ParseResult {
   records: SaleRecord[];
   errors: string[];
   totalRows: number;
 }
-
-const MONTHS_SHORT = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-] as const;
 
 /**
  * Normalizes number fields from diverse formats (e.g., "  1,829.66 ", " - ", "-329.03", "₹1,200", etc.)
@@ -131,6 +116,29 @@ function findValue(
   return "";
 }
 
+/**
+ * Pre-computes column key mappings once for O(1) row lookups instead of
+ * scanning keys on every single row.
+ */
+function createHeaderKeyResolver(rowKeys: string[]) {
+  const cleanMap = new Map<string, string>();
+  for (let i = 0; i < rowKeys.length; i++) {
+    const k = rowKeys[i];
+    cleanMap.set(k, k);
+    cleanMap.set(k.toLowerCase().replace(/[^a-z0-9]/g, ""), k);
+  }
+
+  return (possibleKeys: string[]): string | null => {
+    for (let i = 0; i < possibleKeys.length; i++) {
+      const key = possibleKeys[i];
+      if (cleanMap.has(key)) return cleanMap.get(key)!;
+      const clean = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (cleanMap.has(clean)) return cleanMap.get(clean)!;
+    }
+    return null;
+  };
+}
+
 export function parseSalesCsv(csvText: string): Promise<ParseResult> {
   return new Promise((resolve) => {
     Papa.parse<Record<string, unknown>>(csvText, {
@@ -141,18 +149,142 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
         const records: SaleRecord[] = [];
         const errors: string[] = [];
 
-        results.data.forEach((row, idx) => {
+        if (!results.data || results.data.length === 0) {
+          resolve({
+            records: [],
+            errors: ["CSV file contains no data rows."],
+            totalRows: 0,
+          });
+          return;
+        }
+
+        // Pre-resolve all column keys once from the first available row keys
+        const firstRow = results.data[0] || {};
+        const resolveKey = createHeaderKeyResolver(Object.keys(firstRow));
+
+        const kYear = resolveKey(["Year", "year", "Yr"]);
+        const kMonth = resolveKey(["Month", "month", "Mo"]);
+        const kWeek = resolveKey(["Week", "week", "Wk"]);
+        const kDay = resolveKey(["Day", "day", "D"]);
+        const kDate = resolveKey(["Date", "date", "Order Date", "Sale Date"]);
+        const kOrderNumber = resolveKey([
+          "Order Number",
+          "Order No",
+          "Order Id",
+          "Order_Number",
+          "order_id",
+        ]);
+        const kCustomerName = resolveKey([
+          "Customer name",
+          "Customer Name",
+          "Customer",
+          "Buyer Name",
+        ]);
+        const kBarCode = resolveKey([
+          "Bar Code",
+          "Barcode",
+          "SKU",
+          "Item Code",
+        ]);
+        const kProductName = resolveKey([
+          "Product name",
+          "Product Name",
+          "Item Name",
+          "Title",
+          "Product",
+        ]);
+        const kColor = resolveKey(["Color", "Colour", "Variant"]);
+        const kCategory = resolveKey([
+          "PRODUCT CATEGORY",
+          "Product Category",
+          "Category",
+          "Item Category",
+        ]);
+        const kQty = resolveKey(["QTY", "Qty", "Quantity", "Units"]);
+        const kMrp = resolveKey(["MRP", "Mrp", "Price", "Unit Price"]);
+        const kScoobiesMargin = resolveKey([
+          "Scoobies Margin",
+          "Margin",
+          "Gross Margin",
+        ]);
+        const kRetailersMargin = resolveKey([
+          "Retailers Margin",
+          "Retailer Margin",
+          "Channel Margin",
+        ]);
+        const kExGstMargin = resolveKey([
+          "EX-GST Scoobies Margin",
+          "Ex-GST Margin",
+          "Ex GST Margin",
+          "EX GST",
+        ]);
+        const kDeliveryPlace = resolveKey([
+          "Delivery Place",
+          "City",
+          "Location",
+          "Delivery City",
+        ]);
+        const kState = resolveKey(["State", "Province", "Region"]);
+        const kWebsite = resolveKey([
+          "Website",
+          "Channel",
+          "Platform",
+          "Portal",
+          "Source",
+        ]);
+        const kStatus = resolveKey([
+          "Status",
+          "Order Status",
+          "Delivery Status",
+        ]);
+        const kBackToSchool = resolveKey([
+          "Back To School",
+          "Back to School",
+          "Campaign",
+          "B2S",
+        ]);
+        const kZone = resolveKey(["Zone", "Sales Zone", "Area"]);
+        const kSaleValue = resolveKey([
+          "Sale Value",
+          "Sale_Value",
+          "Net Sales",
+          "Sales",
+          "Total Value",
+        ]);
+
+        const getVal = (
+          row: Record<string, unknown>,
+          resolvedKey: string | null,
+          fallbackKeys: string[],
+        ): unknown => {
+          if (
+            resolvedKey &&
+            row[resolvedKey] !== undefined &&
+            row[resolvedKey] !== null &&
+            row[resolvedKey] !== ""
+          ) {
+            return row[resolvedKey];
+          }
+          return findValue(row, fallbackKeys);
+        };
+
+        const len = results.data.length;
+        for (let idx = 0; idx < len; idx++) {
+          const row = results.data[idx];
           try {
-            const rawYear = cleanNumber(findValue(row, ["Year", "year", "Yr"]));
+            const rawYear = cleanNumber(
+              getVal(row, kYear, ["Year", "year", "Yr"]),
+            );
             const rawMonth = String(
-              findValue(row, ["Month", "month", "Mo"]) || "",
+              getVal(row, kMonth, ["Month", "month", "Mo"]) || "",
             ).trim();
             const rawWeek = String(
-              findValue(row, ["Week", "week", "Wk"]) || "",
+              getVal(row, kWeek, ["Week", "week", "Wk"]) || "",
             ).trim();
-            const rawDay = cleanNumber(findValue(row, ["Day", "day", "D"]));
+            const rawDay = cleanNumber(getVal(row, kDay, ["Day", "day", "D"]));
             const rawDate = String(
-              findValue(row, ["Date", "date", "Order Date", "Sale Date"]) || "",
+              getVal(row, kDate, ["Date", "date", "Order Date", "Sale Date"]) ||
+                "",
             ).trim();
 
             const dateInfo = parseDateComponents(
@@ -163,7 +295,7 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
             );
 
             const orderNumber = String(
-              findValue(row, [
+              getVal(row, kOrderNumber, [
                 "Order Number",
                 "Order No",
                 "Order Id",
@@ -173,7 +305,7 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
             ).trim();
 
             const customerName = String(
-              findValue(row, [
+              getVal(row, kCustomerName, [
                 "Customer name",
                 "Customer Name",
                 "Customer",
@@ -182,10 +314,15 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
             ).trim();
 
             const barCode = String(
-              findValue(row, ["Bar Code", "Barcode", "SKU", "Item Code"]) || "",
+              getVal(row, kBarCode, [
+                "Bar Code",
+                "Barcode",
+                "SKU",
+                "Item Code",
+              ]) || "",
             ).trim();
             const productName = String(
-              findValue(row, [
+              getVal(row, kProductName, [
                 "Product name",
                 "Product Name",
                 "Item Name",
@@ -195,10 +332,10 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
             ).trim();
 
             const color = String(
-              findValue(row, ["Color", "Colour", "Variant"]) || "Standard",
+              getVal(row, kColor, ["Color", "Colour", "Variant"]) || "Standard",
             ).trim();
             const category = String(
-              findValue(row, [
+              getVal(row, kCategory, [
                 "PRODUCT CATEGORY",
                 "Product Category",
                 "Category",
@@ -207,20 +344,24 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
             ).trim();
 
             const qty = cleanNumber(
-              findValue(row, ["QTY", "Qty", "Quantity", "Units"]),
+              getVal(row, kQty, ["QTY", "Qty", "Quantity", "Units"]),
               1,
             );
             const mrp = cleanNumber(
-              findValue(row, ["MRP", "Mrp", "Price", "Unit Price"]),
+              getVal(row, kMrp, ["MRP", "Mrp", "Price", "Unit Price"]),
               0,
             );
 
             const scoobiesMargin = cleanNumber(
-              findValue(row, ["Scoobies Margin", "Margin", "Gross Margin"]),
+              getVal(row, kScoobiesMargin, [
+                "Scoobies Margin",
+                "Margin",
+                "Gross Margin",
+              ]),
               0,
             );
             const retailersMargin = cleanNumber(
-              findValue(row, [
+              getVal(row, kRetailersMargin, [
                 "Retailers Margin",
                 "Retailer Margin",
                 "Channel Margin",
@@ -228,7 +369,7 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
               0,
             );
             const exGstMargin = cleanNumber(
-              findValue(row, [
+              getVal(row, kExGstMargin, [
                 "EX-GST Scoobies Margin",
                 "Ex-GST Margin",
                 "Ex GST Margin",
@@ -238,7 +379,7 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
             );
 
             const deliveryPlace = cleanString(
-              findValue(row, [
+              getVal(row, kDeliveryPlace, [
                 "Delivery Place",
                 "City",
                 "Location",
@@ -248,11 +389,11 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
             );
 
             const state = cleanString(
-              findValue(row, ["State", "Province", "Region"]),
+              getVal(row, kState, ["State", "Province", "Region"]),
               "Unassigned",
             );
             const websiteRaw = cleanString(
-              findValue(row, [
+              getVal(row, kWebsite, [
                 "Website",
                 "Channel",
                 "Platform",
@@ -264,7 +405,11 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
             const channel = websiteRaw || "Direct Website";
 
             const rawStatus = cleanString(
-              findValue(row, ["Status", "Order Status", "Delivery Status"]),
+              getVal(row, kStatus, [
+                "Status",
+                "Order Status",
+                "Delivery Status",
+              ]),
               "Dispatched",
             );
             let status: "Dispatched" | "Return" | "Cancelled" | "Other" =
@@ -281,7 +426,7 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
             }
 
             const backToSchool = cleanString(
-              findValue(row, [
+              getVal(row, kBackToSchool, [
                 "Back To School",
                 "Back to School",
                 "Campaign",
@@ -291,12 +436,12 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
             );
 
             const zone = cleanString(
-              findValue(row, ["Zone", "Sales Zone", "Area"]),
+              getVal(row, kZone, ["Zone", "Sales Zone", "Area"]),
               "Unassigned",
             );
 
             const saleValue = cleanNumber(
-              findValue(row, [
+              getVal(row, kSaleValue, [
                 "Sale Value",
                 "Sale_Value",
                 "Net Sales",
@@ -339,7 +484,7 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
             const msg = err instanceof Error ? err.message : String(err);
             errors.push(`Row ${idx + 1}: ${msg}`);
           }
-        });
+        }
 
         resolve({
           records,
@@ -349,4 +494,62 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
       },
     });
   });
+}
+
+/**
+ * Triggers a browser file download for text/CSV content via a transient Blob URL.
+ */
+export function downloadFile(
+  content: string,
+  filename: string,
+  mimeType = "text/csv;charset=utf-8;",
+): void {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Serializes and triggers download of SaleRecords as a formatted CSV file.
+ */
+export function exportRecordsToCsv(
+  records: SaleRecord[],
+  filename?: string,
+): void {
+  if (!records || records.length === 0) return;
+  const exportData = records.map((r) => ({
+    Date: r.dateStr,
+    Year: r.year,
+    Month: r.month,
+    Week: r.week,
+    "Order Number": r.orderNumber,
+    "Customer Name": r.customerName,
+    "Bar Code": r.barCode,
+    "Product Name": r.productName,
+    Color: r.color,
+    Category: r.category,
+    QTY: r.qty,
+    MRP: r.mrp,
+    "Sale Value": r.saleValue,
+    "Scoobies Margin": r.scoobiesMargin,
+    "EX-GST Margin": r.exGstMargin,
+    Channel: r.channel,
+    Status: r.status,
+    Location: r.deliveryPlace,
+    State: r.state,
+    Zone: r.zone,
+    Campaign: r.backToSchool,
+  }));
+
+  const csvStr = Papa.unparse(exportData);
+  const name =
+    filename ||
+    `filtered_sales_export_${new Date().toISOString().split("T")[0]}.csv`;
+  downloadFile(csvStr, name);
 }

@@ -1,7 +1,5 @@
 import React, { useRef, useState } from "react";
 import { X, Printer, CheckCircle2, Download, Loader2 } from "lucide-react";
-import { jsPDF } from "jspdf";
-import html2canvas from "html2canvas";
 import {
   DashboardMetrics,
   ChannelMetric,
@@ -48,6 +46,11 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
     setIsExporting(true);
     try {
       const element = reportRef.current;
+      const [{ jsPDF }, { default: html2canvas }] = await Promise.all([
+        import("jspdf"),
+        import("html2canvas"),
+      ]);
+
       const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,

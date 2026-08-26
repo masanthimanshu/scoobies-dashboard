@@ -1,5 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
-import Papa from "papaparse";
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  lazy,
+  Suspense,
+} from "react";
 import { UploadCloud } from "lucide-react";
 import { Navbar } from "./components/Navbar";
 import { FilterBar } from "./components/FilterBar";
@@ -12,24 +18,38 @@ import { ProductCategoryAnalytics } from "./components/ProductCategoryAnalytics"
 import { ReturnAnalysis } from "./components/ReturnAnalysis";
 import { GeoAnalytics } from "./components/GeoAnalytics";
 import { OrdersTable } from "./components/OrdersTable";
-import { UploadModal } from "./components/UploadModal";
-import { GoalModal } from "./components/GoalModal";
-import { PrintReportView } from "./components/PrintReportView";
 import { AiFloatingButton } from "./components/AiFloatingButton";
-import { AiAdvisorDrawer } from "./components/AiAdvisorDrawer";
+
+// Code-split heavy modals and drawers
+const UploadModal = lazy(() =>
+  import("./components/UploadModal").then((m) => ({ default: m.UploadModal })),
+);
+const GoalModal = lazy(() =>
+  import("./components/GoalModal").then((m) => ({ default: m.GoalModal })),
+);
+const PrintReportView = lazy(() =>
+  import("./components/PrintReportView").then((m) => ({
+    default: m.PrintReportView,
+  })),
+);
+const AiAdvisorDrawer = lazy(() =>
+  import("./components/AiAdvisorDrawer").then((m) => ({
+    default: m.AiAdvisorDrawer,
+  })),
+);
 
 import {
   filterRecords,
-  computeDashboardMetrics,
-  computeTimeSeries,
-  computeChannelMetrics,
-  computeCategoryMetrics,
-  computeProductMetrics,
-  computeGeoMetrics,
+  computeAllAnalytics,
   generateExecutiveInsights,
 } from "./utils/analytics";
 import { buildDistilledContext } from "./utils/aiContextDistiller";
-import { isValidFilterOption } from "./utils/formatters";
+import { exportRecordsToCsv } from "./utils/csvParser";
+import {
+  isValidFilterOption,
+  sortMonthList,
+  sortWeekList,
+} from "./utils/formatters";
 import { SaleRecord, FilterState } from "./types";
 
 const DEFAULT_FILTERS: FilterState = {
@@ -49,35 +69,6 @@ const DEFAULT_FILTERS: FilterState = {
   status: "ALL",
   campaign: "ALL",
 };
-
-const MONTH_ORDER = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-] as const;
-
-function extractUniqueValues(
-  records: SaleRecord[],
-  key: keyof SaleRecord,
-): string[] {
-  const set = new Set<string>();
-  for (let i = 0; i < records.length; i++) {
-    const val = records[i][key];
-    if (typeof val === "string" && isValidFilterOption(val)) {
-      set.add(val.trim());
-    }
-  }
-  return Array.from(set).sort();
-}
 
 export default function App() {
   const [records, setRecords] = useState<SaleRecord[]>([]);
@@ -107,122 +98,104 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const handleClearData = () => {
+  const handleClearData = useCallback(() => {
     setRecords([]);
     setFileName("");
     setFilters(DEFAULT_FILTERS);
-  };
+  }, []);
 
-  const handleNewDataLoaded = (
-    newRecords: SaleRecord[],
-    uploadedName: string,
-  ) => {
-    setRecords(newRecords);
-    setFileName(uploadedName);
-    setFilters(DEFAULT_FILTERS);
-    setGranularity("daily");
-  };
+  const handleNewDataLoaded = useCallback(
+    (newRecords: SaleRecord[], uploadedName: string) => {
+      setRecords(newRecords);
+      setFileName(uploadedName);
+      setFilters(DEFAULT_FILTERS);
+      setGranularity("daily");
+    },
+    [],
+  );
 
-  // Available metadata for filters
-  const availableYears = useMemo(() => {
+  const handleFilterChange = useCallback((newFilters: FilterState) => {
+    setFilters(newFilters);
+  }, []);
+
+  const handleGranularityChange = useCallback(
+    (g: "daily" | "weekly" | "monthly" | "yearly") => {
+      setGranularity(g);
+    },
+    [],
+  );
+
+  const handleSaveGoal = useCallback((goal: number) => {
+    setSalesTarget(goal);
+  }, []);
+
+  const handleOpenUpload = useCallback(() => setIsUploadOpen(true), []);
+  const handleCloseUpload = useCallback(() => setIsUploadOpen(false), []);
+  const handleOpenGoal = useCallback(() => setIsGoalOpen(true), []);
+  const handleCloseGoal = useCallback(() => setIsGoalOpen(false), []);
+  const handleOpenPrint = useCallback(() => setIsPrintOpen(true), []);
+  const handleClosePrint = useCallback(() => setIsPrintOpen(false), []);
+  const handleOpenAi = useCallback(() => setIsAiDrawerOpen(true), []);
+  const handleCloseAi = useCallback(() => setIsAiDrawerOpen(false), []);
+  const handleClearInitialPrompt = useCallback(
+    () => setAiInitialPrompt(null),
+    [],
+  );
+
+  // Extract all available filter metadata in a single O(N) pass
+  const {
+    availableYears,
+    availableMonths,
+    availableWeeks,
+    availableChannels,
+    availableCategories,
+    availableZones,
+  } = useMemo(() => {
     const yearsSet = new Set<number>();
+    const monthsSet = new Set<string>();
+    const weeksSet = new Set<string>();
+    const channelsSet = new Set<string>();
+    const categoriesSet = new Set<string>();
+    const zonesSet = new Set<string>();
+
     for (let i = 0; i < records.length; i++) {
-      const y = Number(records[i].year);
-      if (!isNaN(y) && y > 0) {
-        yearsSet.add(y);
-      }
+      const r = records[i];
+      if (r.year && !isNaN(r.year)) yearsSet.add(r.year);
+      if (isValidFilterOption(r.month)) monthsSet.add(r.month.trim());
+      if (isValidFilterOption(r.week)) weeksSet.add(r.week.trim());
+      if (isValidFilterOption(r.channel)) channelsSet.add(r.channel.trim());
+      if (isValidFilterOption(r.category)) categoriesSet.add(r.category.trim());
+      if (isValidFilterOption(r.zone)) zonesSet.add(r.zone.trim());
     }
-    return Array.from(yearsSet).sort((a: number, b: number) => b - a);
+
+    return {
+      availableYears: Array.from(yearsSet).sort((a, b) => b - a),
+      availableMonths: sortMonthList(Array.from(monthsSet)),
+      availableWeeks: sortWeekList(Array.from(weeksSet)),
+      availableChannels: Array.from(channelsSet).sort(),
+      availableCategories: Array.from(categoriesSet).sort(),
+      availableZones: Array.from(zonesSet).sort(),
+    };
   }, [records]);
-
-  const availableMonths = useMemo(() => {
-    const set = new Set<string>();
-    for (let i = 0; i < records.length; i++) {
-      const m = records[i].month;
-      if (isValidFilterOption(m)) set.add(m);
-    }
-    return Array.from(set).sort((a, b) => {
-      const idxA = MONTH_ORDER.findIndex(
-        (m) =>
-          m.toLowerCase() === a.toLowerCase() ||
-          a.toLowerCase().startsWith(m.toLowerCase()),
-      );
-      const idxB = MONTH_ORDER.findIndex(
-        (m) =>
-          m.toLowerCase() === b.toLowerCase() ||
-          b.toLowerCase().startsWith(m.toLowerCase()),
-      );
-      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-      return a.localeCompare(b);
-    });
-  }, [records]);
-
-  const availableWeeks = useMemo(() => {
-    const set = new Set<string>();
-    for (let i = 0; i < records.length; i++) {
-      const w = records[i].week;
-      if (isValidFilterOption(w)) set.add(w);
-    }
-    return Array.from(set).sort((a, b) => {
-      const numA = parseInt(a.replace(/\D/g, ""), 10);
-      const numB = parseInt(b.replace(/\D/g, ""), 10);
-      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-      return a.localeCompare(b);
-    });
-  }, [records]);
-
-  const availableChannels = useMemo(
-    () => extractUniqueValues(records, "channel"),
-    [records],
-  );
-
-  const availableCategories = useMemo(
-    () => extractUniqueValues(records, "category"),
-    [records],
-  );
-
-  const availableZones = useMemo(
-    () => extractUniqueValues(records, "zone"),
-    [records],
-  );
 
   // Filtered dataset
   const filteredRecords = useMemo(() => {
     return filterRecords(records, filters);
   }, [records, filters]);
 
-  // Analytics
-  const metrics = useMemo(() => {
-    return computeDashboardMetrics(filteredRecords);
-  }, [filteredRecords]);
-
-  const timeSeriesData = useMemo(() => {
-    return computeTimeSeries(filteredRecords, granularity);
+  // Unified single-pass analytics computation
+  const {
+    metrics,
+    timeSeriesData,
+    channelMetrics,
+    categoryMetrics,
+    productMetrics,
+    zoneMetrics,
+    stateMetrics,
+    cityMetrics,
+  } = useMemo(() => {
+    return computeAllAnalytics(filteredRecords, granularity);
   }, [filteredRecords, granularity]);
-
-  const channelMetrics = useMemo(() => {
-    return computeChannelMetrics(filteredRecords, metrics.totalNetSales);
-  }, [filteredRecords, metrics.totalNetSales]);
-
-  const categoryMetrics = useMemo(() => {
-    return computeCategoryMetrics(filteredRecords, metrics.totalNetSales);
-  }, [filteredRecords, metrics.totalNetSales]);
-
-  const productMetrics = useMemo(() => {
-    return computeProductMetrics(filteredRecords, metrics.totalNetSales);
-  }, [filteredRecords, metrics.totalNetSales]);
-
-  const zoneMetrics = useMemo(() => {
-    return computeGeoMetrics(filteredRecords, "zone", metrics.totalNetSales);
-  }, [filteredRecords, metrics.totalNetSales]);
-
-  const stateMetrics = useMemo(() => {
-    return computeGeoMetrics(filteredRecords, "state", metrics.totalNetSales);
-  }, [filteredRecords, metrics.totalNetSales]);
-
-  const cityMetrics = useMemo(() => {
-    return computeGeoMetrics(filteredRecords, "city", metrics.totalNetSales);
-  }, [filteredRecords, metrics.totalNetSales]);
 
   const executiveInsights = useMemo(() => {
     return generateExecutiveInsights(
@@ -234,8 +207,9 @@ export default function App() {
     );
   }, [metrics, channelMetrics, productMetrics, zoneMetrics, filteredRecords]);
 
-  // Distilled context for Groq GPT OSS 120B
+  // Distilled context for Groq GPT OSS 120B (deferred only when AI drawer is open)
   const distilledContext = useMemo(() => {
+    if (!isAiDrawerOpen) return null;
     return buildDistilledContext(
       filteredRecords,
       metrics,
@@ -250,6 +224,7 @@ export default function App() {
       fileName,
     );
   }, [
+    isAiDrawerOpen,
     filteredRecords,
     metrics,
     channelMetrics,
@@ -263,47 +238,15 @@ export default function App() {
     fileName,
   ]);
 
-  const handleOpenAiDeepDive = (prompt?: string) => {
+  const handleOpenAiDeepDive = useCallback((prompt?: string) => {
     if (prompt) setAiInitialPrompt(prompt);
     setIsAiDrawerOpen(true);
-  };
+  }, []);
 
   // Export Filtered CSV
-  const handleExportFilteredCsv = () => {
-    if (filteredRecords.length === 0) return;
-    const exportData = filteredRecords.map((r) => ({
-      Date: r.dateStr,
-      Year: r.year,
-      Month: r.month,
-      Week: r.week,
-      "Order Number": r.orderNumber,
-      "Customer Name": r.customerName,
-      "Bar Code": r.barCode,
-      "Product Name": r.productName,
-      Color: r.color,
-      Category: r.category,
-      QTY: r.qty,
-      MRP: r.mrp,
-      "Sale Value": r.saleValue,
-      "Scoobies Margin": r.scoobiesMargin,
-      "EX-GST Margin": r.exGstMargin,
-      Channel: r.channel,
-      Status: r.status,
-      Location: r.deliveryPlace,
-      State: r.state,
-      Zone: r.zone,
-      Campaign: r.backToSchool,
-    }));
-
-    const csvStr = Papa.unparse(exportData);
-    const blob = new Blob([csvStr], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `filtered_sales_export_${new Date().toISOString().split("T")[0]}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
+  const handleExportFilteredCsv = useCallback(() => {
+    exportRecordsToCsv(filteredRecords);
+  }, [filteredRecords]);
 
   return (
     <div className="min-h-screen bg-[#F9F7F2] text-[#433E37] font-sans antialiased selection:bg-[#5F7161] selection:text-white">
@@ -313,10 +256,10 @@ export default function App() {
         totalRows={records.length}
         filteredRows={filteredRecords.length}
         salesTarget={salesTarget}
-        onOpenUpload={() => setIsUploadOpen(true)}
+        onOpenUpload={handleOpenUpload}
         onClearData={handleClearData}
-        onOpenGoal={() => setIsGoalOpen(true)}
-        onPrintReport={() => setIsPrintOpen(true)}
+        onOpenGoal={handleOpenGoal}
+        onPrintReport={handleOpenPrint}
         onExportFilteredCsv={handleExportFilteredCsv}
       />
 
@@ -339,7 +282,7 @@ export default function App() {
               </p>
               <button
                 type="button"
-                onClick={() => setIsUploadOpen(true)}
+                onClick={handleOpenUpload}
                 className="inline-flex items-center gap-2.5 px-6 py-3 text-sm font-bold text-white bg-[#5F7161] hover:bg-[#4E5E50] rounded-2xl transition-all shadow-md shadow-[#5F7161]/25 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
               >
                 <UploadCloud className="w-5 h-5" />
@@ -352,7 +295,7 @@ export default function App() {
         {/* Filter Bar */}
         <FilterBar
           filters={filters}
-          onFilterChange={setFilters}
+          onFilterChange={handleFilterChange}
           availableYears={availableYears}
           availableMonths={availableMonths}
           availableWeeks={availableWeeks}
@@ -365,7 +308,7 @@ export default function App() {
         <KpiGrid
           metrics={metrics}
           salesTarget={salesTarget}
-          onOpenGoalModal={() => setIsGoalOpen(true)}
+          onOpenGoalModal={handleOpenGoal}
         />
 
         {/* Executive Highlights & Actionable Insights */}
@@ -382,7 +325,7 @@ export default function App() {
         <SalesTrendChart
           data={timeSeriesData}
           granularity={granularity}
-          onGranularityChange={setGranularity}
+          onGranularityChange={handleGranularityChange}
         />
 
         {/* Marketplace Channel Breakdown */}
@@ -416,51 +359,65 @@ export default function App() {
         />
       </main>
 
-      {/* Upload CSV Modal */}
-      <UploadModal
-        isOpen={isUploadOpen}
-        onClose={() => setIsUploadOpen(false)}
-        onDataLoaded={handleNewDataLoaded}
-      />
+      {/* Lazy-loaded Modals and Drawers */}
+      {isUploadOpen && (
+        <Suspense fallback={null}>
+          <UploadModal
+            isOpen={isUploadOpen}
+            onClose={handleCloseUpload}
+            onDataLoaded={handleNewDataLoaded}
+          />
+        </Suspense>
+      )}
 
-      {/* Target Goal Modal */}
-      <GoalModal
-        isOpen={isGoalOpen}
-        onClose={() => setIsGoalOpen(false)}
-        currentGoal={salesTarget}
-        currentMargin={metrics.totalScoobiesMargin}
-        onSaveGoal={setSalesTarget}
-      />
+      {isGoalOpen && (
+        <Suspense fallback={null}>
+          <GoalModal
+            isOpen={isGoalOpen}
+            onClose={handleCloseGoal}
+            currentGoal={salesTarget}
+            currentMargin={metrics.totalScoobiesMargin}
+            onSaveGoal={handleSaveGoal}
+          />
+        </Suspense>
+      )}
 
-      {/* Print / Export Report Modal */}
-      <PrintReportView
-        isOpen={isPrintOpen}
-        onClose={() => setIsPrintOpen(false)}
-        metrics={metrics}
-        channels={channelMetrics}
-        categories={categoryMetrics}
-        topProducts={productMetrics}
-        cities={cityMetrics}
-        fileName={fileName}
-        totalRecordsCount={filteredRecords.length}
-      />
+      {isPrintOpen && (
+        <Suspense fallback={null}>
+          <PrintReportView
+            isOpen={isPrintOpen}
+            onClose={handleClosePrint}
+            metrics={metrics}
+            channels={channelMetrics}
+            categories={categoryMetrics}
+            topProducts={productMetrics}
+            cities={cityMetrics}
+            fileName={fileName}
+            totalRecordsCount={filteredRecords.length}
+          />
+        </Suspense>
+      )}
 
       {/* Floating Action Button (Bottom-Right) */}
       <AiFloatingButton
         isOpen={isAiDrawerOpen}
-        onClick={() => setIsAiDrawerOpen(true)}
+        onClick={handleOpenAi}
         filteredCount={filteredRecords.length}
       />
 
       {/* Right Slide-over AI Advisor Drawer */}
-      <AiAdvisorDrawer
-        isOpen={isAiDrawerOpen}
-        onClose={() => setIsAiDrawerOpen(false)}
-        distilledContext={distilledContext}
-        rawRecords={filteredRecords}
-        initialPrompt={aiInitialPrompt}
-        onClearInitialPrompt={() => setAiInitialPrompt(null)}
-      />
+      {isAiDrawerOpen && distilledContext && (
+        <Suspense fallback={null}>
+          <AiAdvisorDrawer
+            isOpen={isAiDrawerOpen}
+            onClose={handleCloseAi}
+            distilledContext={distilledContext}
+            rawRecords={filteredRecords}
+            initialPrompt={aiInitialPrompt}
+            onClearInitialPrompt={handleClearInitialPrompt}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

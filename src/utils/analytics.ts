@@ -167,6 +167,471 @@ export function computeSharePct(
   return Number(((Math.max(0, val) / total) * 100).toFixed(decimals));
 }
 
+export interface AllAnalyticsResult {
+  metrics: DashboardMetrics;
+  timeSeriesData: TimeSeriesPoint[];
+  channelMetrics: ChannelMetric[];
+  categoryMetrics: CategoryMetric[];
+  productMetrics: ProductMetric[];
+  zoneMetrics: GeoMetric[];
+  stateMetrics: GeoMetric[];
+  cityMetrics: GeoMetric[];
+}
+
+/**
+ * High-performance unified analytics aggregator.
+ * Computes dashboard KPIs, timeseries, channels, categories, products,
+ * and geographic distributions in a SINGLE linear O(N) pass.
+ */
+export function computeAllAnalytics(
+  records: SaleRecord[],
+  granularity: "daily" | "weekly" | "monthly" | "yearly" = "daily",
+): AllAnalyticsResult {
+  let totalGrossSales = 0;
+  let totalNetSales = 0;
+  let totalReturnedSales = 0;
+  let totalUnitsSold = 0;
+  let totalGrossUnits = 0;
+  let totalReturnedUnits = 0;
+  let totalScoobiesMargin = 0;
+  let totalExGstMargin = 0;
+  let retailersMarginTotal = 0;
+  let b2sNetSales = 0;
+
+  const ordersSet = new Set<string>();
+
+  // TimeSeries map
+  const timeSeriesMap = new Map<
+    string,
+    {
+      gross: number;
+      net: number;
+      returns: number;
+      qty: number;
+      count: number;
+      margin: number;
+      ts: number;
+      label: string;
+    }
+  >();
+
+  // Channel map
+  const channelMap = new Map<
+    string,
+    {
+      gross: number;
+      net: number;
+      returns: number;
+      orders: Set<string>;
+      units: number;
+      returnUnits: number;
+      margin: number;
+    }
+  >();
+
+  // Category map
+  const categoryMap = new Map<
+    string,
+    {
+      gross: number;
+      net: number;
+      returns: number;
+      units: number;
+      returnUnits: number;
+      orders: Set<string>;
+      margin: number;
+    }
+  >();
+
+  // Product map
+  const productMap = new Map<
+    string,
+    {
+      barCode: string;
+      category: string;
+      channels: Set<string>;
+      returnChannels: Set<string>;
+      gross: number;
+      net: number;
+      returns: number;
+      units: number;
+      returnUnits: number;
+      mrp: number;
+      margin: number;
+    }
+  >();
+
+  // Geo maps
+  const zoneMap = new Map<
+    string,
+    { sales: number; orders: Set<string>; units: number }
+  >();
+  const stateMap = new Map<
+    string,
+    { sales: number; orders: Set<string>; units: number }
+  >();
+  const cityMap = new Map<
+    string,
+    { sales: number; orders: Set<string>; units: number }
+  >();
+
+  for (let i = 0; i < records.length; i++) {
+    const r = records[i];
+    ordersSet.add(r.orderNumber);
+
+    const { isReturn, val, qty } = getRecordMetrics(r);
+
+    // 1. Dashboard Metrics
+    if (isReturn) {
+      totalReturnedSales += val;
+      totalReturnedUnits += qty;
+      totalNetSales -= val;
+      totalUnitsSold -= qty;
+    } else {
+      totalGrossSales += val;
+      totalGrossUnits += qty;
+      totalNetSales += val;
+      totalUnitsSold += qty;
+    }
+
+    totalScoobiesMargin += r.scoobiesMargin;
+    totalExGstMargin += r.exGstMargin;
+    retailersMarginTotal += r.retailersMargin;
+
+    if (isB2SCampaign(r.backToSchool)) {
+      b2sNetSales += isReturn ? -val : val;
+    }
+
+    // 2. TimeSeries
+    let timeKey = r.dateStr;
+    let timeLabel = r.dateStr;
+    if (granularity === "weekly") {
+      timeKey = `${r.year}-${r.month}-${r.week}`;
+      timeLabel = `${r.month} ${r.week}`;
+    } else if (granularity === "monthly") {
+      timeKey = `${r.year}-${r.month}`;
+      timeLabel = `${r.month} ${r.year}`;
+    } else if (granularity === "yearly") {
+      timeKey = `${r.year}`;
+      timeLabel = `${r.year}`;
+    }
+
+    let tsCurr = timeSeriesMap.get(timeKey);
+    if (!tsCurr) {
+      tsCurr = {
+        gross: 0,
+        net: 0,
+        returns: 0,
+        qty: 0,
+        count: 0,
+        margin: 0,
+        ts: r.timestamp,
+        label: timeLabel,
+      };
+      timeSeriesMap.set(timeKey, tsCurr);
+    }
+    if (isReturn) {
+      tsCurr.returns += val;
+      tsCurr.net -= val;
+      tsCurr.qty -= qty;
+    } else {
+      tsCurr.gross += val;
+      tsCurr.net += val;
+      tsCurr.qty += qty;
+    }
+    tsCurr.count += 1;
+    tsCurr.margin += r.scoobiesMargin;
+
+    // 3. Channel
+    const ch = r.channel || "Direct";
+    let chCurr = channelMap.get(ch);
+    if (!chCurr) {
+      chCurr = {
+        gross: 0,
+        net: 0,
+        returns: 0,
+        orders: new Set<string>(),
+        units: 0,
+        returnUnits: 0,
+        margin: 0,
+      };
+      channelMap.set(ch, chCurr);
+    }
+    chCurr.orders.add(r.orderNumber);
+    if (isReturn) {
+      chCurr.returns += val;
+      chCurr.net -= val;
+      chCurr.returnUnits += qty;
+      chCurr.units -= qty;
+    } else {
+      chCurr.gross += val;
+      chCurr.net += val;
+      chCurr.units += qty;
+    }
+    chCurr.margin += r.scoobiesMargin;
+
+    // 4. Category
+    const cat = r.category || "OTHER";
+    let catCurr = categoryMap.get(cat);
+    if (!catCurr) {
+      catCurr = {
+        gross: 0,
+        net: 0,
+        returns: 0,
+        units: 0,
+        returnUnits: 0,
+        orders: new Set<string>(),
+        margin: 0,
+      };
+      categoryMap.set(cat, catCurr);
+    }
+    catCurr.orders.add(r.orderNumber);
+    if (isReturn) {
+      catCurr.returns += val;
+      catCurr.net -= val;
+      catCurr.units -= qty;
+      catCurr.returnUnits += qty;
+    } else {
+      catCurr.gross += val;
+      catCurr.net += val;
+      catCurr.units += qty;
+    }
+    catCurr.margin += r.scoobiesMargin;
+
+    // 5. Product
+    const pName = r.productName;
+    const cleanCh = r.channel ? r.channel.trim() : "Direct";
+    let prodCurr = productMap.get(pName);
+    if (!prodCurr) {
+      prodCurr = {
+        barCode: r.barCode,
+        category: r.category,
+        channels: new Set<string>(),
+        returnChannels: new Set<string>(),
+        gross: 0,
+        net: 0,
+        returns: 0,
+        units: 0,
+        returnUnits: 0,
+        mrp: r.mrp,
+        margin: 0,
+      };
+      productMap.set(pName, prodCurr);
+    }
+    if (cleanCh) prodCurr.channels.add(cleanCh);
+    if (isReturn) {
+      prodCurr.returns += val;
+      prodCurr.net -= val;
+      prodCurr.returnUnits += qty;
+      prodCurr.units -= qty;
+      if (cleanCh) prodCurr.returnChannels.add(cleanCh);
+    } else {
+      prodCurr.gross += val;
+      prodCurr.net += val;
+      prodCurr.units += qty;
+    }
+    prodCurr.margin += r.scoobiesMargin;
+
+    // 6. Geo (Zone, State, City)
+    const zoneKey = r.zone || "Unassigned";
+    const stateKey = r.state || "Unassigned";
+    const cityKey = r.deliveryPlace || "Unassigned";
+
+    let zCurr = zoneMap.get(zoneKey);
+    if (!zCurr) {
+      zCurr = { sales: 0, orders: new Set<string>(), units: 0 };
+      zoneMap.set(zoneKey, zCurr);
+    }
+    zCurr.orders.add(r.orderNumber);
+    zCurr.sales += isReturn ? -val : val;
+    zCurr.units += isReturn ? -qty : qty;
+
+    let sCurr = stateMap.get(stateKey);
+    if (!sCurr) {
+      sCurr = { sales: 0, orders: new Set<string>(), units: 0 };
+      stateMap.set(stateKey, sCurr);
+    }
+    sCurr.orders.add(r.orderNumber);
+    sCurr.sales += isReturn ? -val : val;
+    sCurr.units += isReturn ? -qty : qty;
+
+    let cCurr = cityMap.get(cityKey);
+    if (!cCurr) {
+      cCurr = { sales: 0, orders: new Set<string>(), units: 0 };
+      cityMap.set(cityKey, cCurr);
+    }
+    cCurr.orders.add(r.orderNumber);
+    cCurr.sales += isReturn ? -val : val;
+    cCurr.units += isReturn ? -qty : qty;
+  }
+
+  const totalOrders = ordersSet.size;
+  const returnRateQtyPct =
+    totalGrossUnits > 0 ? (totalReturnedUnits / totalGrossUnits) * 100 : 0;
+  const returnRateValPct =
+    totalGrossSales > 0 ? (totalReturnedSales / totalGrossSales) * 100 : 0;
+  const averageOrderValue = totalOrders > 0 ? totalNetSales / totalOrders : 0;
+  const marginPercentage =
+    totalNetSales > 0 ? (totalScoobiesMargin / totalNetSales) * 100 : 0;
+  const b2sSalesPct =
+    totalNetSales > 0 ? (Math.max(0, b2sNetSales) / totalNetSales) * 100 : 0;
+
+  const metrics: DashboardMetrics = {
+    totalGrossSales,
+    totalNetSales,
+    totalReturnedSales,
+    totalOrders,
+    totalUnitsSold,
+    totalGrossUnits,
+    totalReturnedUnits,
+    returnRateQtyPct,
+    returnRateValPct,
+    averageOrderValue,
+    totalScoobiesMargin,
+    totalExGstMargin,
+    marginPercentage,
+    retailersMarginTotal,
+    b2sNetSales,
+    b2sSalesPct,
+  };
+
+  const timeSeriesData: TimeSeriesPoint[] = Array.from(timeSeriesMap.entries())
+    .sort((a, b) => a[1].ts - b[1].ts)
+    .map(([key, data]) => ({
+      date: key,
+      label: data.label,
+      timestamp: data.ts,
+      grossSales: Math.round(data.gross),
+      netSales: Math.round(data.net),
+      returns: Math.round(data.returns),
+      netQty: data.qty,
+      orderCount: data.count,
+      margin: Math.round(data.margin),
+    }));
+
+  const channelMetrics: ChannelMetric[] = Array.from(channelMap.entries())
+    .map(([channel, data]) => {
+      const orderCount = data.orders.size;
+      const avgOrderValue = orderCount > 0 ? data.net / orderCount : 0;
+      const totalAttempted = data.units + data.returnUnits;
+      const returnRate =
+        totalAttempted > 0 ? (data.returnUnits / totalAttempted) * 100 : 0;
+      const sharePct = computeSharePct(data.net, totalNetSales);
+
+      return {
+        channel,
+        grossSales: Math.round(data.gross),
+        netSales: Math.round(data.net),
+        returns: Math.round(data.returns),
+        orderCount,
+        units: data.units,
+        returnUnits: data.returnUnits,
+        returnRate: Math.max(0, Number(returnRate.toFixed(1))),
+        avgOrderValue: Math.round(avgOrderValue),
+        margin: Math.round(data.margin),
+        sharePct,
+      };
+    })
+    .sort((a, b) => b.netSales - a.netSales);
+
+  const categoryMetrics: CategoryMetric[] = Array.from(categoryMap.entries())
+    .map(([category, data]) => {
+      const sharePct = computeSharePct(data.net, totalNetSales);
+      const totalAttempted = data.units + data.returnUnits;
+      const returnRate =
+        totalAttempted > 0 ? (data.returnUnits / totalAttempted) * 100 : 0;
+      return {
+        category,
+        sales: Math.round(data.net),
+        grossSales: Math.round(data.gross),
+        returns: Math.round(data.returns),
+        units: data.units,
+        returnUnits: data.returnUnits,
+        returnRate: Number(returnRate.toFixed(1)),
+        orders: data.orders.size,
+        margin: Math.round(data.margin),
+        sharePct,
+      };
+    })
+    .sort((a, b) => b.sales - a.sales);
+
+  const productMetrics: ProductMetric[] = Array.from(productMap.entries())
+    .map(([productName, data]) => {
+      const grossUnits = data.units + data.returnUnits;
+      const returnRate =
+        grossUnits > 0 ? (data.returnUnits / grossUnits) * 100 : 0;
+      const sharePct = computeSharePct(data.net, totalNetSales);
+      const channelArray = Array.from(data.channels);
+      const returnChannelArray = Array.from(data.returnChannels);
+      const primaryChannel =
+        returnChannelArray.length > 0
+          ? returnChannelArray.join(", ")
+          : channelArray.length > 0
+            ? channelArray.join(", ")
+            : "Direct";
+
+      return {
+        productName,
+        barCode: data.barCode,
+        category: data.category,
+        channel: primaryChannel,
+        channels: channelArray,
+        returnChannels: returnChannelArray,
+        netSales: Math.round(data.net),
+        grossSales: Math.round(data.gross),
+        returns: Math.round(data.returns),
+        units: data.units,
+        returnUnits: data.returnUnits,
+        returnRate: Math.round(returnRate * 10) / 10,
+        mrp: data.mrp,
+        margin: Math.round(data.margin),
+        sharePct,
+      };
+    })
+    .sort((a, b) => b.netSales - a.netSales);
+
+  const zoneMetrics: GeoMetric[] = Array.from(zoneMap.entries())
+    .map(([name, data]) => ({
+      name,
+      sales: Math.round(data.sales),
+      orders: data.orders.size,
+      units: data.units,
+      sharePct: computeSharePct(data.sales, totalNetSales),
+    }))
+    .sort((a, b) => b.sales - a.sales);
+
+  const stateMetrics: GeoMetric[] = Array.from(stateMap.entries())
+    .map(([name, data]) => ({
+      name,
+      sales: Math.round(data.sales),
+      orders: data.orders.size,
+      units: data.units,
+      sharePct: computeSharePct(data.sales, totalNetSales),
+    }))
+    .sort((a, b) => b.sales - a.sales);
+
+  const cityMetrics: GeoMetric[] = Array.from(cityMap.entries())
+    .map(([name, data]) => ({
+      name,
+      sales: Math.round(data.sales),
+      orders: data.orders.size,
+      units: data.units,
+      sharePct: computeSharePct(data.sales, totalNetSales),
+    }))
+    .sort((a, b) => b.sales - a.sales);
+
+  return {
+    metrics,
+    timeSeriesData,
+    channelMetrics,
+    categoryMetrics,
+    productMetrics,
+    zoneMetrics,
+    stateMetrics,
+    cityMetrics,
+  };
+}
+
 export function computeDashboardMetrics(
   records: SaleRecord[],
 ): DashboardMetrics {

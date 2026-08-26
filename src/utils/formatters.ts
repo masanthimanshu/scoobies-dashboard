@@ -77,3 +77,63 @@ export const CHART_PALETTE = [
   "#8C8376", // Warm Stone
   "#2D2A26", // Espresso
 ] as const;
+
+/**
+ * Standard 3-letter month abbreviations for chronological ordering
+ */
+export const MONTHS_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
+/**
+ * Sorts month names chronologically (Jan -> Dec)
+ */
+export function sortMonthList(months: string[]): string[] {
+  return [...months].sort((a, b) => {
+    const aLower = a.toLowerCase();
+    const bLower = b.toLowerCase();
+    const idxA = MONTHS_SHORT.findIndex(
+      (m) => m.toLowerCase() === aLower || aLower.startsWith(m.toLowerCase()),
+    );
+    const idxB = MONTHS_SHORT.findIndex(
+      (m) => m.toLowerCase() === bLower || bLower.startsWith(m.toLowerCase()),
+    );
+    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+    return a.localeCompare(b);
+  });
+}
+
+/**
+ * Sorts week identifiers numerically (Week 1 -> Week 52)
+ */
+export function sortWeekList(weeks: string[]): string[] {
+  return [...weeks].sort((a, b) => {
+    const numA = parseInt(a.replace(/\D/g, ""), 10);
+    const numB = parseInt(b.replace(/\D/g, ""), 10);
+    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+    return a.localeCompare(b);
+  });
+}
+
+/**
+ * Consistent tooltip styling across charts
+ */
+export const CHART_TOOLTIP_STYLE = {
+  backgroundColor: "#2D2A26",
+  borderRadius: "12px",
+  color: "#fff",
+  fontSize: "12px",
+  border: "none",
+  fontWeight: 600,
+} as const;

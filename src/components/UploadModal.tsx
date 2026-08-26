@@ -8,7 +8,7 @@ import {
   Info,
   Loader2,
 } from "lucide-react";
-import { parseSalesCsv } from "../utils/csvParser";
+import { parseSalesCsv, downloadFile } from "../utils/csvParser";
 import { SaleRecord } from "../types";
 
 interface UploadModalProps {
@@ -75,13 +75,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   const downloadSampleTemplate = () => {
     const header =
       "Year,Month,Week,Day,Date,Order Number,Customer name,Bar Code,Product name,Color,PRODUCT CATEGORY,QTY,MRP,MRP Value,Scoobies Margin,Retailers Margin,EX-GST Scoobies Margin,Delivery Place,State,Website,Status,Received Payment,Back To School,Zone,Sale Value\n2026,Aug,Week1,1,1/8/2026,16542,Ekta Gupta,SC0000190,Wrapping Sheets (Assorted),Multi,Wrapping Sheets,1,89,89,20,0,16.95,North Delhi,Delhi,Office Website,Dispatched,,With out B2S,North,20";
-    const blob = new Blob([header], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "sales_report_template.csv";
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadFile(header, "sales_report_template.csv");
   };
 
   return (

@@ -14,12 +14,17 @@ import {
   Target,
   Layers,
   StopCircle,
+  Mic,
+  Square,
+  Loader2,
 } from "lucide-react";
 import { marked } from "marked";
 import {
   ChatMessage,
   streamGroqChat,
   getActiveGroqApiKey,
+  transcribeGroqAudio,
+  refineSpokenPromptWithGroq,
 } from "../services/groqService";
 import {
   DistilledSalesContext,
@@ -63,19 +68,59 @@ export const AiAdvisorDrawer: React.FC<AiAdvisorDrawerProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
+  // Audio Recording & STT state
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [audioError, setAudioError] = useState<string | null>(null);
+
+  // Audio recording refs
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const timerIntervalRef = useRef<number | null>(null);
+
   // Abort controller ref for cancellation
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Clean up audio streams and timers on unmount or drawer close
+  useEffect(() => {
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+      if (
+        mediaRecorderRef.current &&
+        mediaRecorderRef.current.state !== "inactive"
+      ) {
+        mediaRecorderRef.current.stop();
+      }
+    };
+  }, []);
 
   // Sync API Key state from .env
   const hasApiKey = useMemo(() => {
     return getActiveGroqApiKey().length > 0;
   }, []);
 
-  // Context markdown
+  // Context markdown for full chat
   const contextMarkdown = useMemo(() => {
     return formatDistilledContextToMarkdown(distilledContext);
+  }, [distilledContext]);
+
+  // Concise context summary for voice prompt refinement
+  const contextSummary = useMemo(() => {
+    const chNames = distilledContext.channels.map((c) => c.name).join(", ");
+    const catNames = distilledContext.categories
+      .slice(0, 8)
+      .map((c) => c.name)
+      .join(", ");
+    return `Dataset: ${distilledContext.datasetInfo.totalRecords} records (${distilledContext.datasetInfo.dateSpan || "All time"}).
+Active Filters: ${distilledContext.datasetInfo.activeFiltersDescription}.
+Active Sales Channels: ${chNames || "All"}.
+Top Product Categories: ${catNames || "All"}.
+Key Metrics: Net Sales ${formatCurrency(distilledContext.kpis.netSales)}, Margin ${formatPercent(distilledContext.kpis.scoobiesMarginPct)}, Returns ${formatPercent(distilledContext.kpis.returnRateQtyPct)}, Target Quota ${formatCurrency(distilledContext.kpis.salesTarget)}.`;
   }, [distilledContext]);
 
   // Scroll to bottom on new messages
@@ -124,6 +169,112 @@ export const AiAdvisorDrawer: React.FC<AiAdvisorDrawerProps> = ({
   const handleClearChat = () => {
     handleStop();
     setMessages([]);
+  };
+
+  // Start Speech-to-Text recording
+  const handleStartRecording = async () => {
+    setAudioError(null);
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Microphone access is not supported in this browser.");
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // Determine best supported MIME type
+      let options: MediaRecorderOptions = {};
+      if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+        options = { mimeType: "audio/webm;codecs=opus" };
+      } else if (MediaRecorder.isTypeSupported("audio/webm")) {
+        options = { mimeType: "audio/webm" };
+      } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+        options = { mimeType: "audio/mp4" };
+      }
+
+      const recorder = new MediaRecorder(stream, options);
+      mediaRecorderRef.current = recorder;
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        // Stop audio tracks so the mic light turns off
+        stream.getTracks().forEach((track) => track.stop());
+
+        if (audioChunksRef.current.length === 0) {
+          setIsTranscribing(false);
+          return;
+        }
+
+        const mimeType = recorder.mimeType || "audio/webm";
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        audioChunksRef.current = [];
+
+        setIsTranscribing(true);
+        try {
+          // Step 1: Transcribe audio with Groq Whisper Large V3 Turbo
+          const rawTranscript = await transcribeGroqAudio({
+            audioBlob,
+            model: "whisper-large-v3-turbo",
+          });
+
+          if (rawTranscript) {
+            // Step 2: Refine spoken transcript with Groq 120B using active dashboard context
+            const refinedPrompt = await refineSpokenPromptWithGroq({
+              rawTranscript,
+              contextSummary,
+              model: "openai/gpt-oss-120b",
+            });
+
+            setInputQuery((prev) =>
+              prev.trim() ? `${prev.trim()} ${refinedPrompt}` : refinedPrompt,
+            );
+            setTimeout(() => inputRef.current?.focus(), 100);
+          }
+        } catch (err: unknown) {
+          const msg =
+            err instanceof Error ? err.message : "Failed to transcribe audio.";
+          setAudioError(msg);
+          setTimeout(() => setAudioError(null), 5000);
+        } finally {
+          setIsTranscribing(false);
+        }
+      };
+
+      recorder.start(100);
+      setIsRecording(true);
+      setRecordingDuration(0);
+
+      timerIntervalRef.current = window.setInterval(() => {
+        setRecordingDuration((prev) => prev + 1);
+      }, 1000);
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Microphone access denied or unavailable.";
+      setAudioError(msg);
+      setTimeout(() => setAudioError(null), 5000);
+    }
+  };
+
+  // Stop recording and trigger Whisper transcription
+  const handleStopRecording = () => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== "inactive"
+    ) {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
   };
 
   // Copy assistant response
@@ -518,49 +669,14 @@ Ensure \`GROQ_API_KEY\` is defined in your \`.env\` file to enable real-time Gro
 
         {/* Footer / Input Area */}
         <div className="p-4 bg-white border-t border-[#EBE5D9] shrink-0">
-          {/* Quick Prompt Chips (when in active chat) */}
-          {messages.length > 0 && !isGenerating && (
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-2 no-scrollbar">
-              <button
-                type="button"
-                onClick={() =>
-                  handleSendMessage(
-                    "What are the top 3 items draining margin through returns?",
-                  )
-                }
-                className="whitespace-nowrap px-2.5 py-1 rounded-full bg-[#FAF8F5] hover:bg-[#F1EDE5] border border-[#EBE5D9] text-[10px] font-bold text-[#433E37] transition-colors cursor-pointer shrink-0"
-              >
-                ⚠️ Top Return Drainers
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  handleSendMessage(
-                    "Which sales channel generates the highest profit per order?",
-                  )
-                }
-                className="whitespace-nowrap px-2.5 py-1 rounded-full bg-[#FAF8F5] hover:bg-[#F1EDE5] border border-[#EBE5D9] text-[10px] font-bold text-[#433E37] transition-colors cursor-pointer shrink-0"
-              >
-                📊 Best Margin Channel
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  handleSendMessage(
-                    "What price or bundle adjustments would increase our AOV?",
-                  )
-                }
-                className="whitespace-nowrap px-2.5 py-1 rounded-full bg-[#FAF8F5] hover:bg-[#F1EDE5] border border-[#EBE5D9] text-[10px] font-bold text-[#433E37] transition-colors cursor-pointer shrink-0"
-              >
-                💡 Increase AOV Levers
-              </button>
-            </div>
-          )}
-
           {/* Form */}
           <form
             onSubmit={(e) => {
               e.preventDefault();
+              if (isRecording) {
+                handleStopRecording();
+                return;
+              }
               handleSendMessage();
             }}
             className="flex items-center gap-2"
@@ -571,17 +687,58 @@ Ensure \`GROQ_API_KEY\` is defined in your \`.env\` file to enable real-time Gro
                 type="text"
                 value={inputQuery}
                 onChange={(e) => setInputQuery(e.target.value)}
-                placeholder="Ask anything about sales, margins, returns, channels, or targets..."
-                disabled={isGenerating}
-                className="w-full px-4 py-3 pr-10 text-xs border border-[#EBE5D9] rounded-2xl bg-[#FAF8F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#5F7161]/30 focus:border-[#5F7161] font-medium placeholder-[#A89F91] transition-all disabled:opacity-60"
+                placeholder={
+                  isRecording
+                    ? `🎙️ Recording (${Math.floor(recordingDuration / 60)}:${(recordingDuration % 60).toString().padStart(2, "0")})... Click to finish`
+                    : isTranscribing
+                      ? "⚡ Transcribing & refining with Groq AI..."
+                      : "Ask anything or specify a persona (e.g., 'Act as a performance marketer...')"
+                }
+                disabled={isGenerating || isTranscribing}
+                className={`w-full px-4 py-3 pr-11 text-xs border rounded-2xl bg-[#FAF8F5] focus:bg-white focus:outline-none focus:ring-2 font-medium placeholder-[#A89F91] transition-all disabled:opacity-60 ${
+                  isRecording
+                    ? "border-red-400 ring-2 ring-red-400/20 bg-red-50/40 text-red-900"
+                    : "border-[#EBE5D9] focus:ring-[#5F7161]/30 focus:border-[#5F7161]"
+                }`}
               />
+
+              {/* Microphone Action Button inside text field */}
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center">
+                {isTranscribing ? (
+                  <div
+                    className="p-1 text-[#5F7161] animate-spin"
+                    title="Transcribing audio with Whisper Turbo..."
+                  >
+                    <Loader2 className="w-4 h-4" />
+                  </div>
+                ) : isRecording ? (
+                  <button
+                    type="button"
+                    onClick={handleStopRecording}
+                    className="p-1.5 rounded-xl bg-red-500 hover:bg-red-600 text-white shadow-xs animate-pulse transition-all cursor-pointer"
+                    title="Stop recording and transcribe"
+                  >
+                    <Square className="w-3.5 h-3.5 fill-current" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleStartRecording}
+                    disabled={isGenerating}
+                    className="p-1.5 rounded-xl text-[#8C8376] hover:text-[#5F7161] hover:bg-[#F1EDE5] transition-all cursor-pointer disabled:opacity-40"
+                    title="Speak question (Groq Whisper Turbo)"
+                  >
+                    <Mic className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
 
             {isGenerating ? (
               <button
                 type="button"
                 onClick={handleStop}
-                className="px-4 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                className="px-4 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
                 title="Stop generation"
               >
                 <StopCircle className="w-4 h-4" />
@@ -590,8 +747,8 @@ Ensure \`GROQ_API_KEY\` is defined in your \`.env\` file to enable real-time Gro
             ) : (
               <button
                 type="submit"
-                disabled={!inputQuery.trim()}
-                className="px-4 py-3 rounded-2xl bg-[#5F7161] hover:bg-[#4E5E50] disabled:opacity-40 disabled:hover:bg-[#5F7161] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-[#5F7161]/25 transition-all cursor-pointer"
+                disabled={!inputQuery.trim() || isRecording || isTranscribing}
+                className="px-4 py-3 rounded-2xl bg-[#5F7161] hover:bg-[#4E5E50] disabled:opacity-40 disabled:hover:bg-[#5F7161] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-[#5F7161]/25 transition-all cursor-pointer shrink-0"
                 title="Send query"
               >
                 <Send className="w-4 h-4" />
@@ -599,6 +756,23 @@ Ensure \`GROQ_API_KEY\` is defined in your \`.env\` file to enable real-time Gro
               </button>
             )}
           </form>
+
+          {/* Audio Error Alert if any */}
+          {audioError && (
+            <div className="mt-2 px-3 py-2 bg-red-50 border border-red-200 rounded-xl text-[11px] text-red-700 font-semibold flex items-center justify-between animate-in fade-in duration-200">
+              <div className="flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                <span>{audioError}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAudioError(null)}
+                className="text-red-400 hover:text-red-700 ml-2 cursor-pointer"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          )}
 
           {/* Footer note */}
           <div className="mt-2 flex items-center justify-between text-[10px] text-[#8C8376] font-medium px-1">
