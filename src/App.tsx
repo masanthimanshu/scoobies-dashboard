@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Papa from "papaparse";
+import { UploadCloud } from "lucide-react";
 import { Navbar } from "./components/Navbar";
 import { FilterBar } from "./components/FilterBar";
 import { KpiGrid } from "./components/KpiGrid";
@@ -17,8 +18,6 @@ import { PrintReportView } from "./components/PrintReportView";
 import { AiFloatingButton } from "./components/AiFloatingButton";
 import { AiAdvisorDrawer } from "./components/AiAdvisorDrawer";
 
-import { INITIAL_CSV_DATA } from "./data/sampleCsv";
-import { parseSalesCsv } from "./utils/csvParser";
 import {
   filterRecords,
   computeDashboardMetrics,
@@ -50,9 +49,23 @@ const DEFAULT_FILTERS: FilterState = {
   campaign: "ALL",
 };
 
+function extractUniqueValues(
+  records: SaleRecord[],
+  key: keyof SaleRecord,
+): string[] {
+  const set = new Set<string>();
+  records.forEach((r) => {
+    const val = r[key];
+    if (typeof val === "string" && val.trim()) {
+      set.add(val.trim());
+    }
+  });
+  return Array.from(set).sort();
+}
+
 export default function App() {
   const [records, setRecords] = useState<SaleRecord[]>([]);
-  const [fileName, setFileName] = useState<string>("15-Days-Sales-Report.csv");
+  const [fileName, setFileName] = useState<string>("");
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [granularity, setGranularity] = useState<
     "daily" | "weekly" | "monthly" | "yearly"
@@ -78,19 +91,9 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Load default dataset on mount
-  useEffect(() => {
-    async function loadInitial() {
-      const parsed = await parseSalesCsv(INITIAL_CSV_DATA);
-      setRecords(parsed.records);
-    }
-    loadInitial();
-  }, []);
-
-  const handleResetToSample = async () => {
-    const parsed = await parseSalesCsv(INITIAL_CSV_DATA);
-    setRecords(parsed.records);
-    setFileName("15-Days-Sales-Report.csv");
+  const handleClearData = () => {
+    setRecords([]);
+    setFileName("");
     setFilters(DEFAULT_FILTERS);
   };
 
@@ -164,29 +167,20 @@ export default function App() {
     });
   }, [records]);
 
-  const availableChannels = useMemo(() => {
-    const set = new Set<string>();
-    records.forEach((r) => {
-      if (r.channel) set.add(r.channel);
-    });
-    return Array.from(set).sort();
-  }, [records]);
+  const availableChannels = useMemo(
+    () => extractUniqueValues(records, "channel"),
+    [records],
+  );
 
-  const availableCategories = useMemo(() => {
-    const set = new Set<string>();
-    records.forEach((r) => {
-      if (r.category) set.add(r.category);
-    });
-    return Array.from(set).sort();
-  }, [records]);
+  const availableCategories = useMemo(
+    () => extractUniqueValues(records, "category"),
+    [records],
+  );
 
-  const availableZones = useMemo(() => {
-    const set = new Set<string>();
-    records.forEach((r) => {
-      if (r.zone) set.add(r.zone);
-    });
-    return Array.from(set).sort();
-  }, [records]);
+  const availableZones = useMemo(
+    () => extractUniqueValues(records, "zone"),
+    [records],
+  );
 
   // Filtered dataset
   const filteredRecords = useMemo(() => {
@@ -230,7 +224,6 @@ export default function App() {
     return generateExecutiveInsights(
       metrics,
       channelMetrics,
-      categoryMetrics,
       productMetrics,
       zoneMetrics,
       filteredRecords,
@@ -238,7 +231,6 @@ export default function App() {
   }, [
     metrics,
     channelMetrics,
-    categoryMetrics,
     productMetrics,
     zoneMetrics,
     filteredRecords,
@@ -324,7 +316,7 @@ export default function App() {
         filteredRows={filteredRecords.length}
         salesTarget={salesTarget}
         onOpenUpload={() => setIsUploadOpen(true)}
-        onResetSample={handleResetToSample}
+        onClearData={handleClearData}
         onOpenGoal={() => setIsGoalOpen(true)}
         onPrintReport={() => setIsPrintOpen(true)}
         onExportFilteredCsv={handleExportFilteredCsv}
@@ -332,6 +324,33 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Empty State Banner when no dataset is loaded */}
+        {records.length === 0 && (
+          <div className="bg-white border-2 border-dashed border-[#5F7161]/30 rounded-[32px] p-8 sm:p-12 mb-8 text-center shadow-xs">
+            <div className="max-w-md mx-auto flex flex-col items-center">
+              <div className="w-16 h-16 rounded-3xl bg-[#E9EFEA] text-[#5F7161] flex items-center justify-center mb-4 shadow-inner border border-[#C5D5C7]">
+                <UploadCloud className="w-8 h-8" />
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-[#2D2A26] tracking-tight mb-2">
+                No Sales Data Loaded
+              </h2>
+              <p className="text-sm text-[#8C8376] font-medium mb-6">
+                Upload your sales CSV report to explore real-time revenue KPIs,
+                channel breakdowns, product margins, return analytics, and AI
+                strategic insights.
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsUploadOpen(true)}
+                className="inline-flex items-center gap-2.5 px-6 py-3 text-sm font-bold text-white bg-[#5F7161] hover:bg-[#4E5E50] rounded-2xl transition-all shadow-md shadow-[#5F7161]/25 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <UploadCloud className="w-5 h-5" />
+                <span>Import Sales CSV</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Filter Bar */}
         <FilterBar
           filters={filters}

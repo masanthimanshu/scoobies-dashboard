@@ -13,6 +13,28 @@ interface ExecutiveSummaryProps {
   onOpenAiDeepDive?: (prompt?: string) => void;
 }
 
+const INSIGHT_STYLES: Record<
+  ExecutiveInsight["type"],
+  { badgeBg: string; icon: React.ReactNode }
+> = {
+  positive: {
+    badgeBg: "bg-[#E9EFEA] text-[#5F7161] border-[#C5D5C7]",
+    icon: <CheckCircle2 className="w-3.5 h-3.5 text-[#5F7161]" />,
+  },
+  warning: {
+    badgeBg: "bg-[#FAF0E6] text-[#AF8260] border-[#E8D2C2]",
+    icon: <AlertTriangle className="w-3.5 h-3.5 text-[#AF8260]" />,
+  },
+  highlight: {
+    badgeBg: "bg-[#FDF4EB] text-[#E7AB79] border-[#F5DCBF]",
+    icon: <Sparkles className="w-3.5 h-3.5 text-[#E7AB79]" />,
+  },
+  neutral: {
+    badgeBg: "bg-[#E9EFEA] text-[#5F7161] border-[#C5D5C7]",
+    icon: <TrendingUp className="w-3.5 h-3.5 text-[#5F7161]" />,
+  },
+};
+
 export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({
   insights,
   totalRecordsCount,
@@ -61,32 +83,19 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {insights.map((insight, idx) => {
-          let badgeBg = "bg-[#E9EFEA] text-[#5F7161] border-[#C5D5C7]";
-          let cardBg = "bg-[#F9F7F2] border-[#EBE5D9]";
-          let icon = <TrendingUp className="w-3.5 h-3.5 text-[#5F7161]" />;
-
-          if (insight.type === "warning") {
-            badgeBg = "bg-[#FAF0E6] text-[#AF8260] border-[#E8D2C2]";
-            icon = <AlertTriangle className="w-3.5 h-3.5 text-[#AF8260]" />;
-          } else if (insight.type === "positive") {
-            badgeBg = "bg-[#E9EFEA] text-[#5F7161] border-[#C5D5C7]";
-            icon = <CheckCircle2 className="w-3.5 h-3.5 text-[#5F7161]" />;
-          } else if (insight.type === "highlight") {
-            badgeBg = "bg-[#FDF4EB] text-[#E7AB79] border-[#F5DCBF]";
-            icon = <Sparkles className="w-3.5 h-3.5 text-[#E7AB79]" />;
-          }
+          const style = INSIGHT_STYLES[insight.type] || INSIGHT_STYLES.neutral;
 
           return (
             <div
               key={idx}
-              className={`${cardBg} hover:bg-[#F1EDE5] transition-colors border rounded-2xl p-4 flex flex-col justify-between`}
+              className="bg-[#F9F7F2] border-[#EBE5D9] hover:bg-[#F1EDE5] transition-colors border rounded-2xl p-4 flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${badgeBg}`}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${style.badgeBg}`}
                   >
-                    {icon}
+                    {style.icon}
                     <span>{insight.metric || "Key Driver"}</span>
                   </span>
                 </div>

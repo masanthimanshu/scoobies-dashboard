@@ -621,10 +621,63 @@ export function computeGeoMetrics(
     .sort((a, b) => b.sales - a.sales);
 }
 
+interface PeriodAggregate {
+  label: string;
+  profit: number;
+  netSales: number;
+  orders: Set<string>;
+}
+
+function updatePeriodMap(
+  map: Map<string, PeriodAggregate>,
+  key: string,
+  label: string,
+  isReturn: boolean,
+  val: number,
+  profit: number,
+  orderNumber: string,
+) {
+  const curr = map.get(key) || {
+    label,
+    profit: 0,
+    netSales: 0,
+    orders: new Set<string>(),
+  };
+  curr.netSales += isReturn ? -val : val;
+  curr.profit += profit;
+  if (orderNumber) curr.orders.add(orderNumber);
+  map.set(key, curr);
+}
+
+function createPeriodInsight(
+  periodMap: Map<string, PeriodAggregate>,
+  periodType: "Month" | "Week",
+): ExecutiveInsight | null {
+  const sorted = Array.from(periodMap.values())
+    .map((p) => ({
+      ...p,
+      orderCount: p.orders.size,
+      marginPct: p.netSales > 0 ? (p.profit / p.netSales) * 100 : 0,
+    }))
+    .sort((a, b) => (b.profit !== a.profit ? b.profit - a.profit : b.netSales - a.netSales));
+
+  if (sorted.length > 0 && sorted[0].profit > 0) {
+    const top = sorted[0];
+    const marginPctStr =
+      top.marginPct > 0 ? ` (${top.marginPct.toFixed(1)}% margin)` : "";
+    return {
+      type: "positive",
+      title: `Most Profitable ${periodType}: ${top.label}`,
+      description: `Delivered ₹${Math.round(top.profit).toLocaleString()} in profit${marginPctStr} on ₹${Math.round(top.netSales).toLocaleString()} net sales across ${top.orderCount} orders.`,
+      metric: `₹${Math.round(top.profit).toLocaleString()} Profit`,
+    };
+  }
+  return null;
+}
+
 export function generateExecutiveInsights(
   metrics: DashboardMetrics,
   channels: ChannelMetric[],
-  categories: CategoryMetric[],
   products: ProductMetric[],
   zones: GeoMetric[],
   records?: SaleRecord[],
@@ -633,38 +686,12 @@ export function generateExecutiveInsights(
 
   // Most Profitable Month & Most Profitable Week
   if (records && records.length > 0) {
-    // 1. Month Aggregation
-    const monthMap = new Map<
-      string,
-      {
-        label: string;
-        profit: number;
-        exGstProfit: number;
-        netSales: number;
-        grossSales: number;
-        orders: Set<string>;
-        units: number;
-      }
-    >();
-
-    // 2. Week Aggregation
-    const weekMap = new Map<
-      string,
-      {
-        label: string;
-        profit: number;
-        exGstProfit: number;
-        netSales: number;
-        grossSales: number;
-        orders: Set<string>;
-        units: number;
-      }
-    >();
+    const monthMap = new Map<string, PeriodAggregate>();
+    const weekMap = new Map<string, PeriodAggregate>();
 
     records.forEach((r) => {
-      const { isReturn, val, qty } = getRecordMetrics(r);
+      const { isReturn, val } = getRecordMetrics(r);
       const profitVal = r.scoobiesMargin || 0;
-      const exGstVal = r.exGstMargin || 0;
 
       // Month
       let monthName = r.month || "";
@@ -680,107 +707,37 @@ export function generateExecutiveInsights(
       const monthLabel = `${monthName} ${yr}`;
       const monthKey = `${yr}-${monthName}`;
 
-      const currMonth = monthMap.get(monthKey) || {
-        label: monthLabel,
-        profit: 0,
-        exGstProfit: 0,
-        netSales: 0,
-        grossSales: 0,
-        orders: new Set<string>(),
-        units: 0,
-      };
+      updatePeriodMap(
+        monthMap,
+        monthKey,
+        monthLabel,
+        isReturn,
+        val,
+        profitVal,
+        r.orderNumber,
+      );
 
       // Week
       const weekName = r.week || `Week ${Math.ceil(r.day / 7)}`;
       const weekLabel = r.month ? `${weekName} (${r.month})` : weekName;
       const weekKey = `${yr}-${r.month || "Aug"}-${weekName}`;
 
-      const currWeek = weekMap.get(weekKey) || {
-        label: weekLabel,
-        profit: 0,
-        exGstProfit: 0,
-        netSales: 0,
-        grossSales: 0,
-        orders: new Set<string>(),
-        units: 0,
-      };
-
-      if (isReturn) {
-        currMonth.netSales -= val;
-        currMonth.units -= qty;
-        currWeek.netSales -= val;
-        currWeek.units -= qty;
-      } else {
-        currMonth.grossSales += val;
-        currMonth.netSales += val;
-        currMonth.units += qty;
-        currWeek.grossSales += val;
-        currWeek.netSales += val;
-        currWeek.units += qty;
-      }
-
-      currMonth.profit += profitVal;
-      currMonth.exGstProfit += exGstVal;
-      if (r.orderNumber) currMonth.orders.add(r.orderNumber);
-      monthMap.set(monthKey, currMonth);
-
-      currWeek.profit += profitVal;
-      currWeek.exGstProfit += exGstVal;
-      if (r.orderNumber) currWeek.orders.add(r.orderNumber);
-      weekMap.set(weekKey, currWeek);
+      updatePeriodMap(
+        weekMap,
+        weekKey,
+        weekLabel,
+        isReturn,
+        val,
+        profitVal,
+        r.orderNumber,
+      );
     });
 
-    // Most Profitable Month
-    const monthlyList = Array.from(monthMap.values())
-      .map((m) => ({
-        ...m,
-        orderCount: m.orders.size,
-        marginPct: m.netSales > 0 ? (m.profit / m.netSales) * 100 : 0,
-      }))
-      .sort((a, b) => {
-        if (b.profit !== a.profit) return b.profit - a.profit;
-        return b.netSales - a.netSales;
-      });
+    const topMonthInsight = createPeriodInsight(monthMap, "Month");
+    if (topMonthInsight) insights.push(topMonthInsight);
 
-    if (monthlyList.length > 0 && monthlyList[0].profit > 0) {
-      const topMonth = monthlyList[0];
-      const marginPctStr =
-        topMonth.marginPct > 0
-          ? ` (${topMonth.marginPct.toFixed(1)}% margin)`
-          : "";
-      insights.push({
-        type: "positive",
-        title: `Most Profitable Month: ${topMonth.label}`,
-        description: `Delivered ₹${Math.round(topMonth.profit).toLocaleString()} in profit${marginPctStr} on ₹${Math.round(topMonth.netSales).toLocaleString()} net sales across ${topMonth.orderCount} orders.`,
-        metric: `₹${Math.round(topMonth.profit).toLocaleString()} Profit`,
-      });
-    }
-
-    // Most Profitable Week
-    const weeklyList = Array.from(weekMap.values())
-      .map((w) => ({
-        ...w,
-        orderCount: w.orders.size,
-        marginPct: w.netSales > 0 ? (w.profit / w.netSales) * 100 : 0,
-      }))
-      .sort((a, b) => {
-        if (b.profit !== a.profit) return b.profit - a.profit;
-        return b.netSales - a.netSales;
-      });
-
-    if (weeklyList.length > 0 && weeklyList[0].profit > 0) {
-      const topWeek = weeklyList[0];
-      const marginPctStr =
-        topWeek.marginPct > 0
-          ? ` (${topWeek.marginPct.toFixed(1)}% margin)`
-          : "";
-      insights.push({
-        type: "positive",
-        title: `Most Profitable Week: ${topWeek.label}`,
-        description: `Delivered ₹${Math.round(topWeek.profit).toLocaleString()} in profit${marginPctStr} on ₹${Math.round(topWeek.netSales).toLocaleString()} net sales across ${topWeek.orderCount} orders.`,
-        metric: `₹${Math.round(topWeek.profit).toLocaleString()} Profit`,
-      });
-    }
+    const topWeekInsight = createPeriodInsight(weekMap, "Week");
+    if (topWeekInsight) insights.push(topWeekInsight);
   }
 
   // Top Channel Driver

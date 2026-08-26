@@ -23,6 +23,172 @@ interface FilterBarProps {
   availableZones: string[];
 }
 
+interface TimeFilterGroupProps {
+  label: string;
+  allLabel: string;
+  items: (string | number)[];
+  selectedItems: string[];
+  onToggle: (val: string) => void;
+}
+
+const TimeFilterGroup: React.FC<TimeFilterGroupProps> = ({
+  label,
+  allLabel,
+  items,
+  selectedItems,
+  onToggle,
+}) => {
+  const validItems = items.filter(
+    (item) =>
+      item !== undefined &&
+      item !== null &&
+      item !== "" &&
+      item !== "#N/A" &&
+      item !== "N/A",
+  );
+  if (validItems.length === 0) return null;
+
+  const showCompact = validItems.length <= 4;
+  const recentItems = showCompact ? validItems : validItems.slice(0, 3);
+  const isOlderSelected =
+    !showCompact &&
+    selectedItems.some(
+      (sel) =>
+        !recentItems.some((r) => String(r).toLowerCase() === sel.toLowerCase()),
+    );
+
+  return (
+    <div className="flex items-center gap-1.5 shrink-0">
+      <span className="text-xs font-bold text-[#8C8376] uppercase tracking-wider mr-1">
+        {label}:
+      </span>
+
+      <div className="flex items-center gap-1 bg-[#F1EDE5] p-1 rounded-xl border border-[#EBE5D9]">
+        <button
+          type="button"
+          onClick={() => onToggle("ALL")}
+          className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
+            selectedItems.length === 0
+              ? "bg-[#2D2A26] text-white shadow-2xs font-extrabold"
+              : "text-[#8C8376] hover:text-[#2D2A26]"
+          }`}
+        >
+          {allLabel}
+        </button>
+
+        {recentItems.map((item) => {
+          const str = String(item);
+          const isSelected = selectedItems.some(
+            (s) => s.toLowerCase() === str.toLowerCase(),
+          );
+          return (
+            <button
+              type="button"
+              key={str}
+              onClick={() => onToggle(str)}
+              className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                isSelected
+                  ? "bg-[#5F7161] text-white shadow-2xs font-extrabold"
+                  : "text-[#8C8376] hover:text-[#2D2A26]"
+              }`}
+            >
+              {str}
+            </button>
+          );
+        })}
+
+        {!showCompact && (
+          <div className="relative inline-flex items-center">
+            <select
+              value=""
+              onChange={(e) => {
+                if (e.target.value) onToggle(e.target.value);
+              }}
+              className={`pl-2.5 pr-7 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer appearance-none focus:outline-none ${
+                isOlderSelected
+                  ? "bg-[#5F7161] text-white shadow-2xs"
+                  : "bg-transparent text-[#8C8376] hover:text-[#2D2A26]"
+              }`}
+            >
+              <option value="" disabled className="bg-white text-[#2D2A26]">
+                {isOlderSelected
+                  ? `${selectedItems
+                      .filter(
+                        (sel) =>
+                          !recentItems.some(
+                            (r) =>
+                              String(r).toLowerCase() === sel.toLowerCase(),
+                          ),
+                      )
+                      .join(", ")}`
+                  : "More ▾"}
+              </option>
+              {validItems.map((item) => {
+                const str = String(item);
+                const isSelected = selectedItems.some(
+                  (s) => s.toLowerCase() === str.toLowerCase(),
+                );
+                return (
+                  <option
+                    key={str}
+                    value={str}
+                    className="bg-white text-[#2D2A26]"
+                  >
+                    {isSelected ? `✓ ${str}` : str}
+                  </option>
+                );
+              })}
+            </select>
+            <ChevronDown
+              className={`w-3 h-3 absolute right-2 pointer-events-none ${
+                isOlderSelected ? "text-white" : "text-[#8C8376]"
+              }`}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+interface FilterChipProps {
+  label: string;
+  value: string;
+  onRemove: () => void;
+  variant?: "green" | "brown" | "neutral";
+}
+
+const FilterChip: React.FC<FilterChipProps> = ({
+  label,
+  value,
+  onRemove,
+  variant = "green",
+}) => {
+  const styles =
+    variant === "brown"
+      ? "bg-[#FAF0E6] text-[#AF8260] border-[#E8D2C2]"
+      : variant === "neutral"
+        ? "bg-[#F1EDE5] text-[#2D2A26] border-[#E4DCD0]"
+        : "bg-[#E9EFEA] text-[#5F7161] border-[#C5D5C7]";
+  const iconColor =
+    variant === "brown"
+      ? "text-[#AF8260]"
+      : variant === "neutral"
+        ? "text-[#8C8376]"
+        : "text-[#5F7161]";
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-semibold border ${styles}`}
+    >
+      {label}: {value}
+      <button type="button" onClick={onRemove} className="cursor-pointer">
+        <X className={`w-3 h-3 ${iconColor} hover:text-[#2D2A26]`} />
+      </button>
+    </span>
+  );
+};
+
 export const FilterBar: React.FC<FilterBarProps> = ({
   filters,
   onFilterChange,
@@ -57,85 +223,39 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         ? [filters.week]
         : [];
 
-  const toggleYear = (yr: string) => {
-    if (yr === "ALL") {
-      onFilterChange({ ...filters, years: [], year: "ALL" });
+  const toggleTimeFilter = (
+    arrKey: "years" | "months" | "weeks",
+    strKey: "year" | "month" | "week",
+    currentList: string[],
+    val: string,
+  ) => {
+    if (val === "ALL") {
+      onFilterChange({ ...filters, [arrKey]: [], [strKey]: "ALL" });
       return;
     }
-    const exists = selectedYears.includes(yr);
-    const next = exists
-      ? selectedYears.filter((y) => y !== yr)
-      : [...selectedYears, yr];
-    onFilterChange({
-      ...filters,
-      years: next,
-      year: next.length === 1 ? next[0] : next.length === 0 ? "ALL" : "CUSTOM",
-    });
-  };
-
-  const toggleMonth = (m: string) => {
-    if (m === "ALL") {
-      onFilterChange({ ...filters, months: [], month: "ALL" });
-      return;
-    }
-    const exists = selectedMonths.some(
-      (x) => x.toLowerCase() === m.toLowerCase(),
+    const exists = currentList.some(
+      (x) => x.toLowerCase() === val.toLowerCase(),
     );
     const next = exists
-      ? selectedMonths.filter((x) => x.toLowerCase() !== m.toLowerCase())
-      : [...selectedMonths, m];
+      ? currentList.filter((x) => x.toLowerCase() !== val.toLowerCase())
+      : [...currentList, val];
     onFilterChange({
       ...filters,
-      months: next,
-      month: next.length === 1 ? next[0] : next.length === 0 ? "ALL" : "CUSTOM",
+      [arrKey]: next,
+      [strKey]:
+        next.length === 1 ? next[0] : next.length === 0 ? "ALL" : "CUSTOM",
     });
   };
 
-  const toggleWeek = (w: string) => {
-    if (w === "ALL") {
-      onFilterChange({ ...filters, weeks: [], week: "ALL" });
-      return;
-    }
-    const exists = selectedWeeks.some(
-      (x) => x.toLowerCase() === w.toLowerCase(),
-    );
-    const next = exists
-      ? selectedWeeks.filter((x) => x.toLowerCase() !== w.toLowerCase())
-      : [...selectedWeeks, w];
-    onFilterChange({
-      ...filters,
-      weeks: next,
-      week: next.length === 1 ? next[0] : next.length === 0 ? "ALL" : "CUSTOM",
-    });
-  };
-
-  const handleStatusChange = (status: FilterState["status"]) => {
-    onFilterChange({ ...filters, status });
-  };
-
-  const handleCampaignChange = (campaign: FilterState["campaign"]) => {
-    onFilterChange({ ...filters, campaign });
-  };
-
-  const toggleChannel = (ch: string) => {
-    const next = filters.channels.includes(ch)
-      ? filters.channels.filter((c) => c !== ch)
-      : [...filters.channels, ch];
-    onFilterChange({ ...filters, channels: next });
-  };
-
-  const toggleCategory = (cat: string) => {
-    const next = filters.categories.includes(cat)
-      ? filters.categories.filter((c) => c !== cat)
-      : [...filters.categories, cat];
-    onFilterChange({ ...filters, categories: next });
-  };
-
-  const toggleZone = (z: string) => {
-    const next = filters.zones.includes(z)
-      ? filters.zones.filter((item) => item !== z)
-      : [...filters.zones, z];
-    onFilterChange({ ...filters, zones: next });
+  const toggleArrayFilter = (
+    key: "channels" | "categories" | "zones",
+    item: string,
+  ) => {
+    const list = filters[key];
+    const next = list.includes(item)
+      ? list.filter((i) => i !== item)
+      : [...list, item];
+    onFilterChange({ ...filters, [key]: next });
   };
 
   const resetAllFilters = () => {
@@ -181,218 +301,35 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     (c) => c && c !== "#N/A" && c !== "N/A",
   );
 
-  // Determine recent years and extra years for clean display without overflow
-  const showCompactYears = availableYears.length <= 4;
-  const recentYears = showCompactYears
-    ? availableYears
-    : availableYears.slice(0, 3);
-  const isOlderYearSelected =
-    !showCompactYears &&
-    selectedYears.some((yr) => !recentYears.includes(Number(yr)));
-
-  // Determine month options
-  const validMonths = availableMonths.filter(
-    (m) => m && m !== "#N/A" && m !== "N/A",
-  );
-  const showCompactMonths = validMonths.length <= 4;
-  const recentMonths = showCompactMonths
-    ? validMonths
-    : validMonths.slice(0, 3);
-  const isOlderMonthSelected =
-    !showCompactMonths &&
-    selectedMonths.some(
-      (m) => !recentMonths.some((rm) => rm.toLowerCase() === m.toLowerCase()),
-    );
-
-  // Determine week options
-  const validWeeks = availableWeeks.filter(
-    (w) => w && w !== "#N/A" && w !== "N/A",
-  );
-  const showCompactWeeks = validWeeks.length <= 4;
-  const recentWeeks = showCompactWeeks ? validWeeks : validWeeks.slice(0, 3);
-  const isOlderWeekSelected =
-    !showCompactWeeks &&
-    selectedWeeks.some(
-      (w) => !recentWeeks.some((rw) => rw.toLowerCase() === w.toLowerCase()),
-    );
-
   return (
     <div className="bg-white border border-[#EBE5D9] rounded-[24px] shadow-sm p-4 sm:p-5 mb-6">
-      {/* Primary Row - Clean, Spacious, No Search Bar */}
+      {/* Primary Row */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Left Section: Year filter, Month filter, Status filter & Week filter */}
         <div className="flex flex-wrap items-center gap-4">
-          {/* Year Filter Controls (Multi-Select) */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-xs font-bold text-[#8C8376] uppercase tracking-wider mr-1">
-              Year:
-            </span>
+          {/* Year Filter Controls */}
+          <TimeFilterGroup
+            label="Year"
+            allLabel="All Years"
+            items={availableYears}
+            selectedItems={selectedYears}
+            onToggle={(yr) =>
+              toggleTimeFilter("years", "year", selectedYears, yr)
+            }
+          />
 
-            <div className="flex items-center gap-1 bg-[#F1EDE5] p-1 rounded-xl border border-[#EBE5D9]">
-              <button
-                type="button"
-                onClick={() => toggleYear("ALL")}
-                className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                  selectedYears.length === 0
-                    ? "bg-[#2D2A26] text-white shadow-2xs font-extrabold"
-                    : "text-[#8C8376] hover:text-[#2D2A26]"
-                }`}
-              >
-                All Years
-              </button>
+          {/* Month Filter Controls */}
+          <TimeFilterGroup
+            label="Month"
+            allLabel="All Months"
+            items={availableMonths}
+            selectedItems={selectedMonths}
+            onToggle={(m) =>
+              toggleTimeFilter("months", "month", selectedMonths, m)
+            }
+          />
 
-              {recentYears.map((yr) => {
-                const isSelected = selectedYears.includes(String(yr));
-                return (
-                  <button
-                    type="button"
-                    key={yr}
-                    onClick={() => toggleYear(String(yr))}
-                    className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                      isSelected
-                        ? "bg-[#5F7161] text-white shadow-2xs font-extrabold"
-                        : "text-[#8C8376] hover:text-[#2D2A26]"
-                    }`}
-                  >
-                    {yr}
-                  </button>
-                );
-              })}
-
-              {/* Dropdown for older years when dataset spans > 4 years */}
-              {!showCompactYears && (
-                <div className="relative inline-flex items-center">
-                  <select
-                    value=""
-                    onChange={(e) => {
-                      if (e.target.value) toggleYear(e.target.value);
-                    }}
-                    className={`pl-2.5 pr-7 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer appearance-none focus:outline-none ${
-                      isOlderYearSelected
-                        ? "bg-[#5F7161] text-white shadow-2xs"
-                        : "bg-transparent text-[#8C8376] hover:text-[#2D2A26]"
-                    }`}
-                  >
-                    <option
-                      value=""
-                      disabled
-                      className="bg-white text-[#2D2A26]"
-                    >
-                      {isOlderYearSelected
-                        ? `${selectedYears.filter((yr) => !recentYears.includes(Number(yr))).join(", ")}`
-                        : "More ▾"}
-                    </option>
-                    {availableYears.map((yr) => (
-                      <option
-                        key={yr}
-                        value={String(yr)}
-                        className="bg-white text-[#2D2A26]"
-                      >
-                        {selectedYears.includes(String(yr))
-                          ? `✓ ${yr}`
-                          : String(yr)}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    className={`w-3 h-3 absolute right-2 pointer-events-none ${
-                      isOlderYearSelected ? "text-white" : "text-[#8C8376]"
-                    }`}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Month Filter Controls (Multi-Select) */}
-          {validMonths.length > 0 && (
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-xs font-bold text-[#8C8376] uppercase tracking-wider mr-1">
-                Month:
-              </span>
-
-              <div className="flex items-center gap-1 bg-[#F1EDE5] p-1 rounded-xl border border-[#EBE5D9]">
-                <button
-                  type="button"
-                  onClick={() => toggleMonth("ALL")}
-                  className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                    selectedMonths.length === 0
-                      ? "bg-[#2D2A26] text-white shadow-2xs font-extrabold"
-                      : "text-[#8C8376] hover:text-[#2D2A26]"
-                  }`}
-                >
-                  All Months
-                </button>
-
-                {recentMonths.map((m) => {
-                  const isSelected = selectedMonths.some(
-                    (x) => x.toLowerCase() === m.toLowerCase(),
-                  );
-                  return (
-                    <button
-                      type="button"
-                      key={m}
-                      onClick={() => toggleMonth(m)}
-                      className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                        isSelected
-                          ? "bg-[#5F7161] text-white shadow-2xs font-extrabold"
-                          : "text-[#8C8376] hover:text-[#2D2A26]"
-                      }`}
-                    >
-                      {m}
-                    </button>
-                  );
-                })}
-
-                {/* Dropdown for extra months when dataset spans > 4 months */}
-                {!showCompactMonths && (
-                  <div className="relative inline-flex items-center">
-                    <select
-                      value=""
-                      onChange={(e) => {
-                        if (e.target.value) toggleMonth(e.target.value);
-                      }}
-                      className={`pl-2.5 pr-7 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer appearance-none focus:outline-none ${
-                        isOlderMonthSelected
-                          ? "bg-[#5F7161] text-white shadow-2xs"
-                          : "bg-transparent text-[#8C8376] hover:text-[#2D2A26]"
-                      }`}
-                    >
-                      <option
-                        value=""
-                        disabled
-                        className="bg-white text-[#2D2A26]"
-                      >
-                        {isOlderMonthSelected
-                          ? `${selectedMonths.filter((m) => !recentMonths.some((rm) => rm.toLowerCase() === m.toLowerCase())).join(", ")}`
-                          : "More ▾"}
-                      </option>
-                      {validMonths.map((m) => (
-                        <option
-                          key={m}
-                          value={m}
-                          className="bg-white text-[#2D2A26]"
-                        >
-                          {selectedMonths.some(
-                            (x) => x.toLowerCase() === m.toLowerCase(),
-                          )
-                            ? `✓ ${m}`
-                            : m}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown
-                      className={`w-3 h-3 absolute right-2 pointer-events-none ${
-                        isOlderMonthSelected ? "text-white" : "text-[#8C8376]"
-                      }`}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Status Filter (Positioned BEFORE Week) */}
+          {/* Status Filter */}
           <div className="flex items-center gap-1.5 shrink-0">
             <span className="text-xs font-bold text-[#8C8376] uppercase tracking-wider mr-1">
               Status:
@@ -400,7 +337,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             <div className="flex items-center gap-1 bg-[#F1EDE5] p-1 rounded-xl border border-[#EBE5D9]">
               <button
                 type="button"
-                onClick={() => handleStatusChange("ALL")}
+                onClick={() => onFilterChange({ ...filters, status: "ALL" })}
                 className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                   filters.status === "ALL"
                     ? "bg-white text-[#2D2A26] shadow-2xs font-extrabold"
@@ -411,7 +348,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => handleStatusChange("Dispatched")}
+                onClick={() =>
+                  onFilterChange({ ...filters, status: "Dispatched" })
+                }
                 className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                   filters.status === "Dispatched"
                     ? "bg-[#5F7161] text-white shadow-2xs"
@@ -422,7 +361,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => handleStatusChange("Return")}
+                onClick={() => onFilterChange({ ...filters, status: "Return" })}
                 className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                   filters.status === "Return"
                     ? "bg-[#AF8260] text-white shadow-2xs"
@@ -434,93 +373,16 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             </div>
           </div>
 
-          {/* Week Filter Controls (Multi-Select, Positioned AFTER Status) */}
-          {validWeeks.length > 0 && (
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-xs font-bold text-[#8C8376] uppercase tracking-wider mr-1">
-                Week:
-              </span>
-
-              <div className="flex items-center gap-1 bg-[#F1EDE5] p-1 rounded-xl border border-[#EBE5D9]">
-                <button
-                  type="button"
-                  onClick={() => toggleWeek("ALL")}
-                  className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                    selectedWeeks.length === 0
-                      ? "bg-[#2D2A26] text-white shadow-2xs font-extrabold"
-                      : "text-[#8C8376] hover:text-[#2D2A26]"
-                  }`}
-                >
-                  All Weeks
-                </button>
-
-                {recentWeeks.map((w) => {
-                  const isSelected = selectedWeeks.some(
-                    (x) => x.toLowerCase() === w.toLowerCase(),
-                  );
-                  return (
-                    <button
-                      type="button"
-                      key={w}
-                      onClick={() => toggleWeek(w)}
-                      className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                        isSelected
-                          ? "bg-[#5F7161] text-white shadow-2xs font-extrabold"
-                          : "text-[#8C8376] hover:text-[#2D2A26]"
-                      }`}
-                    >
-                      {w}
-                    </button>
-                  );
-                })}
-
-                {/* Dropdown for extra weeks when dataset spans > 4 weeks */}
-                {!showCompactWeeks && (
-                  <div className="relative inline-flex items-center">
-                    <select
-                      value=""
-                      onChange={(e) => {
-                        if (e.target.value) toggleWeek(e.target.value);
-                      }}
-                      className={`pl-2.5 pr-7 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer appearance-none focus:outline-none ${
-                        isOlderWeekSelected
-                          ? "bg-[#5F7161] text-white shadow-2xs"
-                          : "bg-transparent text-[#8C8376] hover:text-[#2D2A26]"
-                      }`}
-                    >
-                      <option
-                        value=""
-                        disabled
-                        className="bg-white text-[#2D2A26]"
-                      >
-                        {isOlderWeekSelected
-                          ? `${selectedWeeks.filter((w) => !recentWeeks.some((rw) => rw.toLowerCase() === w.toLowerCase())).join(", ")}`
-                          : "More ▾"}
-                      </option>
-                      {validWeeks.map((w) => (
-                        <option
-                          key={w}
-                          value={w}
-                          className="bg-white text-[#2D2A26]"
-                        >
-                          {selectedWeeks.some(
-                            (x) => x.toLowerCase() === w.toLowerCase(),
-                          )
-                            ? `✓ ${w}`
-                            : w}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown
-                      className={`w-3 h-3 absolute right-2 pointer-events-none ${
-                        isOlderWeekSelected ? "text-white" : "text-[#8C8376]"
-                      }`}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          {/* Week Filter Controls */}
+          <TimeFilterGroup
+            label="Week"
+            allLabel="All Weeks"
+            items={availableWeeks}
+            selectedItems={selectedWeeks}
+            onToggle={(w) =>
+              toggleTimeFilter("weeks", "week", selectedWeeks, w)
+            }
+          />
         </div>
 
         {/* Right Section: Advanced Filters Button */}
@@ -572,7 +434,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                   <button
                     type="button"
                     key={ch}
-                    onClick={() => toggleChannel(ch)}
+                    onClick={() => toggleArrayFilter("channels", ch)}
                     className={`px-2.5 py-1 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
                       isSelected
                         ? "bg-[#5F7161] text-white border-[#4A594C]"
@@ -599,7 +461,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                   <button
                     type="button"
                     key={cat}
-                    onClick={() => toggleCategory(cat)}
+                    onClick={() => toggleArrayFilter("categories", cat)}
                     className={`px-2.5 py-1 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
                       isSelected
                         ? "bg-[#AF8260] text-white border-[#8D6546]"
@@ -626,7 +488,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                   <button
                     type="button"
                     key={z}
-                    onClick={() => toggleZone(z)}
+                    onClick={() => toggleArrayFilter("zones", z)}
                     className={`px-3 py-1 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
                       isSelected
                         ? "bg-[#5F7161] text-white border-[#4A594C]"
@@ -648,7 +510,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               <div className="flex gap-1.5">
                 <button
                   type="button"
-                  onClick={() => handleCampaignChange("ALL")}
+                  onClick={() =>
+                    onFilterChange({ ...filters, campaign: "ALL" })
+                  }
                   className={`px-2.5 py-1 rounded-lg border text-xs font-semibold cursor-pointer ${
                     filters.campaign === "ALL"
                       ? "bg-[#2D2A26] text-white border-[#2D2A26]"
@@ -659,7 +523,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleCampaignChange("B2S")}
+                  onClick={() =>
+                    onFilterChange({ ...filters, campaign: "B2S" })
+                  }
                   className={`px-2.5 py-1 rounded-lg border text-xs font-semibold cursor-pointer ${
                     filters.campaign === "B2S"
                       ? "bg-[#AF8260] text-white border-[#8D6546]"
@@ -670,7 +536,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleCampaignChange("NON_B2S")}
+                  onClick={() =>
+                    onFilterChange({ ...filters, campaign: "NON_B2S" })
+                  }
                   className={`px-2.5 py-1 rounded-lg border text-xs font-semibold cursor-pointer ${
                     filters.campaign === "NON_B2S"
                       ? "bg-[#5F7161] text-white border-[#4A594C]"
@@ -728,136 +596,87 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             Active filters:
           </span>
           {selectedYears.map((yr) => (
-            <span
+            <FilterChip
               key={yr}
-              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E9EFEA] text-[#5F7161] font-semibold border border-[#C5D5C7]"
-            >
-              Year: {yr}
-              <button
-                type="button"
-                onClick={() => toggleYear(yr)}
-                className="cursor-pointer"
-              >
-                <X className="w-3 h-3 text-[#5F7161] hover:text-[#2D2A26]" />
-              </button>
-            </span>
+              label="Year"
+              value={yr}
+              onRemove={() =>
+                toggleTimeFilter("years", "year", selectedYears, yr)
+              }
+            />
           ))}
           {selectedMonths.map((m) => (
-            <span
+            <FilterChip
               key={m}
-              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E9EFEA] text-[#5F7161] font-semibold border border-[#C5D5C7]"
-            >
-              Month: {m}
-              <button
-                type="button"
-                onClick={() => toggleMonth(m)}
-                className="cursor-pointer"
-              >
-                <X className="w-3 h-3 text-[#5F7161] hover:text-[#2D2A26]" />
-              </button>
-            </span>
+              label="Month"
+              value={m}
+              onRemove={() =>
+                toggleTimeFilter("months", "month", selectedMonths, m)
+              }
+            />
           ))}
           {filters.status !== "ALL" && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#F1EDE5] text-[#2D2A26] font-semibold border border-[#E4DCD0]">
-              Status: {filters.status}
-              <button
-                type="button"
-                onClick={() => onFilterChange({ ...filters, status: "ALL" })}
-                className="cursor-pointer"
-              >
-                <X className="w-3 h-3 text-[#8C8376] hover:text-[#2D2A26]" />
-              </button>
-            </span>
+            <FilterChip
+              label="Status"
+              value={filters.status}
+              variant="neutral"
+              onRemove={() => onFilterChange({ ...filters, status: "ALL" })}
+            />
           )}
           {selectedWeeks.map((w) => (
-            <span
+            <FilterChip
               key={w}
-              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E9EFEA] text-[#5F7161] font-semibold border border-[#C5D5C7]"
-            >
-              Week: {w}
-              <button
-                type="button"
-                onClick={() => toggleWeek(w)}
-                className="cursor-pointer"
-              >
-                <X className="w-3 h-3 text-[#5F7161] hover:text-[#2D2A26]" />
-              </button>
-            </span>
+              label="Week"
+              value={w}
+              onRemove={() =>
+                toggleTimeFilter("weeks", "week", selectedWeeks, w)
+              }
+            />
           ))}
           {(filters.startDate || filters.endDate) && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#F1EDE5] text-[#2D2A26] font-semibold border border-[#E4DCD0]">
-              Date: {filters.startDate || "Start"} to {filters.endDate || "End"}
-              <button
-                type="button"
-                onClick={() =>
-                  onFilterChange({ ...filters, startDate: "", endDate: "" })
-                }
-                className="cursor-pointer"
-              >
-                <X className="w-3 h-3 text-[#8C8376] hover:text-[#2D2A26]" />
-              </button>
-            </span>
+            <FilterChip
+              label="Date"
+              value={`${filters.startDate || "Start"} to ${filters.endDate || "End"}`}
+              variant="neutral"
+              onRemove={() =>
+                onFilterChange({ ...filters, startDate: "", endDate: "" })
+              }
+            />
           )}
           {filters.channels.map((ch) => (
-            <span
+            <FilterChip
               key={ch}
-              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E9EFEA] text-[#5F7161] font-semibold border border-[#C5D5C7]"
-            >
-              Channel: {ch}
-              <button
-                type="button"
-                onClick={() => toggleChannel(ch)}
-                className="cursor-pointer"
-              >
-                <X className="w-3 h-3 text-[#5F7161] hover:text-[#2D2A26]" />
-              </button>
-            </span>
+              label="Channel"
+              value={ch}
+              onRemove={() => toggleArrayFilter("channels", ch)}
+            />
           ))}
           {filters.categories.map((cat) => (
-            <span
+            <FilterChip
               key={cat}
-              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FAF0E6] text-[#AF8260] font-semibold border border-[#E8D2C2]"
-            >
-              Category: {cat}
-              <button
-                type="button"
-                onClick={() => toggleCategory(cat)}
-                className="cursor-pointer"
-              >
-                <X className="w-3 h-3 text-[#AF8260] hover:text-[#2D2A26]" />
-              </button>
-            </span>
+              label="Category"
+              value={cat}
+              variant="brown"
+              onRemove={() => toggleArrayFilter("categories", cat)}
+            />
           ))}
           {filters.zones.map((z) => (
-            <span
+            <FilterChip
               key={z}
-              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E9EFEA] text-[#5F7161] font-semibold border border-[#C5D5C7]"
-            >
-              Zone: {z}
-              <button
-                type="button"
-                onClick={() => toggleZone(z)}
-                className="cursor-pointer"
-              >
-                <X className="w-3 h-3 text-[#5F7161] hover:text-[#2D2A26]" />
-              </button>
-            </span>
+              label="Zone"
+              value={z}
+              onRemove={() => toggleArrayFilter("zones", z)}
+            />
           ))}
           {filters.campaign !== "ALL" && (
-            <span
-              key="campaign-chip"
-              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FAF0E6] text-[#AF8260] font-semibold border border-[#E8D2C2]"
-            >
-              Campaign:{" "}
-              {filters.campaign === "B2S" ? "Back To School" : "Standard"}
-              <button
-                type="button"
-                onClick={() => onFilterChange({ ...filters, campaign: "ALL" })}
-                className="cursor-pointer"
-              >
-                <X className="w-3 h-3 text-[#AF8260] hover:text-[#2D2A26]" />
-              </button>
-            </span>
+            <FilterChip
+              label="Campaign"
+              value={
+                filters.campaign === "B2S" ? "Back To School" : "Standard"
+              }
+              variant="brown"
+              onRemove={() => onFilterChange({ ...filters, campaign: "ALL" })}
+            />
           )}
           <button
             type="button"

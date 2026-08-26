@@ -1,609 +1,177 @@
-# Scoobies Sales Analytics Dashboard — Technical Summary
+# Scoobies Sales Dashboard: Technical Audit Summary
 
----
+This document is raw material for technical interviews and resume development. It describes implemented behavior and verified architectural characteristics of the repository, while clearly separating production recommendations from current capabilities.
 
 ## 1. Executive Overview
 
 ### Elevator Pitch
 
-**Scoobies Sales Analytics Dashboard** is a production-grade, real-time sales analytics SPA (Single Page Application) built with React 19, TypeScript 7, and Vite that enables business analysts and leadership to query multi-dimensional sales data from raw CSV files. It transforms unstructured sales records into actionable insights through advanced filtering, margin tracking, and executive-level KPI dashboards—all without a backend server dependency, ensuring rapid deployment and minimal operational overhead.
+Scoobies Sales Dashboard is a client-side React and TypeScript analytics workspace that converts heterogeneous sales CSV or TXT reports into an interactive commercial-performance view. It normalizes inconsistent column names, dates, numeric formats, statuses, and missing values, then exposes revenue, margins, orders, returns, products, channels, campaigns, trends, and geographic demand through coordinated filters and visualizations.
 
-### The "North Star" Metric
+The application is designed for rapid, self-service analysis without a data warehouse or application backend: uploaded records remain in browser memory, all primary calculations run locally, and the optional AI advisor receives a compact analytical context rather than an indiscriminate dump of the full dataset. Users can export filtered records as CSV or generate a printable/PDF executive report.
 
-**Primary Goal:** Enable self-service sales analysis by non-technical business users, eliminating dependency on data teams for ad-hoc reporting while maintaining 100% data integrity through client-side processing and static type safety.
+### The North Star Metric
 
-**Secondary Goals:**
-
-- Reduce reporting cycle time from days (manual Excel) to seconds (interactive dashboard)
-- Provide executive visibility into multi-dimensional metrics (channel, geography, category, margin breakdown)
-- Support compliance-grade audit trails via printable/exportable reports with full calculation transparency
-
----
+The primary product objective is to reduce the time and friction required to move from an operational sales report to an actionable commercial decision. The most useful measurable proxy is **time from CSV upload to a validated executive insight**, supported by secondary goals of preserving analytical consistency across filters, making return and margin leakage visible, and enabling leadership-ready report export.
 
 ## 2. Technical Stack Mapping
 
-### Languages & Frameworks
+### Languages and Application Framework
 
-| Tool           | Version | Rationale                                                                                                                                                               |
-| -------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **React**      | 19.2.8  | Latest stable; provides declarative UI composition, fiber reconciliation for performant re-renders, hooks-based state management (useMemo for expensive calculations)   |
-| **TypeScript** | 7.0.2   | Strict type safety across 100+ interfaces; catches data shape mismatches at compile time; enables IDE-driven development with autocomplete for CSV field mappings       |
-| **Vite**       | 8.2.2   | Sub-second HMR (Hot Module Replacement) for rapid development iteration; tree-shaking reduces production bundle; ES2022 native modules eliminate transpilation overhead |
+- **TypeScript**: Provides explicit contracts for `SaleRecord`, `FilterState`, dashboard KPIs, chart series, channel/category/product metrics, geographic metrics, and AI context. This is particularly valuable because the input data is untyped and variable while the downstream dashboard expects stable fields.
+- **React 19**: Fits the application’s component-oriented dashboard surface. Independent components own upload, filters, KPI cards, charts, tables, modals, reporting, and AI interactions while `App.tsx` coordinates shared state.
+- **Vite**: Supplies a lightweight development server and fast production bundling for a static browser application with minimal operational overhead.
+- **Tailwind CSS 4 with the Vite plugin**: Enables consistent responsive layouts and localized visual styling without introducing a large bespoke stylesheet or component framework.
 
-### Build & Runtime
+### Data and Visualization Libraries
 
-| Tool                                 | Purpose                                                                                               |
-| ------------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| **Vite + @vitejs/plugin-react**      | Modern build pipeline with Babel JSX transform; handles React imports, fast refresh                   |
-| **Tailwind CSS + @tailwindcss/vite** | Utility-first CSS with JIT compilation; responsive design system (6-column grid for adaptive layouts) |
-| **tsx**                              | TypeScript executor for potential Node.js scripts (type-safe CSV preprocessing, data validation)      |
+- **Papa Parse**: Handles header-aware CSV parsing, empty-line behavior, and row-level data traversal. It is a better fit than manual string splitting for quoted fields and real-world report variability.
+- **Recharts**: Provides the dashboard’s time-series and comparative visualizations while allowing the application to pass already-aggregated metric models to presentation components.
+- **`html2canvas` and `jsPDF`**: Turn the rendered executive report into a downloadable A4 PDF in the browser, avoiding a server-side document-generation service.
+- **`marked`**: Renders Markdown returned by the AI advisor into readable executive briefings and chat responses.
+- **`lucide-react`**: Supplies a consistent icon vocabulary for actions, statuses, navigation, and data-analysis affordances.
 
-### Data Processing & Visualization
+### AI and External Integration
 
-| Library                       | Use Case                                                                                                               | Architectural Impact                                                                                         |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| **PapaParse 5.7.0**           | CSV parsing with robust error handling for malformed files (trailing commas, inconsistent delimiters, encoding issues) | Decouples CSV parsing logic from React components; `parseSalesCsv()` utility function is pure and testable   |
-| **Recharts 3.10.1**           | Line charts, bar charts, pie charts with responsive containers                                                         | Avoids D3.js complexity; provides React component interface; built-in legend, tooltip, and responsive design |
-| **Lucide React 1.34.0**       | Icon system (Dashboard, Filter, Download, Print icons)                                                                 | Tree-shakeable; 1KB per icon; improves visual hierarchy and UX clarity                                       |
-| **html2canvas + jsPDF 4.2.1** | Client-side PDF generation without backend service                                                                     | Enables offline report generation; privacy-preserving (data never leaves user's browser)                     |
+- **Groq OpenAI-compatible chat completions API**: Provides optional low-latency interactive analysis using the configured `openai/gpt-oss-120b` model. Server-sent event parsing lets the UI display incremental response text.
+- **Deterministic offline AI engine**: Keeps the core briefing workflow functional without an API key. It derives a strategic brief from local metrics, channel drivers, margin leaders, return watchlists, quota progress, and temporal velocity.
 
-### State Management Architecture
+### Testing, Delivery, and Operations
 
-| Mechanism                     | Scope                                                                            | Implementation                                                                                                                          |
-| ----------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| **React useState**            | Global filter state, modal visibility, sales target                              | Centralized in `App.tsx` with DEFAULT_FILTERS as single source of truth                                                                 |
-| **useMemo**                   | Expensive calculations (filtered records, time-series aggregations, KPI metrics) | Memoized by dependency arrays to prevent recalculation on every render; O(n) filtering only runs when records or filters change         |
-| **No External State Library** | Intentional choice                                                               | Reduces bundle size (~15KB saved vs Redux); sufficient for single-page, non-distributed state; filters propagate downward through props |
+- **Build validation**: TypeScript and Vite are used through the `npm run build` production build. The repository has no test, lint, preview, CI/CD, infrastructure-as-code, monitoring, or deployment scripts at present.
+- **Deployment model**: The static bundle can be hosted by a conventional static web host. A production deployment should move Groq requests behind a server-side proxy and server-managed secret store rather than exposing a browser-available API key.
 
----
+## 3. Engineering Achievements (The Gold Mine)
 
-## 3. Engineering Achievements (The "Gold Mine")
+### Technical Win 1: Resilient Sales-Report Normalization
 
-### Achievement #1: Multi-Dimensional Data Filtering Engine
+**The Challenge:** Sales reports frequently vary in header spelling, punctuation, capitalization, date representation, numeric formatting, status vocabulary, and completeness. A dashboard built against one exact spreadsheet schema would be brittle and costly to reuse.
 
-**The Challenge:**  
-Business users needed to slice data across 8+ independent dimensions (year, month, week, date range, channel, category, zone, state, status) with both single-select AND multi-select support. Combining filters incorrectly (e.g., "Year 2025 AND Year 2026") had to work as OR logic, while filters across dimensions used AND logic. CSV data came in inconsistent formats (leading zeros, case mismatches, null values as strings).
+**The Action:** Implemented `parseSalesCsv` in `src/utils/csvParser.ts` with Papa Parse and a normalization layer. `findValue` compares normalized header keys, allowing aliases such as `SKU`/`Bar Code`, `Quantity`/`QTY`, `Platform`/`Channel`, `Province`/`State`, and multiple order/date labels. `cleanNumber` strips currency symbols and thousands separators and handles placeholders such as `-`; `cleanString` removes common spreadsheet error values. Missing values receive explicit defaults, categories are normalized to uppercase, and dates are decomposed into year, month, day, ISO-like display text, and a timestamp.
 
-**The Action:**  
-Implemented `filterRecords()` function in `utils/analytics.ts` with:
+**The Result:** Multiple report shapes converge into one stable `SaleRecord` contract. Downstream analytics and UI code can operate on predictable fields instead of repeating defensive parsing logic. Invalid rows are isolated into parse errors rather than preventing the entire import from completing.
 
-- **Dual-mode filtering:** Supports legacy single-select (`filters.year`, `filters.month`) and modern multi-select arrays (`filters.years[]`, `filters.months[]`)
-- **Intelligent null-coalescing:** Falls back to single-select if multi-select array is empty
-- **Type-safe dimension handling:** Each dimension (channels, categories, zones, states) is explicitly typed in `FilterState` interface
-- **Date range validation:** Supports 7-day presets (7D, 15D, 30D, MTD, YTD) plus custom YYYY-MM-DD range selection
-- **Full-text search:** Searches across 8 fields (productName, orderNumber, customerName, category, channel, state) with case-insensitive matching
+### Technical Win 2: Return-Aware Financial and Operational Analytics
 
-```
-Pseudocode:
-records.filter(record => {
-  searchMatch && yearMatch && monthMatch && channelMatch &&
-  dateRangeMatch && categoryMatch && zoneMatch && stateMatch
-})
-```
+**The Challenge:** Returns must affect net sales, units, refund value, return rates, product rankings, channel economics, geography, and time trends consistently. Treating returns as ordinary negative or positive rows in each component would create duplicated and conflicting business logic.
 
-**The Result:**
+**The Action:** Centralized transaction interpretation in `getRecordMetrics` and reused it throughout `computeDashboardMetrics`, `computeTimeSeries`, `computeChannelMetrics`, `computeCategoryMetrics`, `computeProductMetrics`, and `computeGeoMetrics`. Return detection considers explicit status, negative quantity, and negative sale value. Aggregations use `Set<string>` order identity to avoid counting line items as separate orders and use a shared safe percentage helper for denominator protection.
 
-- **Flexibility:** Users can toggle between single and multi-select without code changes
-- **Performance:** O(n) filtering with short-circuit logic (fails fast on first unmatched filter)
-- **Type Safety:** TypeScript prevents filter key typos at compile time
-- **User Autonomy:** Business analysts can now create custom reports without technical intervention
+**The Result:** A single business rule drives gross sales, net sales, returned value, gross/net/returned units, AOV, margin rate, return rates, channel share, product return watchlists, and regional rankings. This improves consistency and makes the financial treatment of returns inspectable in one place.
 
----
+### Technical Win 3: Memoized Analytical Projection Pipeline
 
-### Achievement #2: Real-Time Margin Calculation Engine
+**The Challenge:** The dashboard renders many views from the same filtered dataset. Recomputing every aggregation on every component render would make filter changes expensive and could cause views to disagree about the active data.
 
-**The Challenge:**  
-Sales data contains three competing margin concepts:
+**The Action:** Kept the source records and filter state in `App.tsx`, derived `filteredRecords` once, and used `useMemo` for available filter metadata, core KPIs, time series, channel/category/product metrics, geography, executive insights, and AI context. The resulting metric models are passed into focused presentation components such as charts, KPI grids, tables, and analytics sections.
 
-1. **Scoobies Margin** (net revenue - costs)
-2. **Retailers Margin** (retailer's cut)
-3. **Ex-GST Margin** (tax-adjusted margin)
+**The Result:** Filtering is a coherent state transition: every analytical surface and export receives the same active record set. Derived work is recalculated when its relevant inputs change, reducing unnecessary computation and creating a clean separation between orchestration, domain calculations, and rendering.
 
-Each order had multiple line items with varying margins. Users needed accurate totals, averages, and percentage breakdowns. A single calculation error would break trust in the entire dashboard.
+### Technical Win 4: Multi-Dimensional Self-Service Filtering
 
-**The Action:**  
-Implemented `computeDashboardMetrics()` function with explicit, auditable calculations:
+**The Challenge:** Commercial users need to compare periods and segments without writing queries or waiting for a data-team extract.
 
-```typescript
-totalScoobiesMargin = sum(record.scoobiesMargin for all filtered records)
-marginPercentage = (totalScoobiesMargin / totalGrossSales) * 100
-returnRateQtyPct = (totalReturnedUnits / totalGrossUnits) * 100
-returnRateValPct = (totalReturnedSales / totalGrossSales) * 100
-```
+**The Action:** Implemented search and filters for years, months, weeks, date ranges, channels, categories, zones, states, dispatch/return status, B2S versus non-B2S campaign, and sale-value ranges. `FilterBar` supports multi-select time dimensions and dynamic options derived from the loaded dataset. The filter predicate in `filterRecords` applies the same rules to all consumers.
 
-- **No magic numbers:** Every calculation is named; formulas are explicit
-- **Null-safe aggregation:** Handles missing margin fields with `cleanNumber()` utility (defaults to 0)
-- **Audit trail:** Each metric is documented in `DashboardMetrics` interface with clear semantics
-- **Separated concerns:** Analytics logic lives in pure functions, not React components
+**The Result:** Users can move from a portfolio view to a narrow product, marketplace, period, campaign, or geography slice while retaining consistent KPIs, charts, tables, insights, AI context, and exports.
 
-**The Result:**
+### Technical Win 5: Executive Insight Generation from Local Math
 
-- **Accuracy:** 100% transparent calculations; business users can verify formulas in code
-- **Auditability:** PDF reports include calculated metrics; formulas are reproducible
-- **Maintainability:** Adding new metrics (e.g., "Net Margin After Shipping") requires only 1 line in analytics.ts + 1 interface field
+**The Challenge:** A dashboard should surface decisions, not only display raw charts. Leadership needs to see the strongest periods, leading channels, margin health, return risks, geographic leaders, and campaign contribution quickly.
 
----
+**The Action:** Implemented `generateExecutiveInsights` with period maps for profitable months and weeks, top-channel ranking, margin thresholds, high-return product detection, zone leadership, and Back To School contribution. The logic emits typed insight objects with positive, warning, neutral, or highlight classifications and human-readable metrics.
 
-### Achievement #3: Time-Series Aggregation at Multiple Granularities
+**The Result:** The application produces repeatable, explainable executive highlights directly from the active filtered data, without requiring an AI service or manually authored commentary for each dataset.
 
-**The Challenge:**  
-Dashboard needed to display sales trends at 4 different time granularities (daily, weekly, monthly, yearly) without pre-computing all combinations. Dates came in mixed formats (D/M/YYYY, YYYY-MM-DD). Aggregating 10,000+ records across dimensions had to stay responsive (<100ms).
+### Technical Win 6: Token-Conscious Analytical Context and RAG-Lite Drill-Down
 
-**The Action:**  
-Implemented `computeTimeSeries()` function that:
+**The Challenge:** Sending every raw transaction to an LLM increases prompt size, cost, latency, and privacy exposure. Sending only a few KPIs loses the detail needed to answer questions about specific products or channels.
 
-- **Dynamic granularity:** User selects granularity; function regroups data accordingly
-- **Robust date parsing:** `parseDateComponents()` utility handles 4+ date formats via regex detection and fallback logic
-- **Week calculation:** Converts day-of-month to ISO 8601 week number (Week 1, Week 2, etc.)
-- **Efficient grouping:** Uses Map<string, accumulator> pattern to group records in O(n) time
+**The Action:** Built `buildDistilledContext` and `formatDistilledContextToMarkdown` in `src/utils/aiContextDistiller.ts`. The context includes dataset metadata, active filters, date span, financial KPIs, channel economics, top-volume products, top-margin drivers, return offenders, geographic leaders, and peak/trough periods. `extractTargetedMicroSlice` adds a focused top-SKU drill-down when a query names a known channel.
 
-```typescript
-const timeSeriesMap = new Map<string, TimeSeriesPoint>();
-filteredRecords.forEach((record) => {
-  const key = getKeyByGranularity(record, granularity); // "2026-08-15" or "Week 33" etc.
-  accumulate(timeSeriesMap.get(key), record);
-});
-return Array.from(timeSeriesMap.values()).sort(
-  (a, b) => a.timestamp - b.timestamp,
-);
-```
+**The Result:** The AI layer receives a compact, structured analytical representation of the current view plus relevant detail on demand. This preserves filter context, limits unnecessary data transfer, and makes responses more decision-oriented than raw-row prompting.
 
-**The Result:**
+### Technical Win 7: Offline-First Strategic Briefing
 
-- **Performance:** Handles 50,000+ records with <50ms aggregation time (verified via React DevTools Profiler)
-- **Flexibility:** Adding new granularity (e.g., "bi-weekly") requires only 1 new case in switch statement
-- **Correctness:** Timestamp-based sorting prevents calendar anomalies (e.g., "Week 53" appearing before "Week 1")
+**The Challenge:** An external AI dependency should not block the user from receiving useful analysis, especially when no API key is configured or network access is unavailable.
 
----
+**The Action:** Implemented `generateOfflineStrategicBrief` as a deterministic fallback over the distilled context. It reports net revenue, order and unit volume, margin health, quota progress, AOV, channel dominance, profit drivers, return risks, and demand velocity. `AiAdvisorDrawer` selects this path when `getActiveGroqApiKey` returns no key.
 
-### Achievement #4: CSV Normalization Pipeline with Error Recovery
+**The Result:** The dashboard retains a useful briefing workflow with zero network dependency and predictable outputs, while interactive custom questions remain an optional enhancement.
 
-**The Challenge:**  
-Real-world CSV files are messy:
+### Technical Win 8: Cancellable Server-Sent Event AI Streaming
 
-- Numbers with currency symbols: "₹1,200.50", "$500", " -329 "
-- Dates in 4+ formats: "15/08/2026", "2026-08-15", "Aug 15, 2026"
-- Missing or NULL values represented as "-", "--", "NA", empty string
-- Case inconsistencies: "Website", "website", "WEBSITE"
-- Encoding issues: Mojibake, BOM characters
+**The Challenge:** Long AI responses should feel responsive, and users need a way to stop a generation that is irrelevant or too slow.
 
-**The Action:**  
-Built robust parsing layer with 4 utility functions:
+**The Action:** Implemented `streamGroqChat` with `fetch`, `ReadableStream.getReader()`, `TextDecoder`, buffered SSE line parsing, incremental accumulated content, explicit 401/429/general API errors, and `AbortSignal` support. The drawer updates the assistant message as chunks arrive and exposes stop/clear interactions.
 
-1. **`cleanNumber(val, defaultVal)`:** Strips currency, commas, trailing spaces; handles "-" as 0; validates parseFloat() output
-2. **`parseDateComponents(dateStr)`:** Detects separator (/ or -); infers format (YYYY-MM-DD vs D/M/YYYY) by checking if first element > 1000; returns ISO YYYY-MM-DD
-3. **`cleanString(val, fallback)`:** Trims whitespace; substitutes null/undefined with fallback
-4. **`parseSalesCsv(csvString)`:** Wraps PapaParse; transforms raw rows to typed SaleRecord[]
+**The Result:** Interactive responses render progressively rather than waiting for a complete payload, and active generations can be cancelled. Error messages are translated into actionable UI feedback for missing keys, invalid credentials, rate limiting, and missing streams.
 
-Error handling strategy:
+### Technical Win 9: Browser-Native Data and Report Exports
 
-- **Defensive parsing:** Never throw on malformed data; use fallback values
-- **Validation logging:** Track parse errors in ParseResult.errors array
-- **Partial success:** Even if 10% of rows fail, import remaining 90%
+**The Challenge:** Analysts need to take a filtered view into another workflow or share an executive snapshot without a separate reporting service.
 
-**The Result:**
+**The Action:** Implemented filtered CSV generation with Papa Parse `unparse`, object-URL download handling, and an executive report view using `html2canvas` plus `jsPDF`. The report includes KPI cards, channel/category tables, top products, and delivery-city rankings, with browser print fallback behavior if PDF generation fails.
 
-- **Robustness:** Handles real-world messy data without crashing
-- **User transparency:** Error array shown in UI ("5 rows skipped due to parsing errors")
-- **Compliance:** Data transformations are logged and reproducible for audits
+**The Result:** The active analytical slice can be exported without re-querying a backend, and the report path supports both downloadable PDF and native print workflows.
 
----
+### Technical Win 10: Usable Dashboard Interaction Model
 
-### Achievement #5: Responsive Component Architecture with No State Pollution
+**The Challenge:** A dense analytics surface can become difficult to navigate on smaller screens or during repeated investigation.
 
-**The Challenge:**  
-Dashboard has 15+ visualization components (KPI Grid, Sales Trend Chart, Channel Breakdown, Geographic Analytics, etc.), each with different data requirements and layout needs. Passing all data to every component would bloat props and violate separation of concerns.
+**The Action:** Composed reusable controls and views with responsive Tailwind layouts, paginated and sortable order exploration, dynamic page sizes, modal upload/goal/report flows, keyboard shortcuts (`Cmd/Ctrl+J` for AI and `Escape` to close the drawer), drag-and-drop upload, loading/error states, and an empty-data state.
 
-**The Action:**  
-Adopted **Presentational + Container Pattern** with strict data flow:
-
-```
-App.tsx (Container)
-  ├─ computes filteredRecords = filterRecords(records, filters)
-  ├─ computes metrics = computeDashboardMetrics(filteredRecords)
-  ├─ computes timeSeries = computeTimeSeries(filteredRecords, granularity)
-  └─ passes only required data to child components:
-      ├─ KpiGrid(metrics)
-      ├─ SalesTrendChart(timeSeries)
-      ├─ ChannelBreakdown(channelMetrics)
-      ├─ ProductCategoryAnalytics(categoryMetrics)
-      ├─ GeoAnalytics(geoMetrics)
-      └─ OrdersTable(filteredRecords, searchTerm)
-```
-
-Benefits of this pattern:
-
-- **No prop drilling:** Each component receives exactly what it needs
-- **No shared mutable state:** All computations are pure functions of (records, filters)
-- **Testability:** Components can be tested in isolation with mock data
-- **Reusability:** SalesTrendChart can accept any TimeSeriesPoint[] array; it's decoupled from App logic
-
-Implementation:
-
-- All computed metrics live in `useMemo` hooks in App.tsx
-- Dependency arrays include only filters and records
-- Child components are 100% stateless (functional components, no useState)
-
-**The Result:**
-
-- **Maintainability:** Adding new chart requires 1 new component file + 1 new compute function + 1 line in App.tsx
-- **Performance:** useMemo prevents recalculation of expensive operations; React Fast Refresh works flawlessly
-- **Debugging:** Redux DevTools not needed; filter state is visible in React DevTools directly
-
----
-
-### Achievement #6: Client-Side PDF Report Generation with Print UI
-
-**The Challenge:**  
-Users needed to print dashboards or export as PDF for email/Slack sharing. Server-side rendering would require backend infrastructure. Styling for print had to match screen (including charts, tables, colored KPI cards).
-
-**The Action:**  
-Implemented `PrintReportView` component that:
-
-1. **Duplicates dashboard layout:** Renders all metrics, charts, and tables in print-optimized HTML
-2. **Uses html2canvas:** Converts React components to canvas, then to PNG
-3. **Uses jsPDF:** Embeds images into PDF with page breaks
-4. **Print stylesheet:** CSS media queries hide filters, show full data tables
-5. **Offline capability:** Entire operation runs in user's browser; no API calls
-
-```tsx
-const handlePrintToPdf = async () => {
-  const element = printRef.current;
-  const canvas = await html2canvas(element, { scale: 2 });
-  const pdf = new jsPDF();
-  const imgData = canvas.toDataURL("image/png");
-  pdf.addImage(imgData, "PNG", 0, 0, 210, 297); // A4 size
-  pdf.save("sales-report.pdf");
-};
-```
-
-**The Result:**
-
-- **Zero backend dependency:** No servers required for PDF generation
-- **Privacy-preserving:** Sales data never leaves user's browser
-- **Instant generation:** Report ready in <2 seconds for typical dashboards
-- **Compliance:** Users can generate audit-ready reports with timestamp and data filters
-
----
-
----
+**The Result:** The application supports an end-to-end workflow from import to exploration to insight to export, with interaction states represented in the UI rather than requiring a separate operations console.
 
 ## 4. Architectural Highlights
 
-### Data Flow Architecture
+### Data Flow
 
-```
-┌─────────────────────────────────────────────────────┐
-│ User Uploads CSV via UploadModal                    │
-│ (or loads INITIAL_CSV_DATA from sampleCsv.ts)      │
-└────────────────┬────────────────────────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────────────────────────┐
-│ CSV → parseSalesCsv() → SaleRecord[]                │
-│ (PapaParse + cleanNumber/cleanString utilities)     │
-└────────────────┬────────────────────────────────────┘
-                 │
-                 ▼ records stored in useState
-┌─────────────────────────────────────────────────────┐
-│ App.tsx State Management                            │
-│  ├─ records: SaleRecord[]                           │
-│  ├─ filters: FilterState                            │
-│  ├─ granularity: "daily" | "weekly" | ...           │
-│  └─ salesTarget: number                             │
-└────────────────┬────────────────────────────────────┘
-                 │
-                 ▼ computed via useMemo (dependency: [records, filters])
-┌─────────────────────────────────────────────────────┐
-│ Analytics Computation Layer (Pure Functions)        │
-│  ├─ filteredRecords = filterRecords(records, filters)
-│  ├─ metrics = computeDashboardMetrics(filteredRecords)
-│  ├─ timeSeries = computeTimeSeries(filteredRecords, granularity)
-│  ├─ channelMetrics = computeChannelMetrics(filteredRecords)
-│  ├─ categoryMetrics = computeCategoryMetrics(filteredRecords)
-│  ├─ geoMetrics = computeGeoMetrics(filteredRecords)
-│  └─ insights = generateExecutiveInsights(metrics)
-└────────────────┬────────────────────────────────────┘
-                 │
-                 ▼ passed as props to component tree
-┌─────────────────────────────────────────────────────┐
-│ Presentation Components (Stateless Functional)      │
-│  ├─ KpiGrid(metrics)                                │
-│  ├─ SalesTrendChart(timeSeries)                     │
-│  ├─ ChannelBreakdown(channelMetrics)                │
-│  ├─ ProductCategoryAnalytics(categoryMetrics)       │
-│  ├─ GeoAnalytics(geoMetrics)                        │
-│  ├─ ReturnAnalysis(filteredRecords)                 │
-│  ├─ ExecutiveSummary(insights)                      │
-│  └─ OrdersTable(filteredRecords, searchTerm)        │
-└──────────────────────────────────────────────────────┘
-```
+1. A user selects or drops a `.csv` or `.txt` file in `UploadModal`.
+2. The file is read locally with `File.text()` and passed to Papa Parse.
+3. `parseSalesCsv` maps source rows into normalized `SaleRecord` objects, derives date components and status, applies defaults, and returns records plus parse metadata.
+4. `App.tsx` stores records and the uploaded filename in React state and resets filters for the new dataset.
+5. `filterRecords` produces the active analytical slice.
+6. Memoized analytics functions calculate KPIs and projections for time, channels, categories, products, zones, states, cities, and executive insights.
+7. The same projections feed charts, tables, the report exporter, and `buildDistilledContext`.
+8. The AI drawer either generates a local deterministic brief or sends the distilled Markdown context and optional targeted slice to Groq over a streamed HTTP request.
+9. Users export the filtered records as CSV or render the active metrics into a PDF/print report.
 
-### Type Safety Architecture
+### Architectural Patterns and Principles
 
-TypeScript interfaces define contracts at every layer:
+- **Normalization boundary:** External, inconsistent report data is converted once at import time into an internal domain contract.
+- **Pure functional domain calculations:** Filtering and metric functions are isolated from React rendering and can be reasoned about independently.
+- **Single source of truth:** `App.tsx` owns the loaded dataset, filters, granularity, target, and modal/drawer state; child components receive data and callbacks through typed props.
+- **Projection-oriented analytics:** Shared aggregation models avoid pushing raw-record interpretation into visual components.
+- **Progressive enhancement:** Local deterministic intelligence is always available; network AI augments it when configured.
+- **Defensive aggregation:** Set-based order counting, safe division, normalized values, and explicit empty states reduce common spreadsheet and dashboard failure modes.
+- **Command/cancellation interaction:** AI generation is represented as an abortable operation with streamed state updates rather than a blocking request.
 
-```typescript
-// Layer 1: Data Shape
-interface SaleRecord {
-  id, year, month, week, day, dateStr, timestamp, orderNumber,
-  customerName, barCode, productName, color, category, qty, mrp,
-  mrpValue, scoobiesMargin, retailersMargin, exGstMargin,
-  deliveryPlace, state, channel, status, zone, saleValue
-}
+### Security, Privacy, and Trust Boundaries
 
-// Layer 2: User Intent (Filters)
-interface FilterState {
-  search, year, years[], month, months[], week, weeks[],
-  dateRangePreset, startDate, endDate, channels[], categories[],
-  zones[], states[], status, campaign
-}
+- Uploaded sales data is processed in browser memory and is not persisted by the application after reload. This reduces server-side retention by default.
+- The optional AI path sends distilled analytics context and a targeted data slice to Groq. The README warns against uploading sensitive or personally identifiable information without approval.
+- API keys can be read from `localStorage` or a Vite-injected environment value. Because both paths make the key available to browser code, the current implementation is not suitable for protecting a production secret from users or browser extensions.
+- No authentication, authorization, IAM role, encryption-at-rest policy, server-side secret manager, audit log, or tenant isolation is implemented in this repository. A production architecture should introduce a backend proxy, server-managed secret, access controls, data-classification rules, and transport/storage policies as needed.
 
-// Layer 3: Computed Results
-interface DashboardMetrics {
-  totalGrossSales, totalNetSales, totalReturnedSales, totalOrders,
-  totalUnitsSold, returnRateQtyPct, returnRateValPct, aov,
-  totalScoobiesMargin, marginPercentage, topChannel, topCategory, topZone
-}
+### Scalability and Current Limits
 
-interface TimeSeriesPoint {
-  date, label, rawDate, timestamp, grossSales, netSales, returns, margin
-}
+The current architecture scales operationally by avoiding backend infrastructure and scales interaction performance through memoized projections, bounded AI context, paginated table rendering, and client-side aggregation. It is appropriate for small to moderate report sizes that fit comfortably in browser memory.
 
-interface ChannelMetric {
-  channel, grossSales, netSales, returns, orderCount, units, returnRate
-}
+The principal growth limit is browser memory and single-threaded JavaScript execution: every row is loaded and aggregated in the main application context. For substantially larger datasets, the next architectural step would be worker-based parsing/aggregation or a server-side analytical store and query API. The AI context strategy already provides a useful boundary for controlling prompt growth, but it is not a substitute for a scalable data plane.
 
-interface GeoMetric {
-  state, zone, grossSales, netSales, orderCount, returnRate
-}
-```
+### Infrastructure and Delivery Assessment
 
-**Benefit:** A developer cannot accidentally pass the wrong data type to a component; TypeScript catches it at compile time.
-
----
-
-### State Management & Performance Optimization
-
-**Why no Redux/Zustand?**
-
-1. Single page scope: All state fits in App.tsx (~200 lines)
-2. Unidirectional data flow: No circular dependencies or complex side effects
-3. Performance sufficient: useMemo handles memoization; React Fast Refresh works without state serialization
-4. Bundle size: ~15KB saved by avoiding external state library
-
-**Memoization Strategy:**
-
-```typescript
-// Each derived dataset is computed ONLY when dependencies change
-const filteredRecords = useMemo(
-  () => filterRecords(records, filters),
-  [records, filters], // only recompute if records or filters change
-);
-
-const metrics = useMemo(
-  () => computeDashboardMetrics(filteredRecords),
-  [filteredRecords],
-);
-
-const timeSeries = useMemo(
-  () => computeTimeSeries(filteredRecords, granularity),
-  [filteredRecords, granularity],
-);
-```
-
-**Complexity Analysis:**
-
-- Initial load of 10,000 records: ~50ms (parsing + filtering + all computations)
-- Filter change on 10,000 records: ~20ms (memoized; only affected slices recompute)
-- Adding single row: ~5ms (memoized unaffected computations stay cached)
-
----
-
-### Responsive Design Strategy
-
-**CSS Architecture:**
-
-- **Tailwind CSS:** Utility-first approach with responsive prefixes (sm:, lg:, xl:)
-- **Grid System:** 6-column grid on desktop (xl:grid-cols-6), adapts to 3 columns on tablet (lg:grid-cols-3), 2 on mobile (sm:grid-cols-2)
-- **Breakpoints:** Mobile-first; components stack vertically then expand
-- **Print Styles:** CSS media query `@media print { ... }` hides controls, shows full tables
-
-Example from KpiGrid:
-
-```jsx
-<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
-  {/* 1 column on mobile, 2 on small, 3 on large, 6 on xl */}
-</div>
-```
-
----
-
-### Build & Deployment
-
-**Development:**
-
-- `npm run dev`: Starts Vite dev server with HMR; opens browser automatically
-- TypeScript runs in project references mode (fast incremental checking)
-- Tailwind JIT compilation on each file save
-
-**Production:**
-
-- `npm run build`: Vite esbuild transpiles to ES2022; tree-shakes unused code
-- Output: Minified single-file bundle (~200KB) + CSS (~50KB)
-- Supports static hosting (S3, Vercel, GitHub Pages, Netlify)
-
-**Deployment Architecture:**
-
-```
-Developer's Machine
-  │
-  ├─ npm run build
-  │   └─ dist/ folder generated (index.html + app.js + styles.css)
-  │
-  └─ Upload dist/ to CDN or Static Host (No server required)
-      │
-      └─ User downloads HTML
-          └─ Browser runs React app in memory
-          └─ User uploads CSV
-          └─ Data processed client-side (never sent to server)
-```
-
----
-
----
+The repository currently defines a Vite development command and a production build command only. There is no checked-in CI workflow, infrastructure-as-code, deployment manifest, monitoring integration, automated test suite, lint configuration, or production API proxy. These omissions are important interview context: the project demonstrates a complete client-side product workflow, while production hardening and operational automation remain follow-up work.
 
 ## 5. Potential KPI Suggestions
 
-Since real-world deployment metrics are not yet available, here are **realistic KPIs** the user should measure and document to strengthen resume bullet points:
+The following metrics should be measured or estimated from actual usage before turning the project into quantified resume bullets:
 
-### 1. **Data Processing Performance**
-
-- **Metric:** Average time to parse and filter N records
-- **Suggested Targets:**
-  - 10,000 records: <100ms
-  - 50,000 records: <500ms
-  - 100,000 records: <2s
-- **How to Measure:**
-  - Browser DevTools Performance tab → Record → measure parseSalesCsv + filterRecords time
-  - Report in resume as: "Optimized CSV parsing pipeline to handle 50,000+ records in <500ms via memoization and O(n) filtering"
-
-### 2. **User Engagement & Autonomy**
-
-- **Metric:** % of reports generated by end-users without technical support requests
-- **Suggested Target:** >90%
-- **How to Measure:**
-  - Track support tickets related to "Report generation"
-  - Calculate: (Reports Generated - Support Requests) / Reports Generated
-- **Resume Value:** "Designed self-service analytics UI enabling 90%+ of business analysts to generate custom reports without data team intervention"
-
-### 3. **Report Accuracy & Auditability**
-
-- **Metric:** % of calculations verified against source data
-- **Suggested Target:** 100% (calculations are deterministic and transparent)
-- **How to Measure:**
-  - Pick 10 random date ranges and filters
-  - Export reports, manually verify 3-5 metrics against raw CSV
-  - Document any discrepancies
-- **Resume Value:** "Implemented transparent, auditable analytics calculations with 100% traceability from raw data to dashboard metrics"
-
-### 4. **Time Saved vs. Manual Reporting**
-
-- **Metric:** Hours saved per report generation (vs. manual Excel/SQL queries)
-- **Suggested Target:** 2-4 hours saved per report
-- **Calculation:**
-  - Manual method: Parse CSV → Create pivot tables → Build charts → Format report = ~3-4 hours
-  - Dashboard method: Upload CSV → Select filters → Export PDF = ~5 minutes
-  - Savings: 3h 55m per report × (Number of reports per month)
-- **Resume Value:** "Reduced monthly reporting time by 40+ hours (20+ reports × 2h saved each) via client-side analytics automation"
-
-### 5. **Geographic/Channel Insight Velocity**
-
-- **Metric:** Time to answer "What was sales by state in August?" or "Which channel had highest margin?"
-- **Suggested Target:** <10 seconds from question to answer
-- **How to Measure:**
-  - Ask 5 business users to find specific metrics
-  - Time from filter selection to insight discovery
-  - Compare to alternative method (SQL query + manual chart building = 10-20 min)
-- **Resume Value:** "Enabled sub-10-second ad-hoc queries across 8+ data dimensions, reducing analyst decision-making latency by 95%"
-
-### 6. **Operational Cost Reduction**
-
-- **Metric:** Infrastructure costs eliminated (no backend, no database, no data team bandwidth)
-- **Suggested Target:** $0 marginal cost per report
-- **Calculation:**
-  - Traditional BI stack (Tableau/Power BI + SQL Server + ETL): $10K-100K/year
-  - This dashboard: $0 server cost (static hosting + free tier CDN)
-  - Savings: $10K-100K annually
-- **Resume Value:** "Architected serverless analytics solution with zero operational overhead, eliminating $50K+ annual BI infrastructure costs"
-
-### 7. **Data Privacy & Compliance**
-
-- **Metric:** % of analytics operations that comply with data residency requirements (e.g., GDPR, local data sovereignty)
-- **Suggested Target:** 100%
-- **Why This Matters:**
-  - Client-side processing = data never leaves user's browser
-  - No backend = no data storage/transmission concerns
-  - PDF reports can be generated entirely offline
-- **Resume Value:** "Implemented privacy-by-design analytics platform where 100% of user data remains client-side, eliminating backend data exposure and supporting strict data residency compliance"
-
-### 8. **Report Distribution & Accessibility**
-
-- **Metric:** % of stakeholders who can access reports independently
-- **Suggested Target:** >95%
-- **Why This Matters:**
-  - PDF reports can be emailed/shared
-  - No login required (just URL + dashboard)
-  - Accessible on mobile browsers
-- **Resume Value:** "Designed accessibility-first UI enabling 95%+ of non-technical stakeholders to generate and share reports without data team assistance"
-
----
-
-## Implementation Notes for Resume
-
-### How to Use This Summary
-
-Each section above is a potential **bullet point** for your resume. Examples:
-
-✅ **Strong Resume Bullet (based on Achievement #1):**
-
-> "Engineered multi-dimensional filtering engine supporting 8+ independent filter dimensions with both single-select and multi-select modes, enabling business analysts to query 50K+ records across year/month/channel/category/geography with O(n) performance (<100ms latency)"
-
-✅ **Strong Resume Bullet (based on Achievement #2):**
-
-> "Implemented transparent, auditable margin calculation engine computing Scoobies margin, retailer margin, and ex-GST margin totals with 100% calculation traceability; calculations verified across 100% of test records"
-
-✅ **Strong Resume Bullet (based on Operational Impact):**
-
-> "Architected serverless analytics platform processing 50K+ monthly sales records entirely client-side, eliminating $50K+ annual BI infrastructure costs while maintaining 100% data privacy compliance via zero-backend architecture"
-
-✅ **Strong Resume Bullet (based on Impact):**
-
-> "Reduced monthly sales reporting cycle from 40+ analyst-hours to <2 hours via self-service dashboard, enabling non-technical business users to generate custom reports across 8+ data dimensions in <10 seconds"
-
----
-
-## Technical Debt & Future Enhancements
-
-### Known Limitations (for transparency)
-
-- **No real-time sync:** Dashboard requires manual CSV upload; no live database connection
-- **Memory constraints:** In-browser storage limited to browser memory; 500K+ records may cause slowdown
-- **Offline-only analysis:** Requires client-side CSV upload; no API-based data source integration
-
-### Potential Enhancements
-
-1. **Server-side export:** For very large datasets (>500K records), implement backend CSV → JSON API
-2. **Data caching:** IndexedDB for persisting uploaded files across sessions
-3. **Collaborative filtering:** Allow multiple users to share filter presets via URL parameters
-4. **Advanced analytics:** Add forecasting (Prophet.js), cohort analysis, or RFM segmentation
-5. **API integration:** Connect to live Shopify/Salesforce APIs for real-time sync
-6. **Testing infrastructure:** Add Jest unit tests + Cypress E2E tests for calculation verification
-
----
-
-## Conclusion
-
-The Scoobies Sales Analytics Dashboard represents a **pragmatic, production-grade solution** that prioritizes:
-
-1. **Type Safety:** TypeScript catches errors at compile time; no runtime type mismatches
-2. **Transparency:** All calculations are open-source, verifiable, and auditable
-3. **Performance:** Memoized computations handle 50K+ records in <500ms
-4. **Autonomy:** Business users can explore data independently without technical support
-5. **Simplicity:** No external state library or complex architecture; leverages React's built-in patterns
-6. **Compliance:** 100% client-side processing eliminates data privacy concerns
-
-This architecture would be a strong foundation for:
-
-- **Scaling to larger datasets** (add backend API)
-- **Adding real-time features** (WebSocket sync)
-- **Building team collaboration** (multi-user shared workspaces)
-- **Extending to new domains** (template other analytics dashboards on this pattern)
-
----
-
-**Created:** 2026-08-26  
-**Technology Stack:** React 19 + TypeScript 7 + Vite 8 + Tailwind CSS + Recharts + PapaParse  
-**Deployment:** Static hosting (S3, Vercel, GitHub Pages, Netlify)  
-**Architecture Pattern:** React Hooks + useMemo + Presentational Component Pattern  
-**Data Processing:** Client-side CSV parsing + O(n) filtering + multi-dimensional aggregation
+1. **Time to insight:** Median time from importing a report to identifying the first actionable margin, return, channel, or target finding.
+2. **Manual reporting effort avoided:** Analyst hours or spreadsheet steps eliminated per reporting cycle through automatic normalization, filtering, aggregation, and PDF/CSV export.
+3. **Dataset compatibility rate:** Percentage of incoming sales reports successfully imported without manual column renaming or preprocessing, plus percentage of rows retained after parsing.
+4. **Interactive responsiveness:** P50/P95 time for CSV parsing, filter changes, and recomputation across representative row counts.
+5. **AI efficiency:** Reduction in prompt tokens, payload size, or response latency achieved by distilled context and targeted micro-slices compared with sending raw records.
+6. **Decision coverage:** Number of commercial dimensions available in one workflow, such as channels, categories, products, returns, campaigns, periods, zones, states, and cities, or the share of recurring questions answered without a custom extract.
+7. **Return and margin impact:** Change in return rate, refunded value, gross margin, AOV, or quota attainment after teams act on dashboard-identified product/channel risks.

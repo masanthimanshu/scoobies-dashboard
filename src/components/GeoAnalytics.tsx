@@ -8,33 +8,35 @@ interface GeoAnalyticsProps {
   cities: GeoMetric[];
 }
 
+const TABS: { id: "zones" | "states" | "cities"; label: string }[] = [
+  { id: "zones", label: "Zones" },
+  { id: "states", label: "Top States" },
+  { id: "cities", label: "Top Cities" },
+];
+
 export const GeoAnalytics: React.FC<GeoAnalyticsProps> = ({
   zones,
   states,
   cities,
 }) => {
   const [geoTab, setGeoTab] = useState<"zones" | "states" | "cities">("zones");
-  const [showAllStates, setShowAllStates] = useState(false);
-  const [showAllCities, setShowAllCities] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // Switch tab & reset expansion
+  const handleTabChange = (tab: "zones" | "states" | "cities") => {
+    setGeoTab(tab);
+    setIsExpanded(false);
+  };
 
   // Full list for the active tab
   const fullList =
     geoTab === "zones" ? zones : geoTab === "states" ? states : cities;
 
   // Displayed slice: Zones shows all, States/Cities shows top 12 by default
-  const isExpanded = geoTab === "states" ? showAllStates : showAllCities;
   const activeList =
     geoTab === "zones" ? zones : isExpanded ? fullList : fullList.slice(0, 12);
 
   const hasMoreThan12 = geoTab !== "zones" && fullList.length > 12;
-
-  const toggleViewAll = () => {
-    if (geoTab === "states") {
-      setShowAllStates(!showAllStates);
-    } else if (geoTab === "cities") {
-      setShowAllCities(!showAllCities);
-    }
-  };
 
   return (
     <div className="bg-white border border-[#EBE5D9] rounded-[28px] p-6 shadow-sm mb-6">
@@ -51,39 +53,20 @@ export const GeoAnalytics: React.FC<GeoAnalyticsProps> = ({
         </div>
 
         <div className="flex bg-[#F1EDE5] p-1 rounded-xl text-xs border border-[#EBE5D9]">
-          <button
-            type="button"
-            onClick={() => setGeoTab("zones")}
-            className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-              geoTab === "zones"
-                ? "bg-white text-[#2D2A26] shadow-2xs font-extrabold"
-                : "text-[#8C8376] hover:text-[#2D2A26]"
-            }`}
-          >
-            Zones
-          </button>
-          <button
-            type="button"
-            onClick={() => setGeoTab("states")}
-            className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-              geoTab === "states"
-                ? "bg-white text-[#2D2A26] shadow-2xs font-extrabold"
-                : "text-[#8C8376] hover:text-[#2D2A26]"
-            }`}
-          >
-            Top States
-          </button>
-          <button
-            type="button"
-            onClick={() => setGeoTab("cities")}
-            className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-              geoTab === "cities"
-                ? "bg-white text-[#2D2A26] shadow-2xs font-extrabold"
-                : "text-[#8C8376] hover:text-[#2D2A26]"
-            }`}
-          >
-            Top Cities
-          </button>
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => handleTabChange(tab.id)}
+              className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                geoTab === tab.id
+                  ? "bg-white text-[#2D2A26] shadow-2xs font-extrabold"
+                  : "text-[#8C8376] hover:text-[#2D2A26]"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -135,7 +118,7 @@ export const GeoAnalytics: React.FC<GeoAnalyticsProps> = ({
         <div className="mt-5 pt-3.5 border-t border-[#F1EDE5] flex justify-center">
           <button
             type="button"
-            onClick={toggleViewAll}
+            onClick={() => setIsExpanded(!isExpanded)}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-[#433E37] bg-[#F9F7F2] hover:bg-[#F1EDE5] border border-[#EBE5D9] rounded-xl transition-colors cursor-pointer"
           >
             <span>

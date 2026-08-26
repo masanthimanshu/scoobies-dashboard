@@ -1,7 +1,6 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, FC } from "react";
 import {
   UploadCloud,
-  RotateCcw,
   Printer,
   Target,
   TrendingUp,
@@ -10,6 +9,7 @@ import {
   ChevronDown,
   FileSpreadsheet,
   Pencil,
+  Trash2,
 } from "lucide-react";
 
 interface NavbarProps {
@@ -18,19 +18,19 @@ interface NavbarProps {
   filteredRows: number;
   salesTarget: number;
   onOpenUpload: () => void;
-  onResetSample: () => void;
+  onClearData?: () => void;
   onOpenGoal: () => void;
   onPrintReport: () => void;
   onExportFilteredCsv: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({
+export const Navbar: FC<NavbarProps> = ({
   fileName,
   totalRows,
   filteredRows,
   salesTarget,
   onOpenUpload,
-  onResetSample,
+  onClearData,
   onOpenGoal,
   onPrintReport,
   onExportFilteredCsv,
@@ -95,26 +95,35 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             </div>
 
-            {/* Active Data Info - Shows Full Filename */}
-            <div className="hidden lg:flex items-center gap-2 px-3 py-2 text-xs text-[#433E37] bg-[#F1EDE5] border border-[#E4DCD0] rounded-2xl font-medium shrink-0">
-              <Database className="w-3.5 h-3.5 text-[#5F7161] shrink-0" />
-              <span
-                className="font-bold text-[#2D2A26] whitespace-nowrap"
-                title={fileName}
-              >
-                {fileName}
-              </span>
-              <span className="text-[#C4BAA9]">|</span>
-              <span className="text-[#8C8376] whitespace-nowrap">
-                {filteredRows.toLocaleString()} / {totalRows.toLocaleString()}{" "}
-                rows
-              </span>
-            </div>
+            {/* Active Data Info */}
+            {totalRows > 0 ? (
+              <div className="hidden lg:flex items-center gap-2 px-3 py-2 text-xs text-[#433E37] bg-[#F1EDE5] border border-[#E4DCD0] rounded-2xl font-medium shrink-0">
+                <Database className="w-3.5 h-3.5 text-[#5F7161] shrink-0" />
+                <span
+                  className="font-bold text-[#2D2A26] whitespace-nowrap max-w-[160px] truncate"
+                  title={fileName}
+                >
+                  {fileName || "Sales Dataset"}
+                </span>
+                <span className="text-[#C4BAA9]">|</span>
+                <span className="text-[#8C8376] whitespace-nowrap">
+                  {filteredRows.toLocaleString()} / {totalRows.toLocaleString()}{" "}
+                  rows
+                </span>
+              </div>
+            ) : (
+              <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 text-xs text-[#8C8376] bg-[#F1EDE5]/60 border border-[#E4DCD0] rounded-2xl font-medium shrink-0">
+                <Database className="w-3.5 h-3.5 text-[#8C8376] shrink-0" />
+                <span className="font-semibold text-[#8C8376] whitespace-nowrap">
+                  No dataset loaded
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Right Action Controls */}
           <div className="flex items-center gap-2 shrink-0">
-            {/* Consolidated Actions Dropdown (Export CSV, Print Report, Reset) */}
+            {/* Consolidated Actions Dropdown (Export CSV, Print Report, Clear Data) */}
             <div className="relative" ref={actionsMenuRef}>
               <button
                 type="button"
@@ -172,24 +181,26 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </button>
                   </div>
 
-                  <div className="py-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsActionsOpen(false);
-                        onResetSample();
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-left text-xs font-bold text-[#8C8376] hover:text-[#C84B31] hover:bg-[#FFF5F5] transition-colors cursor-pointer"
-                    >
-                      <RotateCcw className="w-4 h-4 shrink-0" />
-                      <div>
-                        <div>Reset to Sample Data</div>
-                        <div className="text-[10px] font-normal text-[#8C8376]">
-                          Restore default dataset
+                  {onClearData && totalRows > 0 && (
+                    <div className="py-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsActionsOpen(false);
+                          onClearData();
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3.5 py-2 text-left text-xs font-bold text-[#8C8376] hover:text-[#C84B31] hover:bg-[#FFF5F5] transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4 shrink-0" />
+                        <div>
+                          <div>Clear Dataset</div>
+                          <div className="text-[10px] font-normal text-[#8C8376]">
+                            Unload active sales data
+                          </div>
                         </div>
-                      </div>
-                    </button>
-                  </div>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -20,6 +20,14 @@ interface BasketSizeAovProps {
   metrics: DashboardMetrics;
 }
 
+const currencyFormatter = new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: "INR",
+  maximumFractionDigits: 0,
+});
+
+const formatCurrency = (val: number) => currencyFormatter.format(val || 0);
+
 export const BasketSizeAov: React.FC<BasketSizeAovProps> = ({
   channels,
   metrics,
@@ -71,14 +79,6 @@ export const BasketSizeAov: React.FC<BasketSizeAovProps> = ({
   }, validChannels[0]);
 
   const maxAovValue = Math.max(...validChannels.map((c) => c.avgOrderValue), 1);
-
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 0,
-    }).format(val || 0);
-  };
 
   const handleSaveCustomAov = () => {
     const num = parseFloat(tempAovInput.replace(/[^0-9.]/g, ""));

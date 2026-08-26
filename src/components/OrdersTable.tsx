@@ -15,6 +15,21 @@ interface OrdersTableProps {
   onExportCsv: () => void;
 }
 
+const TABLE_COLUMNS: {
+  key: keyof SaleRecord;
+  label: string;
+  align?: "left" | "right" | "center";
+}[] = [
+  { key: "dateStr", label: "Date", align: "left" },
+  { key: "channel", label: "Channel", align: "left" },
+  { key: "productName", label: "Product & Category", align: "left" },
+  { key: "qty", label: "QTY", align: "right" },
+  { key: "saleValue", label: "Sale Value", align: "right" },
+  { key: "scoobiesMargin", label: "Margin", align: "right" },
+  { key: "deliveryPlace", label: "Location", align: "left" },
+  { key: "status", label: "Status", align: "center" },
+];
+
 export const OrdersTable: React.FC<OrdersTableProps> = ({
   records,
   onExportCsv,
@@ -106,78 +121,20 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
         <table className="w-full text-xs text-left">
           <thead>
             <tr className="bg-[#FAF8F5] border-b border-[#EBE5D9] text-[#8C8376] font-bold uppercase tracking-wider text-[11px] select-none">
-              <th
-                className="py-2.5 px-3 cursor-pointer"
-                onClick={() => handleSort("dateStr")}
-              >
-                <div className="flex items-center gap-1">
-                  <span>Date</span>
-                  <ArrowUpDown className="w-3 h-3 text-[#CEC4B5]" />
-                </div>
-              </th>
-              <th
-                className="py-2.5 px-3 cursor-pointer"
-                onClick={() => handleSort("channel")}
-              >
-                <div className="flex items-center gap-1">
-                  <span>Channel</span>
-                  <ArrowUpDown className="w-3 h-3 text-[#CEC4B5]" />
-                </div>
-              </th>
-              <th
-                className="py-2.5 px-3 cursor-pointer"
-                onClick={() => handleSort("productName")}
-              >
-                <div className="flex items-center gap-1">
-                  <span>Product & Category</span>
-                  <ArrowUpDown className="w-3 h-3 text-[#CEC4B5]" />
-                </div>
-              </th>
-              <th
-                className="py-2.5 px-3 text-right cursor-pointer"
-                onClick={() => handleSort("qty")}
-              >
-                <div className="flex items-center justify-end gap-1">
-                  <span>QTY</span>
-                  <ArrowUpDown className="w-3 h-3 text-[#CEC4B5]" />
-                </div>
-              </th>
-              <th
-                className="py-2.5 px-3 text-right cursor-pointer"
-                onClick={() => handleSort("saleValue")}
-              >
-                <div className="flex items-center justify-end gap-1">
-                  <span>Sale Value</span>
-                  <ArrowUpDown className="w-3 h-3 text-[#CEC4B5]" />
-                </div>
-              </th>
-              <th
-                className="py-2.5 px-3 text-right cursor-pointer"
-                onClick={() => handleSort("scoobiesMargin")}
-              >
-                <div className="flex items-center justify-end gap-1">
-                  <span>Margin</span>
-                  <ArrowUpDown className="w-3 h-3 text-[#CEC4B5]" />
-                </div>
-              </th>
-              <th
-                className="py-2.5 px-3 cursor-pointer"
-                onClick={() => handleSort("deliveryPlace")}
-              >
-                <div className="flex items-center gap-1">
-                  <span>Location</span>
-                  <ArrowUpDown className="w-3 h-3 text-[#CEC4B5]" />
-                </div>
-              </th>
-              <th
-                className="py-2.5 px-3 text-center cursor-pointer"
-                onClick={() => handleSort("status")}
-              >
-                <div className="flex items-center justify-center gap-1">
-                  <span>Status</span>
-                  <ArrowUpDown className="w-3 h-3 text-[#CEC4B5]" />
-                </div>
-              </th>
+              {TABLE_COLUMNS.map((col) => (
+                <th
+                  key={col.key}
+                  className={`py-2.5 px-3 cursor-pointer ${col.align === "right" ? "text-right" : col.align === "center" ? "text-center" : ""}`}
+                  onClick={() => handleSort(col.key)}
+                >
+                  <div
+                    className={`flex items-center gap-1 ${col.align === "right" ? "justify-end" : col.align === "center" ? "justify-center" : ""}`}
+                  >
+                    <span>{col.label}</span>
+                    <ArrowUpDown className="w-3 h-3 text-[#CEC4B5]" />
+                  </div>
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-[#F1EDE5]">
@@ -257,9 +214,15 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
       {/* Pagination Footer */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-4 pt-3.5 border-t border-[#EBE5D9] text-xs text-[#8C8376] font-medium">
         <div>
-          Showing {(currentPage - 1) * pageSize + 1} to{" "}
-          {Math.min(currentPage * pageSize, sortedRecords.length)} of{" "}
-          {sortedRecords.length.toLocaleString()} entries
+          {sortedRecords.length === 0 ? (
+            "Showing 0 entries"
+          ) : (
+            <>
+              Showing {(currentPage - 1) * pageSize + 1} to{" "}
+              {Math.min(currentPage * pageSize, sortedRecords.length)} of{" "}
+              {sortedRecords.length.toLocaleString()} entries
+            </>
+          )}
         </div>
 
         <div className="flex items-center gap-1.5 self-center sm:self-auto">
