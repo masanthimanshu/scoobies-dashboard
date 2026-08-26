@@ -1,5 +1,5 @@
-import Papa from 'papaparse';
-import { SaleRecord } from '../types';
+import Papa from "papaparse";
+import { SaleRecord } from "../types";
 
 export interface ParseResult {
   records: SaleRecord[];
@@ -14,11 +14,11 @@ export interface ParseResult {
 /**
  * Normalizes number fields from diverse formats (e.g., "  1,829.66 ", " - ", "-329.03", "₹1,200", etc.)
  */
-export function cleanNumber(val: any, defaultVal = 0): number {
+export function cleanNumber(val: unknown, defaultVal = 0): number {
   if (val === undefined || val === null) return defaultVal;
-  if (typeof val === 'number') return isNaN(val) ? defaultVal : val;
-  const str = String(val).trim().replace(/[₹$,]/g, '');
-  if (!str || str === '-' || str === '--') return defaultVal;
+  if (typeof val === "number") return isNaN(val) ? defaultVal : val;
+  const str = String(val).trim().replace(/[₹$,]/g, "");
+  if (!str || str === "-" || str === "--") return defaultVal;
   const num = parseFloat(str);
   return isNaN(num) ? defaultVal : num;
 }
@@ -27,24 +27,42 @@ export function cleanNumber(val: any, defaultVal = 0): number {
  * Normalizes date to parse year, month, day and timestamp safely.
  * Accepts formats: D/M/YYYY, DD/MM/YYYY, YYYY-MM-DD, M/D/YYYY, etc.
  */
-export function parseDateComponents(dateStr: string, yearHint?: number, monthHint?: string, dayHint?: number): {
+export function parseDateComponents(
+  dateStr: string,
+  yearHint?: number,
+  monthHint?: string,
+  dayHint?: number,
+): {
   year: number;
   month: string;
   day: number;
   dateFormatted: string;
   timestamp: number;
 } {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
   let y = yearHint || 2026;
-  let mName = monthHint || 'Aug';
+  let mName = monthHint || "Aug";
   let mIndex = months.findIndex((m) => m.toLowerCase() === mName.toLowerCase());
   if (mIndex === -1) mIndex = 7; // default Aug
   let d = dayHint || 1;
 
-  if (dateStr && typeof dateStr === 'string') {
+  if (dateStr && typeof dateStr === "string") {
     const trimmed = dateStr.trim();
-    if (trimmed.includes('/') || trimmed.includes('-')) {
-      const sep = trimmed.includes('/') ? '/' : '-';
+    if (trimmed.includes("/") || trimmed.includes("-")) {
+      const sep = trimmed.includes("/") ? "/" : "-";
       const parts = trimmed.split(sep).map((p) => parseInt(p.trim(), 10));
       if (parts.length === 3) {
         if (parts[0] > 1000) {
@@ -64,8 +82,8 @@ export function parseDateComponents(dateStr: string, yearHint?: number, monthHin
   }
 
   const dateObj = new Date(y, mIndex, d);
-  const isoFormatted = `${y}-${String(mIndex + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-  
+  const isoFormatted = `${y}-${String(mIndex + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
   return {
     year: y,
     month: mName,
@@ -78,10 +96,18 @@ export function parseDateComponents(dateStr: string, yearHint?: number, monthHin
 /**
  * Normalizes strings by trimming and stripping null / error values.
  */
-export function cleanString(val: any, fallback = ''): string {
+export function cleanString(val: unknown, fallback = ""): string {
   if (val === null || val === undefined) return fallback;
   const s = String(val).trim();
-  if (s === '#N/A' || s === 'N/A' || s === '#VALUE!' || s === '#REF!' || s === 'null' || s === 'undefined' || s === '') {
+  if (
+    s === "#N/A" ||
+    s === "N/A" ||
+    s === "#VALUE!" ||
+    s === "#REF!" ||
+    s === "null" ||
+    s === "undefined" ||
+    s === ""
+  ) {
     return fallback;
   }
   return s;
@@ -90,29 +116,36 @@ export function cleanString(val: any, fallback = ''): string {
 /**
  * Normalizes column header keys regardless of case, extra whitespace, or slight differences
  */
-function findValue(row: Record<string, any>, possibleKeys: string[]): any {
+function findValue(
+  row: Record<string, unknown>,
+  possibleKeys: string[],
+): unknown {
   const rowKeys = Object.keys(row);
   for (const key of possibleKeys) {
     const directMatch = row[key];
-    if (directMatch !== undefined && directMatch !== null && directMatch !== '') {
+    if (
+      directMatch !== undefined &&
+      directMatch !== null &&
+      directMatch !== ""
+    ) {
       return directMatch;
     }
-    const cleanTarget = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const cleanTarget = key.toLowerCase().replace(/[^a-z0-9]/g, "");
     const matchedKey = rowKeys.find(
-      (k) => k.toLowerCase().replace(/[^a-z0-9]/g, '') === cleanTarget
+      (k) => k.toLowerCase().replace(/[^a-z0-9]/g, "") === cleanTarget,
     );
-    if (matchedKey && row[matchedKey] !== undefined && row[matchedKey] !== '') {
+    if (matchedKey && row[matchedKey] !== undefined && row[matchedKey] !== "") {
       return row[matchedKey];
     }
   }
-  return '';
+  return "";
 }
 
 export function parseSalesCsv(csvText: string): Promise<ParseResult> {
   return new Promise((resolve) => {
-    Papa.parse<Record<string, any>>(csvText, {
+    Papa.parse<Record<string, unknown>>(csvText, {
       header: true,
-      skipEmptyLines: 'greedy',
+      skipEmptyLines: "greedy",
       transformHeader: (header) => header.trim(),
       complete: (results) => {
         const records: SaleRecord[] = [];
@@ -124,90 +157,171 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
 
         results.data.forEach((row, idx) => {
           try {
-            const rawYear = cleanNumber(findValue(row, ['Year', 'year', 'Yr']));
-            const rawMonth = String(findValue(row, ['Month', 'month', 'Mo']) || '').trim();
-            const rawWeek = String(findValue(row, ['Week', 'week', 'Wk']) || '').trim();
-            const rawDay = cleanNumber(findValue(row, ['Day', 'day', 'D']));
-            const rawDate = String(findValue(row, ['Date', 'date', 'Order Date', 'Sale Date']) || '').trim();
+            const rawYear = cleanNumber(findValue(row, ["Year", "year", "Yr"]));
+            const rawMonth = String(
+              findValue(row, ["Month", "month", "Mo"]) || "",
+            ).trim();
+            const rawWeek = String(
+              findValue(row, ["Week", "week", "Wk"]) || "",
+            ).trim();
+            const rawDay = cleanNumber(findValue(row, ["Day", "day", "D"]));
+            const rawDate = String(
+              findValue(row, ["Date", "date", "Order Date", "Sale Date"]) || "",
+            ).trim();
 
-            const dateInfo = parseDateComponents(rawDate, rawYear || 2026, rawMonth || 'Aug', rawDay || 1);
+            const dateInfo = parseDateComponents(
+              rawDate,
+              rawYear || 2026,
+              rawMonth || "Aug",
+              rawDay || 1,
+            );
 
             const orderNumber = String(
-              findValue(row, ['Order Number', 'Order No', 'Order Id', 'Order_Number', 'order_id']) || `ORD-${idx + 1}`
+              findValue(row, [
+                "Order Number",
+                "Order No",
+                "Order Id",
+                "Order_Number",
+                "order_id",
+              ]) || `ORD-${idx + 1}`,
             ).trim();
 
             const customerName = String(
-              findValue(row, ['Customer name', 'Customer Name', 'Customer', 'Buyer Name']) || 'Valued Customer'
+              findValue(row, [
+                "Customer name",
+                "Customer Name",
+                "Customer",
+                "Buyer Name",
+              ]) || "Valued Customer",
             ).trim();
 
-            const barCode = String(findValue(row, ['Bar Code', 'Barcode', 'SKU', 'Item Code']) || '').trim();
+            const barCode = String(
+              findValue(row, ["Bar Code", "Barcode", "SKU", "Item Code"]) || "",
+            ).trim();
             const productName = String(
-              findValue(row, ['Product name', 'Product Name', 'Item Name', 'Title', 'Product']) || 'General Item'
+              findValue(row, [
+                "Product name",
+                "Product Name",
+                "Item Name",
+                "Title",
+                "Product",
+              ]) || "General Item",
             ).trim();
 
-            const color = String(findValue(row, ['Color', 'Colour', 'Variant']) || 'Standard').trim();
+            const color = String(
+              findValue(row, ["Color", "Colour", "Variant"]) || "Standard",
+            ).trim();
             const category = String(
-              findValue(row, ['PRODUCT CATEGORY', 'Product Category', 'Category', 'Item Category']) || 'General'
+              findValue(row, [
+                "PRODUCT CATEGORY",
+                "Product Category",
+                "Category",
+                "Item Category",
+              ]) || "General",
             ).trim();
 
-            const qty = cleanNumber(findValue(row, ['QTY', 'Qty', 'Quantity', 'Units']), 1);
-            const mrp = cleanNumber(findValue(row, ['MRP', 'Mrp', 'Price', 'Unit Price']), 0);
-            const mrpValue = cleanNumber(findValue(row, ['MRP Value', 'MRP_Value', 'Total MRP']), qty * mrp);
+            const qty = cleanNumber(
+              findValue(row, ["QTY", "Qty", "Quantity", "Units"]),
+              1,
+            );
+            const mrp = cleanNumber(
+              findValue(row, ["MRP", "Mrp", "Price", "Unit Price"]),
+              0,
+            );
+            const mrpValue = cleanNumber(
+              findValue(row, ["MRP Value", "MRP_Value", "Total MRP"]),
+              qty * mrp,
+            );
 
             const scoobiesMargin = cleanNumber(
-              findValue(row, ['Scoobies Margin', 'Margin', 'Gross Margin']),
-              0
+              findValue(row, ["Scoobies Margin", "Margin", "Gross Margin"]),
+              0,
             );
             const retailersMargin = cleanNumber(
-              findValue(row, ['Retailers Margin', 'Retailer Margin', 'Channel Margin']),
-              0
+              findValue(row, [
+                "Retailers Margin",
+                "Retailer Margin",
+                "Channel Margin",
+              ]),
+              0,
             );
             const exGstMargin = cleanNumber(
-              findValue(row, ['EX-GST Scoobies Margin', 'Ex-GST Margin', 'Ex GST Margin', 'EX GST']),
-              scoobiesMargin * 0.85
+              findValue(row, [
+                "EX-GST Scoobies Margin",
+                "Ex-GST Margin",
+                "Ex GST Margin",
+                "EX GST",
+              ]),
+              scoobiesMargin * 0.85,
             );
 
             const deliveryPlace = cleanString(
-              findValue(row, ['Delivery Place', 'City', 'Location', 'Delivery City']),
-              'Unspecified'
+              findValue(row, [
+                "Delivery Place",
+                "City",
+                "Location",
+                "Delivery City",
+              ]),
+              "Unspecified",
             );
 
             const state = cleanString(
-              findValue(row, ['State', 'Province', 'Region']),
-              'Unassigned'
+              findValue(row, ["State", "Province", "Region"]),
+              "Unassigned",
             );
             const websiteRaw = cleanString(
-              findValue(row, ['Website', 'Channel', 'Platform', 'Portal', 'Source']),
-              'Direct'
+              findValue(row, [
+                "Website",
+                "Channel",
+                "Platform",
+                "Portal",
+                "Source",
+              ]),
+              "Direct",
             );
-            const channel = websiteRaw || 'Direct Website';
+            const channel = websiteRaw || "Direct Website";
 
             const rawStatus = cleanString(
-              findValue(row, ['Status', 'Order Status', 'Delivery Status']),
-              'Dispatched'
+              findValue(row, ["Status", "Order Status", "Delivery Status"]),
+              "Dispatched",
             );
-            let status: 'Dispatched' | 'Return' | 'Cancelled' | 'Other' = 'Dispatched';
-            if (rawStatus.toLowerCase().includes('return') || qty < 0) {
-              status = 'Return';
-            } else if (rawStatus.toLowerCase().includes('cancel')) {
-              status = 'Cancelled';
-            } else if (rawStatus.toLowerCase().includes('dispatch') || rawStatus.toLowerCase().includes('delivered')) {
-              status = 'Dispatched';
+            let status: "Dispatched" | "Return" | "Cancelled" | "Other" =
+              "Dispatched";
+            if (rawStatus.toLowerCase().includes("return") || qty < 0) {
+              status = "Return";
+            } else if (rawStatus.toLowerCase().includes("cancel")) {
+              status = "Cancelled";
+            } else if (
+              rawStatus.toLowerCase().includes("dispatch") ||
+              rawStatus.toLowerCase().includes("delivered")
+            ) {
+              status = "Dispatched";
             }
 
             const backToSchool = cleanString(
-              findValue(row, ['Back To School', 'Back to School', 'Campaign', 'B2S']),
-              'Standard'
+              findValue(row, [
+                "Back To School",
+                "Back to School",
+                "Campaign",
+                "B2S",
+              ]),
+              "Standard",
             );
 
             const zone = cleanString(
-              findValue(row, ['Zone', 'Sales Zone', 'Area']),
-              'Unassigned'
+              findValue(row, ["Zone", "Sales Zone", "Area"]),
+              "Unassigned",
             );
-            
+
             const saleValue = cleanNumber(
-              findValue(row, ['Sale Value', 'Sale_Value', 'Net Sales', 'Sales', 'Total Value']),
-              qty < 0 ? -(Math.abs(mrp * qty)) : mrp * qty
+              findValue(row, [
+                "Sale Value",
+                "Sale_Value",
+                "Net Sales",
+                "Sales",
+                "Total Value",
+              ]),
+              qty < 0 ? -Math.abs(mrp * qty) : mrp * qty,
             );
 
             const record: SaleRecord = {
@@ -244,8 +358,9 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
             if (record.channel) channelsSet.add(record.channel);
             if (record.category) categoriesSet.add(record.category);
             if (record.zone) zonesSet.add(record.zone);
-          } catch (err: any) {
-            errors.push(`Row ${idx + 1}: ${err.message}`);
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            errors.push(`Row ${idx + 1}: ${msg}`);
           }
         });
 

@@ -1,22 +1,22 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import Papa from 'papaparse';
-import { Navbar } from './components/Navbar';
-import { FilterBar } from './components/FilterBar';
-import { KpiGrid } from './components/KpiGrid';
-import { ExecutiveSummary } from './components/ExecutiveSummary';
-import { BasketSizeAov } from './components/BasketSizeAov';
-import { SalesTrendChart } from './components/SalesTrendChart';
-import { ChannelBreakdown } from './components/ChannelBreakdown';
-import { ProductCategoryAnalytics } from './components/ProductCategoryAnalytics';
-import { ReturnAnalysis } from './components/ReturnAnalysis';
-import { GeoAnalytics } from './components/GeoAnalytics';
-import { OrdersTable } from './components/OrdersTable';
-import { UploadModal } from './components/UploadModal';
-import { GoalModal } from './components/GoalModal';
-import { PrintReportView } from './components/PrintReportView';
+import React, { useState, useEffect, useMemo } from "react";
+import Papa from "papaparse";
+import { Navbar } from "./components/Navbar";
+import { FilterBar } from "./components/FilterBar";
+import { KpiGrid } from "./components/KpiGrid";
+import { ExecutiveSummary } from "./components/ExecutiveSummary";
+import { BasketSizeAov } from "./components/BasketSizeAov";
+import { SalesTrendChart } from "./components/SalesTrendChart";
+import { ChannelBreakdown } from "./components/ChannelBreakdown";
+import { ProductCategoryAnalytics } from "./components/ProductCategoryAnalytics";
+import { ReturnAnalysis } from "./components/ReturnAnalysis";
+import { GeoAnalytics } from "./components/GeoAnalytics";
+import { OrdersTable } from "./components/OrdersTable";
+import { UploadModal } from "./components/UploadModal";
+import { GoalModal } from "./components/GoalModal";
+import { PrintReportView } from "./components/PrintReportView";
 
-import { INITIAL_CSV_DATA } from './data/sampleCsv';
-import { parseSalesCsv } from './utils/csvParser';
+import { INITIAL_CSV_DATA } from "./data/sampleCsv";
+import { parseSalesCsv } from "./utils/csvParser";
 import {
   filterRecords,
   computeDashboardMetrics,
@@ -26,33 +26,35 @@ import {
   computeProductMetrics,
   computeGeoMetrics,
   generateExecutiveInsights,
-} from './utils/analytics';
-import { SaleRecord, FilterState } from './types';
+} from "./utils/analytics";
+import { SaleRecord, FilterState } from "./types";
 
 const DEFAULT_FILTERS: FilterState = {
-  search: '',
-  year: 'ALL',
+  search: "",
+  year: "ALL",
   years: [],
-  month: 'ALL',
+  month: "ALL",
   months: [],
-  week: 'ALL',
+  week: "ALL",
   weeks: [],
-  dateRangePreset: 'ALL',
-  startDate: '',
-  endDate: '',
+  dateRangePreset: "ALL",
+  startDate: "",
+  endDate: "",
   channels: [],
   categories: [],
   zones: [],
   states: [],
-  status: 'ALL',
-  campaign: 'ALL',
+  status: "ALL",
+  campaign: "ALL",
 };
 
 export default function App() {
   const [records, setRecords] = useState<SaleRecord[]>([]);
-  const [fileName, setFileName] = useState<string>('15-Days-Sales-Report.csv');
+  const [fileName, setFileName] = useState<string>("15-Days-Sales-Report.csv");
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
-  const [granularity, setGranularity] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
+  const [granularity, setGranularity] = useState<
+    "daily" | "weekly" | "monthly" | "yearly"
+  >("daily");
   const [salesTarget, setSalesTarget] = useState<number>(2500000); // default ₹25 Lakh target
 
   // Modals
@@ -72,15 +74,18 @@ export default function App() {
   const handleResetToSample = async () => {
     const parsed = await parseSalesCsv(INITIAL_CSV_DATA);
     setRecords(parsed.records);
-    setFileName('15-Days-Sales-Report.csv');
+    setFileName("15-Days-Sales-Report.csv");
     setFilters(DEFAULT_FILTERS);
   };
 
-  const handleNewDataLoaded = (newRecords: SaleRecord[], uploadedName: string) => {
+  const handleNewDataLoaded = (
+    newRecords: SaleRecord[],
+    uploadedName: string,
+  ) => {
     setRecords(newRecords);
     setFileName(uploadedName);
     setFilters(DEFAULT_FILTERS);
-    setGranularity('daily');
+    setGranularity("daily");
   };
 
   // Available metadata for filters
@@ -96,17 +101,34 @@ export default function App() {
   }, [records]);
 
   const availableMonths = useMemo(() => {
-    const MONTH_ORDER = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const MONTH_ORDER = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
     const set = new Set<string>();
     records.forEach((r) => {
       if (r.month) set.add(r.month);
     });
     return Array.from(set).sort((a, b) => {
       const idxA = MONTH_ORDER.findIndex(
-        (m) => m.toLowerCase() === a.toLowerCase() || a.toLowerCase().startsWith(m.toLowerCase())
+        (m) =>
+          m.toLowerCase() === a.toLowerCase() ||
+          a.toLowerCase().startsWith(m.toLowerCase()),
       );
       const idxB = MONTH_ORDER.findIndex(
-        (m) => m.toLowerCase() === b.toLowerCase() || b.toLowerCase().startsWith(m.toLowerCase())
+        (m) =>
+          m.toLowerCase() === b.toLowerCase() ||
+          b.toLowerCase().startsWith(m.toLowerCase()),
       );
       if (idxA !== -1 && idxB !== -1) return idxA - idxB;
       return a.localeCompare(b);
@@ -119,8 +141,8 @@ export default function App() {
       if (r.week) set.add(r.week);
     });
     return Array.from(set).sort((a, b) => {
-      const numA = parseInt(a.replace(/\D/g, ''), 10);
-      const numB = parseInt(b.replace(/\D/g, ''), 10);
+      const numA = parseInt(a.replace(/\D/g, ""), 10);
+      const numB = parseInt(b.replace(/\D/g, ""), 10);
       if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
       return a.localeCompare(b);
     });
@@ -177,15 +199,15 @@ export default function App() {
   }, [filteredRecords, metrics.totalNetSales]);
 
   const zoneMetrics = useMemo(() => {
-    return computeGeoMetrics(filteredRecords, 'zone', metrics.totalNetSales);
+    return computeGeoMetrics(filteredRecords, "zone", metrics.totalNetSales);
   }, [filteredRecords, metrics.totalNetSales]);
 
   const stateMetrics = useMemo(() => {
-    return computeGeoMetrics(filteredRecords, 'state', metrics.totalNetSales);
+    return computeGeoMetrics(filteredRecords, "state", metrics.totalNetSales);
   }, [filteredRecords, metrics.totalNetSales]);
 
   const cityMetrics = useMemo(() => {
-    return computeGeoMetrics(filteredRecords, 'city', metrics.totalNetSales);
+    return computeGeoMetrics(filteredRecords, "city", metrics.totalNetSales);
   }, [filteredRecords, metrics.totalNetSales]);
 
   const executiveInsights = useMemo(() => {
@@ -195,9 +217,16 @@ export default function App() {
       categoryMetrics,
       productMetrics,
       zoneMetrics,
-      filteredRecords
+      filteredRecords,
     );
-  }, [metrics, channelMetrics, categoryMetrics, productMetrics, zoneMetrics, filteredRecords]);
+  }, [
+    metrics,
+    channelMetrics,
+    categoryMetrics,
+    productMetrics,
+    zoneMetrics,
+    filteredRecords,
+  ]);
 
   // Export Filtered CSV
   const handleExportFilteredCsv = () => {
@@ -207,17 +236,17 @@ export default function App() {
       Year: r.year,
       Month: r.month,
       Week: r.week,
-      'Order Number': r.orderNumber,
-      'Customer Name': r.customerName,
-      'Bar Code': r.barCode,
-      'Product Name': r.productName,
+      "Order Number": r.orderNumber,
+      "Customer Name": r.customerName,
+      "Bar Code": r.barCode,
+      "Product Name": r.productName,
       Color: r.color,
       Category: r.category,
       QTY: r.qty,
       MRP: r.mrp,
-      'Sale Value': r.saleValue,
-      'Scoobies Margin': r.scoobiesMargin,
-      'EX-GST Margin': r.exGstMargin,
+      "Sale Value": r.saleValue,
+      "Scoobies Margin": r.scoobiesMargin,
+      "EX-GST Margin": r.exGstMargin,
       Channel: r.channel,
       Status: r.status,
       Location: r.deliveryPlace,
@@ -227,11 +256,11 @@ export default function App() {
     }));
 
     const csvStr = Papa.unparse(exportData);
-    const blob = new Blob([csvStr], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csvStr], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.download = `filtered_sales_export_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `filtered_sales_export_${new Date().toISOString().split("T")[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -243,7 +272,6 @@ export default function App() {
         fileName={fileName}
         totalRows={records.length}
         filteredRows={filteredRecords.length}
-        netSales={metrics.totalNetSales}
         salesTarget={salesTarget}
         onOpenUpload={() => setIsUploadOpen(true)}
         onResetSample={handleResetToSample}
@@ -280,10 +308,7 @@ export default function App() {
         />
 
         {/* Basket Size & AOV across Channels */}
-        <BasketSizeAov
-          channels={channelMetrics}
-          metrics={metrics}
-        />
+        <BasketSizeAov channels={channelMetrics} metrics={metrics} />
 
         {/* Main Sales Trend Chart */}
         <SalesTrendChart
@@ -293,9 +318,7 @@ export default function App() {
         />
 
         {/* Marketplace Channel Breakdown */}
-        <ChannelBreakdown
-          channels={channelMetrics}
-        />
+        <ChannelBreakdown channels={channelMetrics} />
 
         {/* Products & Category Intelligence */}
         <ProductCategoryAnalytics

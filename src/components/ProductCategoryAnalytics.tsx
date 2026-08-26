@@ -1,30 +1,33 @@
-import React, { useState } from 'react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer 
-} from 'recharts';
-import { ShoppingBag, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
-import { CategoryMetric, ProductMetric } from '../types';
+import React, { useState } from "react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import { ShoppingBag, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
+import { CategoryMetric, ProductMetric } from "../types";
 
 interface ProductCategoryAnalyticsProps {
   categories: CategoryMetric[];
   products: ProductMetric[];
 }
 
-export const ProductCategoryAnalytics: React.FC<ProductCategoryAnalyticsProps> = ({
-  categories,
-  products,
-}) => {
-  const [activeTab, setActiveTab] = useState<'topProducts' | 'categories'>('topProducts');
+export const ProductCategoryAnalytics: React.FC<
+  ProductCategoryAnalyticsProps
+> = ({ categories, products }) => {
+  const [activeTab, setActiveTab] = useState<"topProducts" | "categories">(
+    "topProducts",
+  );
   const [showAllCategories, setShowAllCategories] = useState(false);
 
   const topProductsList = products.slice(0, 10);
-  const displayedCategories = showAllCategories ? categories : categories.slice(0, 12);
+  const displayedCategories = showAllCategories
+    ? categories
+    : categories.slice(0, 12);
   const hasMoreThan12Categories = categories.length > 12;
 
   return (
@@ -37,27 +40,30 @@ export const ProductCategoryAnalytics: React.FC<ProductCategoryAnalyticsProps> =
             Product & Category Intelligence
           </h3>
           <p className="text-xs text-[#8C8376] font-medium mt-0.5">
-            Identify top revenue drivers, best seller items, and category performance
+            Identify top revenue drivers, best seller items, and category
+            performance
           </p>
         </div>
 
         <div className="flex bg-[#F1EDE5] p-1 rounded-xl text-xs border border-[#EBE5D9]">
           <button
-            onClick={() => setActiveTab('topProducts')}
-            className={`px-3 py-1 rounded-lg font-bold transition-all ${
-              activeTab === 'topProducts'
-                ? 'bg-white text-[#2D2A26] shadow-2xs font-extrabold'
-                : 'text-[#8C8376] hover:text-[#2D2A26]'
+            type="button"
+            onClick={() => setActiveTab("topProducts")}
+            className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+              activeTab === "topProducts"
+                ? "bg-white text-[#2D2A26] shadow-2xs font-extrabold"
+                : "text-[#8C8376] hover:text-[#2D2A26]"
             }`}
           >
             Top Products
           </button>
           <button
-            onClick={() => setActiveTab('categories')}
-            className={`px-3 py-1 rounded-lg font-bold transition-all ${
-              activeTab === 'categories'
-                ? 'bg-white text-[#2D2A26] shadow-2xs font-extrabold'
-                : 'text-[#8C8376] hover:text-[#2D2A26]'
+            type="button"
+            onClick={() => setActiveTab("categories")}
+            className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+              activeTab === "categories"
+                ? "bg-white text-[#2D2A26] shadow-2xs font-extrabold"
+                : "text-[#8C8376] hover:text-[#2D2A26]"
             }`}
           >
             Categories
@@ -66,7 +72,7 @@ export const ProductCategoryAnalytics: React.FC<ProductCategoryAnalyticsProps> =
       </div>
 
       {/* Tab 1: Top Products */}
-      {activeTab === 'topProducts' && (
+      {activeTab === "topProducts" && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Chart View */}
           <div className="lg:col-span-6 h-[380px]">
@@ -76,33 +82,49 @@ export const ProductCategoryAnalytics: React.FC<ProductCategoryAnalyticsProps> =
                 layout="vertical"
                 margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
               >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F1EDE5" />
-                <XAxis 
-                  type="number" 
-                  tick={{ fontSize: 11, fill: '#8C8376' }}
-                  axisLine={{ stroke: '#EBE5D9' }}
-                  tickFormatter={(v) => `₹${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`}
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  horizontal={false}
+                  stroke="#F1EDE5"
+                />
+                <XAxis
+                  type="number"
+                  tick={{ fontSize: 11, fill: "#8C8376" }}
+                  axisLine={{ stroke: "#EBE5D9" }}
+                  tickFormatter={(v) =>
+                    `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`
+                  }
                 />
                 <YAxis
                   type="category"
                   dataKey="productName"
-                  tick={{ fontSize: 11, fill: '#433E37', fontWeight: 600 }}
-                  axisLine={{ stroke: '#EBE5D9' }}
+                  tick={{ fontSize: 11, fill: "#433E37", fontWeight: 600 }}
+                  axisLine={{ stroke: "#EBE5D9" }}
                   width={130}
-                  tickFormatter={(name) => (name.length > 18 ? `${name.substring(0, 16)}...` : name)}
+                  tickFormatter={(name) =>
+                    name.length > 18 ? `${name.substring(0, 16)}...` : name
+                  }
                 />
                 <Tooltip
-                  formatter={(val: any, _name: any, item: any) => {
+                  formatter={(
+                    val: unknown,
+                    _name: unknown,
+                    item: { payload?: { sharePct?: number } },
+                  ) => {
                     const share = item?.payload?.sharePct;
-                    const shareText = share !== undefined ? ` • ${share}% of total sales` : '';
-                    return [`₹${Number(val).toLocaleString()}${shareText}`, 'Net Sales'];
+                    const shareText =
+                      share !== undefined ? ` • ${share}% of total sales` : "";
+                    return [
+                      `₹${Number(val || 0).toLocaleString()}${shareText}`,
+                      "Net Sales",
+                    ];
                   }}
                   contentStyle={{
-                    backgroundColor: '#2D2A26',
-                    borderRadius: '12px',
-                    color: '#fff',
-                    fontSize: '12px',
-                    border: 'none',
+                    backgroundColor: "#2D2A26",
+                    borderRadius: "12px",
+                    color: "#fff",
+                    fontSize: "12px",
+                    border: "none",
                     fontWeight: 600,
                   }}
                 />
@@ -125,17 +147,25 @@ export const ProductCategoryAnalytics: React.FC<ProductCategoryAnalyticsProps> =
               </thead>
               <tbody className="divide-y divide-[#F1EDE5]">
                 {topProductsList.map((p, idx) => (
-                  <tr key={p.productName} className="hover:bg-[#FAF8F5] transition-colors">
+                  <tr
+                    key={p.productName}
+                    className="hover:bg-[#FAF8F5] transition-colors"
+                  >
                     <td className="py-2 font-bold text-[#2D2A26] flex items-center gap-2">
                       <span className="w-5 h-5 rounded-full bg-[#E9EFEA] text-[#5F7161] text-[10px] font-bold flex items-center justify-center shrink-0">
                         {idx + 1}
                       </span>
-                      <span className="truncate max-w-[150px]" title={p.productName}>
+                      <span
+                        className="truncate max-w-[150px]"
+                        title={p.productName}
+                      >
                         {p.productName}
                       </span>
                     </td>
                     <td className="py-2 text-[#8C8376] text-[11px]">
-                      <span className="bg-[#F1EDE5] px-2 py-0.5 rounded-md font-semibold text-[#433E37] truncate max-w-[90px] inline-block">{p.category}</span>
+                      <span className="bg-[#F1EDE5] px-2 py-0.5 rounded-md font-semibold text-[#433E37] truncate max-w-[90px] inline-block">
+                        {p.category}
+                      </span>
                     </td>
                     <td className="py-2 text-right text-[#433E37] font-bold">
                       {p.units.toLocaleString()}
@@ -145,7 +175,7 @@ export const ProductCategoryAnalytics: React.FC<ProductCategoryAnalyticsProps> =
                     </td>
                     <td className="py-2 text-right">
                       <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-[#FAF0E6] text-[#AF8260] border border-[#E8D2C2] text-[10px] font-bold">
-                        {p.sharePct ? `${p.sharePct.toFixed(1)}%` : '0.0%'}
+                        {p.sharePct ? `${p.sharePct.toFixed(1)}%` : "0.0%"}
                       </span>
                     </td>
                   </tr>
@@ -157,7 +187,7 @@ export const ProductCategoryAnalytics: React.FC<ProductCategoryAnalyticsProps> =
       )}
 
       {/* Tab 2: Categories */}
-      {activeTab === 'categories' && (
+      {activeTab === "categories" && (
         <div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {displayedCategories.map((cat) => (
@@ -167,7 +197,10 @@ export const ProductCategoryAnalytics: React.FC<ProductCategoryAnalyticsProps> =
               >
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-black text-[#2D2A26] uppercase tracking-wide truncate max-w-[140px]" title={cat.category}>
+                    <span
+                      className="text-xs font-black text-[#2D2A26] uppercase tracking-wide truncate max-w-[140px]"
+                      title={cat.category}
+                    >
                       {cat.category}
                     </span>
                     <span className="text-xs font-bold text-[#AF8260]">
@@ -189,7 +222,9 @@ export const ProductCategoryAnalytics: React.FC<ProductCategoryAnalyticsProps> =
                         </span>
                         <span className="font-bold">
                           ₹{cat.returns.toLocaleString()}
-                          {cat.returnUnits !== undefined && cat.returnUnits > 0 ? ` (${cat.returnUnits} ${cat.returnUnits === 1 ? 'unit' : 'units'})` : ''}
+                          {cat.returnUnits !== undefined && cat.returnUnits > 0
+                            ? ` (${cat.returnUnits} ${cat.returnUnits === 1 ? "unit" : "units"})`
+                            : ""}
                         </span>
                       </div>
                     ) : (
@@ -215,12 +250,13 @@ export const ProductCategoryAnalytics: React.FC<ProductCategoryAnalyticsProps> =
           {hasMoreThan12Categories && (
             <div className="mt-5 pt-3.5 border-t border-[#F1EDE5] flex justify-center">
               <button
+                type="button"
                 onClick={() => setShowAllCategories(!showAllCategories)}
                 className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-[#433E37] bg-[#F9F7F2] hover:bg-[#F1EDE5] border border-[#EBE5D9] rounded-xl transition-colors cursor-pointer"
               >
                 <span>
                   {showAllCategories
-                    ? 'Show Top 12 Categories'
+                    ? "Show Top 12 Categories"
                     : `View All Categories (${categories.length})`}
                 </span>
                 {showAllCategories ? (
@@ -236,4 +272,3 @@ export const ProductCategoryAnalytics: React.FC<ProductCategoryAnalyticsProps> =
     </div>
   );
 };
-

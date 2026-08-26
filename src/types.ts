@@ -21,7 +21,7 @@ export interface SaleRecord {
   deliveryPlace: string;
   state: string;
   channel: string; // Website / Marketplace (Amazon, Blinkit, etc.)
-  status: 'Dispatched' | 'Return' | 'Cancelled' | 'Other';
+  status: "Dispatched" | "Return" | "Cancelled" | "Other";
   backToSchool: string;
   zone: string;
   saleValue: number;
@@ -35,15 +35,15 @@ export interface FilterState {
   months: string[]; // multi-select array e.g. ['August', 'September'] (empty = all)
   week: string; // 'ALL' or specific week like 'Week 1'
   weeks: string[]; // multi-select array e.g. ['Week 1', 'Week 2'] (empty = all)
-  dateRangePreset: 'ALL' | '7D' | '15D' | '30D' | 'MTD' | 'YTD' | 'CUSTOM';
+  dateRangePreset: "ALL" | "7D" | "15D" | "30D" | "MTD" | "YTD" | "CUSTOM";
   startDate: string; // YYYY-MM-DD
   endDate: string; // YYYY-MM-DD
   channels: string[]; // empty = all
   categories: string[]; // empty = all
   zones: string[]; // empty = all
   states: string[]; // empty = all
-  status: 'ALL' | 'Dispatched' | 'Return';
-  campaign: 'ALL' | 'B2S' | 'NON_B2S';
+  status: "ALL" | "Dispatched" | "Return";
+  campaign: "ALL" | "B2S" | "NON_B2S";
   minSaleValue?: number;
   maxSaleValue?: number;
 }
@@ -141,7 +141,7 @@ export interface GeoMetric {
 }
 
 export interface ExecutiveInsight {
-  type: 'positive' | 'warning' | 'neutral' | 'highlight';
+  type: "positive" | "warning" | "neutral" | "highlight";
   title: string;
   description: string;
   metric?: string;

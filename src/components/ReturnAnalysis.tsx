@@ -1,17 +1,22 @@
-import React, { useState, useMemo } from 'react';
-import { 
-  RotateCcw, 
-  AlertTriangle, 
-  ChevronDown, 
-  ChevronUp, 
-  Search, 
+import React, { useState, useMemo } from "react";
+import {
+  RotateCcw,
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  Search,
   ArrowUpDown,
   PackageX,
   Layers,
-  CheckCircle2
-} from 'lucide-react';
-import { ProductMetric, ChannelMetric, DashboardMetrics, SaleRecord } from '../types';
-import { getRecordMetrics } from '../utils/analytics';
+  CheckCircle2,
+} from "lucide-react";
+import {
+  ProductMetric,
+  ChannelMetric,
+  DashboardMetrics,
+  SaleRecord,
+} from "../types";
+import { getRecordMetrics } from "../utils/analytics";
 
 interface ReturnAnalysisProps {
   records?: SaleRecord[];
@@ -26,19 +31,23 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
   channels,
   metrics,
 }) => {
-  const [selectedChannelFilter, setSelectedChannelFilter] = useState<string>('ALL');
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [sortBy, setSortBy] = useState<'units' | 'value' | 'rate' | 'name'>('units');
-  const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
+  const [selectedChannelFilter, setSelectedChannelFilter] =
+    useState<string>("ALL");
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [sortBy, setSortBy] = useState<"units" | "value" | "rate" | "name">(
+    "units",
+  );
+  const [sortDirection] = useState<"desc" | "asc">("desc");
   const [showAllReturns, setShowAllReturns] = useState(false);
 
   // Channels with return metrics for the breakdown cards (only channels with returns)
   const channelsWithReturns = useMemo(() => {
     const totalReturnsVal = metrics?.totalReturnedSales || 1;
     return (channels || [])
-      .filter((ch) => (ch.returns > 0 || ch.returnUnits > 0))
+      .filter((ch) => ch.returns > 0 || ch.returnUnits > 0)
       .map((ch) => {
-        const returnSharePct = totalReturnsVal > 0 ? (ch.returns / totalReturnsVal) * 100 : 0;
+        const returnSharePct =
+          totalReturnsVal > 0 ? (ch.returns / totalReturnsVal) * 100 : 0;
         return {
           ...ch,
           returnSharePct: Math.min(100, Math.max(0, returnSharePct)),
@@ -68,20 +77,23 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
       >();
 
       records.forEach((r) => {
-        const channelName = r.channel ? r.channel.trim() : 'Direct';
-        
+        const channelName = r.channel ? r.channel.trim() : "Direct";
+
         // If a specific channel is selected, ignore records from other channels
-        if (selectedChannelFilter !== 'ALL' && channelName.toLowerCase() !== selectedChannelFilter.toLowerCase()) {
+        if (
+          selectedChannelFilter !== "ALL" &&
+          channelName.toLowerCase() !== selectedChannelFilter.toLowerCase()
+        ) {
           return;
         }
 
-        const name = r.productName || 'Unknown';
+        const name = r.productName || "Unknown";
         const { isReturn, val, qty } = getRecordMetrics(r);
 
         const curr = prodMap.get(name) || {
           productName: name,
-          barCode: r.barCode || '',
-          category: r.category || 'General',
+          barCode: r.barCode || "",
+          category: r.category || "General",
           returnChannels: new Set<string>(),
           channels: new Set<string>(),
           grossSales: 0,
@@ -112,7 +124,10 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
       prodMap.forEach((data) => {
         if (data.returnUnits > 0 || data.returns > 0) {
           const totalUnitsOrdered = data.units + data.returnUnits;
-          const returnRate = totalUnitsOrdered > 0 ? (data.returnUnits / totalUnitsOrdered) * 100 : 100;
+          const returnRate =
+            totalUnitsOrdered > 0
+              ? (data.returnUnits / totalUnitsOrdered) * 100
+              : 100;
           const retChannelsList = Array.from(data.returnChannels);
           const allChannelsList = Array.from(data.channels);
 
@@ -120,11 +135,14 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
             productName: data.productName,
             barCode: data.barCode,
             category: data.category,
-            channel: selectedChannelFilter !== 'ALL' 
-              ? selectedChannelFilter 
-              : retChannelsList.length > 0 
-                ? retChannelsList.join(', ') 
-                : (allChannelsList.length > 0 ? allChannelsList.join(', ') : 'Direct'),
+            channel:
+              selectedChannelFilter !== "ALL"
+                ? selectedChannelFilter
+                : retChannelsList.length > 0
+                  ? retChannelsList.join(", ")
+                  : allChannelsList.length > 0
+                    ? allChannelsList.join(", ")
+                    : "Direct",
             channels: allChannelsList,
             returnChannels: retChannelsList,
             netSales: Math.round(data.netSales),
@@ -144,7 +162,7 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
     }
 
     // Fallback if records prop is not provided
-    if (selectedChannelFilter === 'ALL') {
+    if (selectedChannelFilter === "ALL") {
       return products.filter((p) => p.returnUnits > 0 || p.returns > 0);
     }
 
@@ -156,7 +174,7 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
       if (p.channels && p.channels.length > 0) {
         return p.channels.includes(selectedChannelFilter);
       }
-      return (p.channel || 'Direct') === selectedChannelFilter;
+      return (p.channel || "Direct") === selectedChannelFilter;
     });
   }, [records, products, selectedChannelFilter]);
 
@@ -170,19 +188,20 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
         (p) =>
           p.productName.toLowerCase().includes(q) ||
           p.category.toLowerCase().includes(q) ||
-          (p.barCode && p.barCode.toLowerCase().includes(q))
+          (p.barCode && p.barCode.toLowerCase().includes(q)),
       );
     }
 
     // Sort
     return [...list].sort((a, b) => {
       let comp = 0;
-      if (sortBy === 'units') comp = b.returnUnits - a.returnUnits;
-      else if (sortBy === 'value') comp = b.returns - a.returns;
-      else if (sortBy === 'rate') comp = b.returnRate - a.returnRate;
-      else if (sortBy === 'name') comp = a.productName.localeCompare(b.productName);
+      if (sortBy === "units") comp = b.returnUnits - a.returnUnits;
+      else if (sortBy === "value") comp = b.returns - a.returns;
+      else if (sortBy === "rate") comp = b.returnRate - a.returnRate;
+      else if (sortBy === "name")
+        comp = a.productName.localeCompare(b.productName);
 
-      return sortDirection === 'desc' ? comp : -comp;
+      return sortDirection === "desc" ? comp : -comp;
     });
   }, [channelScopedReturnedProducts, searchTerm, sortBy, sortDirection]);
 
@@ -193,18 +212,26 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
 
   // Channel specific totals when a filter is applied
   const activeScopeSummary = useMemo(() => {
-    if (selectedChannelFilter === 'ALL') {
+    if (selectedChannelFilter === "ALL") {
       return {
-        title: 'All Channels',
+        title: "All Channels",
         refundedValue: metrics?.totalReturnedSales ?? 0,
         returnUnits: metrics?.totalReturnedUnits ?? 0,
         returnRate: metrics?.returnRateValPct ?? 0,
         affectedSkus: channelScopedReturnedProducts.length,
       };
     }
-    const ch = channels.find((c) => c.channel.toLowerCase() === selectedChannelFilter.toLowerCase());
-    const totalRef = channelScopedReturnedProducts.reduce((sum, p) => sum + p.returns, 0);
-    const totalUnits = channelScopedReturnedProducts.reduce((sum, p) => sum + p.returnUnits, 0);
+    const ch = channels.find(
+      (c) => c.channel.toLowerCase() === selectedChannelFilter.toLowerCase(),
+    );
+    const totalRef = channelScopedReturnedProducts.reduce(
+      (sum, p) => sum + p.returns,
+      0,
+    );
+    const totalUnits = channelScopedReturnedProducts.reduce(
+      (sum, p) => sum + p.returnUnits,
+      0,
+    );
     return {
       title: selectedChannelFilter,
       refundedValue: ch ? ch.returns : totalRef,
@@ -216,12 +243,17 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
 
   // Key return insights
   const highestReturnChannel = useMemo(() => {
-    const sorted = [...channels].filter((c) => c.returns > 0).sort((a, b) => b.returns - a.returns);
+    const sorted = [...channels]
+      .filter((c) => c.returns > 0)
+      .sort((a, b) => b.returns - a.returns);
     return sorted.length > 0 ? sorted[0] : null;
   }, [channels]);
 
   return (
-    <section id="return-analysis" className="bg-white border border-[#EBE5D9] rounded-[28px] p-6 shadow-sm mb-6">
+    <section
+      id="return-analysis"
+      className="bg-white border border-[#EBE5D9] rounded-[28px] p-6 shadow-sm mb-6"
+    >
       {/* Section Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-[#EBE5D9]">
         <div className="flex items-start gap-3">
@@ -234,11 +266,15 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
                 Return & Refund Analysis
               </h3>
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#FAF0E6] text-[#AF8260] border border-[#E8D2C2]">
-                {activeScopeSummary.affectedSkus} {selectedChannelFilter !== 'ALL' ? `Returned on ${selectedChannelFilter}` : 'Affected SKUs'}
+                {activeScopeSummary.affectedSkus}{" "}
+                {selectedChannelFilter !== "ALL"
+                  ? `Returned on ${selectedChannelFilter}`
+                  : "Affected SKUs"}
               </span>
             </div>
             <p className="text-xs text-[#8C8376] font-medium mt-0.5">
-              Comprehensive breakdown of returns across marketplace channels and returned products
+              Comprehensive breakdown of returns across marketplace channels and
+              returned products
             </p>
           </div>
         </div>
@@ -247,7 +283,9 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
         <div className="flex flex-wrap items-center gap-3">
           <div className="bg-[#FAF0E6] border border-[#E8D2C2] px-3.5 py-1.5 rounded-xl text-left">
             <span className="block text-[10px] uppercase font-bold text-[#8C8376] tracking-wider">
-              {selectedChannelFilter !== 'ALL' ? `${selectedChannelFilter} Refunded` : 'Total Refunded'}
+              {selectedChannelFilter !== "ALL"
+                ? `${selectedChannelFilter} Refunded`
+                : "Total Refunded"}
             </span>
             <span className="text-sm font-black text-[#AF8260]">
               ₹{(activeScopeSummary.refundedValue ?? 0).toLocaleString()}
@@ -259,7 +297,9 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
 
           <div className="bg-[#F9F7F2] border border-[#EBE5D9] px-3.5 py-1.5 rounded-xl text-left">
             <span className="block text-[10px] uppercase font-bold text-[#8C8376] tracking-wider">
-              {selectedChannelFilter !== 'ALL' ? `${selectedChannelFilter} Return Units` : 'Returned Units'}
+              {selectedChannelFilter !== "ALL"
+                ? `${selectedChannelFilter} Return Units`
+                : "Returned Units"}
             </span>
             <span className="text-sm font-black text-[#2D2A26]">
               {(activeScopeSummary.returnUnits ?? 0).toLocaleString()} units
@@ -278,25 +318,27 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
             </h4>
           </div>
           <span className="text-xs text-[#8C8376]">
-            Click any channel card to filter product returns to that channel only
+            Click any channel card to filter product returns to that channel
+            only
           </span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
           {/* All Channels Quick Filter Card */}
           <button
-            onClick={() => setSelectedChannelFilter('ALL')}
+            type="button"
+            onClick={() => setSelectedChannelFilter("ALL")}
             className={`text-left p-3.5 rounded-2xl border transition-all cursor-pointer ${
-              selectedChannelFilter === 'ALL'
-                ? 'bg-[#F1EDE5] border-[#2D2A26] shadow-xs'
-                : 'bg-[#F9F7F2] border-[#EBE5D9] hover:bg-[#F5F1E9]'
+              selectedChannelFilter === "ALL"
+                ? "bg-[#F1EDE5] border-[#2D2A26] shadow-xs"
+                : "bg-[#F9F7F2] border-[#EBE5D9] hover:bg-[#F5F1E9]"
             }`}
           >
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-xs font-black text-[#2D2A26] uppercase">
                 All Channels Overview
               </span>
-              {selectedChannelFilter === 'ALL' && (
+              {selectedChannelFilter === "ALL" && (
                 <CheckCircle2 className="w-4 h-4 text-[#5F7161]" />
               )}
             </div>
@@ -304,39 +346,51 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
               ₹{(metrics?.totalReturnedSales ?? 0).toLocaleString()}
             </div>
             <div className="flex justify-between items-center text-[11px] text-[#8C8376] mt-2 pt-2 border-t border-[#EBE5D9]">
-              <span>{(metrics?.totalReturnedUnits ?? 0).toLocaleString()} units returned</span>
-              <span className="font-bold text-[#AF8260]">{(metrics?.returnRateValPct ?? 0).toFixed(1)}% rate</span>
+              <span>
+                {(metrics?.totalReturnedUnits ?? 0).toLocaleString()} units
+                returned
+              </span>
+              <span className="font-bold text-[#AF8260]">
+                {(metrics?.returnRateValPct ?? 0).toFixed(1)}% rate
+              </span>
             </div>
           </button>
 
           {/* Individual Channel Cards */}
           {channelsWithReturns.map((ch) => {
-            const isSelected = selectedChannelFilter.toLowerCase() === ch.channel.toLowerCase();
+            const isSelected =
+              selectedChannelFilter.toLowerCase() === ch.channel.toLowerCase();
             const hasReturns = ch.returns > 0;
 
             return (
               <button
+                type="button"
                 key={ch.channel}
-                onClick={() => setSelectedChannelFilter(isSelected ? 'ALL' : ch.channel)}
+                onClick={() =>
+                  setSelectedChannelFilter(isSelected ? "ALL" : ch.channel)
+                }
                 className={`text-left p-3.5 rounded-2xl border transition-all cursor-pointer ${
                   isSelected
-                    ? 'bg-[#FAF0E6] border-[#AF8260] shadow-xs ring-2 ring-[#AF8260]'
+                    ? "bg-[#FAF0E6] border-[#AF8260] shadow-xs ring-2 ring-[#AF8260]"
                     : hasReturns
-                    ? 'bg-[#F9F7F2] border-[#EBE5D9] hover:bg-[#FAF0E6]/50'
-                    : 'bg-[#F9F7F2]/60 border-[#EBE5D9] opacity-75'
+                      ? "bg-[#F9F7F2] border-[#EBE5D9] hover:bg-[#FAF0E6]/50"
+                      : "bg-[#F9F7F2]/60 border-[#EBE5D9] opacity-75"
                 }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-black text-[#2D2A26] uppercase truncate max-w-[120px]" title={ch.channel}>
+                  <span
+                    className="text-xs font-black text-[#2D2A26] uppercase truncate max-w-[120px]"
+                    title={ch.channel}
+                  >
                     {ch.channel}
                   </span>
                   <span
                     className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-md ${
                       ch.returnRate > 15
-                        ? 'bg-[#FEE2E2] text-[#991B1B]'
+                        ? "bg-[#FEE2E2] text-[#991B1B]"
                         : ch.returnRate > 5
-                        ? 'bg-[#FEF3C7] text-[#92400E]'
-                        : 'bg-[#E9EFEA] text-[#5F7161]'
+                          ? "bg-[#FEF3C7] text-[#92400E]"
+                          : "bg-[#E9EFEA] text-[#5F7161]"
                     }`}
                   >
                     {ch.returnRate.toFixed(1)}% rate
@@ -348,7 +402,10 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
                 </div>
 
                 <div className="flex justify-between items-center text-[11px] text-[#8C8376] mt-2 pt-2 border-t border-[#EBE5D9]">
-                  <span>{ch.returnUnits ?? 0} {ch.returnUnits === 1 ? 'unit' : 'units'}</span>
+                  <span>
+                    {ch.returnUnits ?? 0}{" "}
+                    {ch.returnUnits === 1 ? "unit" : "units"}
+                  </span>
                   <span>{ch.returnSharePct.toFixed(1)}% of total</span>
                 </div>
               </button>
@@ -365,7 +422,7 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
             <PackageX className="w-4 h-4 text-[#AF8260]" />
             <h4 className="text-sm font-bold text-[#2D2A26]">
               Returned Products Breakdown
-              {selectedChannelFilter !== 'ALL' ? (
+              {selectedChannelFilter !== "ALL" ? (
                 <span className="ml-2 px-2 py-0.5 rounded-md bg-[#FAF0E6] border border-[#E8D2C2] text-xs font-bold text-[#AF8260]">
                   Filtered to: {selectedChannelFilter} only
                 </span>
@@ -396,7 +453,9 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
               onChange={(e) => setSelectedChannelFilter(e.target.value)}
               className="px-2.5 py-1.5 text-xs bg-white border border-[#EBE5D9] rounded-xl text-[#2D2A26] font-medium focus:outline-hidden focus:ring-1 focus:ring-[#AF8260] cursor-pointer"
             >
-              <option value="ALL">All Channels ({metrics?.totalReturnedUnits ?? 0} total units)</option>
+              <option value="ALL">
+                All Channels ({metrics?.totalReturnedUnits ?? 0} total units)
+              </option>
               {channelsWithReturns.map((ch) => (
                 <option key={ch.channel} value={ch.channel}>
                   {ch.channel} ({ch.returnUnits ?? 0} returned)
@@ -412,7 +471,11 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
               </span>
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
+                onChange={(e) =>
+                  setSortBy(
+                    e.target.value as "units" | "value" | "rate" | "name",
+                  )
+                }
                 className="text-xs bg-transparent font-bold text-[#2D2A26] border-none focus:outline-hidden cursor-pointer"
               >
                 <option value="units">Units Returned</option>
@@ -432,14 +495,20 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
                 <th className="py-3 px-3.5">Product Name</th>
                 <th className="py-3 px-3">Category</th>
                 <th className="py-3 px-3">
-                  {selectedChannelFilter !== 'ALL' ? 'Channel' : 'Return Channel(s)'}
+                  {selectedChannelFilter !== "ALL"
+                    ? "Channel"
+                    : "Return Channel(s)"}
                 </th>
                 <th className="py-3 px-3 text-right">
-                  {selectedChannelFilter !== 'ALL' ? `${selectedChannelFilter} Returns` : 'Units Returned'}
+                  {selectedChannelFilter !== "ALL"
+                    ? `${selectedChannelFilter} Returns`
+                    : "Units Returned"}
                 </th>
                 <th className="py-3 px-3 text-right">Return Rate</th>
                 <th className="py-3 px-3.5 text-right">
-                  {selectedChannelFilter !== 'ALL' ? `${selectedChannelFilter} Refund` : 'Refunded Value'}
+                  {selectedChannelFilter !== "ALL"
+                    ? `${selectedChannelFilter} Refund`
+                    : "Refunded Value"}
                 </th>
               </tr>
             </thead>
@@ -450,14 +519,14 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
                     <div className="flex flex-col items-center justify-center gap-1.5">
                       <RotateCcw className="w-6 h-6 text-[#A89F91]" />
                       <span className="font-semibold text-[#433E37]">
-                        {selectedChannelFilter !== 'ALL'
+                        {selectedChannelFilter !== "ALL"
                           ? `No returns recorded on "${selectedChannelFilter}"`
-                          : 'No returns found'}
+                          : "No returns found"}
                       </span>
                       <span className="text-[11px] text-[#8C8376]">
-                        {searchTerm || selectedChannelFilter !== 'ALL'
+                        {searchTerm || selectedChannelFilter !== "ALL"
                           ? 'Try selecting "All Channels" or clearing the search keyword.'
-                          : 'No return records found in this date window.'}
+                          : "No return records found in this date window."}
                       </span>
                     </div>
                   </td>
@@ -468,13 +537,19 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
                     p.returnChannels && p.returnChannels.length > 0
                       ? p.returnChannels
                       : p.channels && p.channels.length > 0
-                      ? p.channels
-                      : [p.channel || 'Direct'];
+                        ? p.channels
+                        : [p.channel || "Direct"];
 
                   return (
-                    <tr key={p.productName} className="hover:bg-[#FAF8F5] transition-colors">
+                    <tr
+                      key={p.productName}
+                      className="hover:bg-[#FAF8F5] transition-colors"
+                    >
                       <td className="py-3 px-3.5 font-bold text-[#2D2A26]">
-                        <div className="truncate max-w-[260px]" title={p.productName}>
+                        <div
+                          className="truncate max-w-[260px]"
+                          title={p.productName}
+                        >
                           {p.productName}
                         </div>
                         {p.barCode && (
@@ -490,7 +565,7 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
                       </td>
                       <td className="py-3 px-3">
                         <div className="flex flex-wrap gap-1">
-                          {selectedChannelFilter !== 'ALL' ? (
+                          {selectedChannelFilter !== "ALL" ? (
                             <span className="inline-block px-2 py-0.5 rounded-md bg-[#FAF0E6] text-[#AF8260] font-bold text-[11px] border border-[#E8D2C2]">
                               {selectedChannelFilter}
                             </span>
@@ -507,16 +582,16 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
                         </div>
                       </td>
                       <td className="py-3 px-3 text-right font-black text-[#AF8260]">
-                        {p.returnUnits} {p.returnUnits === 1 ? 'unit' : 'units'}
+                        {p.returnUnits} {p.returnUnits === 1 ? "unit" : "units"}
                       </td>
                       <td className="py-3 px-3 text-right">
                         <span
                           className={`px-2.5 py-0.5 rounded-full font-bold text-[11px] border ${
                             p.returnRate > 25
-                              ? 'bg-[#FEE2E2] text-[#991B1B] border-[#FECACA]'
+                              ? "bg-[#FEE2E2] text-[#991B1B] border-[#FECACA]"
                               : p.returnRate > 10
-                              ? 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]'
-                              : 'bg-[#FAF0E6] text-[#AF8260] border-[#E8D2C2]'
+                                ? "bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]"
+                                : "bg-[#FAF0E6] text-[#AF8260] border-[#E8D2C2]"
                           }`}
                         >
                           {p.returnRate}%
@@ -537,12 +612,13 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
         {hasMoreThan10 && (
           <div className="mt-3.5 pt-2.5 flex justify-center">
             <button
+              type="button"
               onClick={() => setShowAllReturns(!showAllReturns)}
               className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-[#433E37] bg-white hover:bg-[#F1EDE5] border border-[#EBE5D9] rounded-xl transition-colors cursor-pointer shadow-2xs"
             >
               <span>
                 {showAllReturns
-                  ? 'Show Top 10 Returned Products'
+                  ? "Show Top 10 Returned Products"
                   : `View All Returned Products (${filteredReturnedProducts.length})`}
               </span>
               {showAllReturns ? (
@@ -562,15 +638,26 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
           <p className="font-medium">
             {highestReturnChannel ? (
               <span>
-                <strong className="text-[#2D2A26]">{highestReturnChannel.channel}</strong> accounts for the largest share of refunds (₹{(highestReturnChannel.returns ?? 0).toLocaleString()} across {highestReturnChannel.returnUnits ?? 0} units).
+                <strong className="text-[#2D2A26]">
+                  {highestReturnChannel.channel}
+                </strong>{" "}
+                accounts for the largest share of refunds (₹
+                {(
+                  highestReturnChannel.returns ?? 0
+                ).toLocaleString()} across{" "}
+                {highestReturnChannel.returnUnits ?? 0} units).
               </span>
             ) : (
-              <span>All return records are actively tracked across fulfillment channels.</span>
+              <span>
+                All return records are actively tracked across fulfillment
+                channels.
+              </span>
             )}
           </p>
         </div>
         <div className="text-[11px] font-bold text-[#AF8260] shrink-0">
-          Recommendation: Verify packaging & product descriptions on high-return SKUs
+          Recommendation: Verify packaging & product descriptions on high-return
+          SKUs
         </div>
       </div>
     </section>

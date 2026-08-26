@@ -1,14 +1,14 @@
-import React, { useState, useMemo } from 'react';
-import { 
-  FileText, 
-  ChevronLeft, 
-  ChevronRight, 
-  ArrowUpDown, 
-  Download, 
-  CheckCircle2, 
-  RotateCcw
-} from 'lucide-react';
-import { SaleRecord } from '../types';
+import React, { useState, useMemo } from "react";
+import {
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  ArrowUpDown,
+  Download,
+  CheckCircle2,
+  RotateCcw,
+} from "lucide-react";
+import { SaleRecord } from "../types";
 
 interface OrdersTableProps {
   records: SaleRecord[];
@@ -21,7 +21,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
-  const [sortField, setSortField] = useState<keyof SaleRecord>('dateStr');
+  const [sortField, setSortField] = useState<keyof SaleRecord>("dateStr");
   const [sortAsc, setSortAsc] = useState(false);
 
   const handleSort = (field: keyof SaleRecord) => {
@@ -38,9 +38,9 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
       let valA = a[sortField];
       let valB = b[sortField];
 
-      if (typeof valA === 'string') {
+      if (typeof valA === "string") {
         valA = (valA as string).toLowerCase();
-        valB = ((valB as string) || '').toLowerCase();
+        valB = ((valB as string) || "").toLowerCase();
       }
 
       if (valA < valB) return sortAsc ? -1 : 1;
@@ -52,7 +52,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
   const totalPages = Math.ceil(sortedRecords.length / pageSize) || 1;
   const paginatedRecords = sortedRecords.slice(
     (currentPage - 1) * pageSize,
-    currentPage * pageSize
+    currentPage * pageSize,
   );
 
   return (
@@ -64,7 +64,8 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
             Orders & Line-Items Data Explorer
           </h3>
           <p className="text-xs text-[#8C8376] font-medium mt-0.5">
-            Showing {records.length.toLocaleString()} transactions matching your active filters
+            Showing {records.length.toLocaleString()} transactions matching your
+            active filters
           </p>
         </div>
 
@@ -90,8 +91,9 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
 
           {/* Export Button */}
           <button
+            type="button"
             onClick={onExportCsv}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#433E37] bg-[#F1EDE5] hover:bg-[#EBE5D9] rounded-xl transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#433E37] bg-[#F1EDE5] hover:bg-[#EBE5D9] rounded-xl transition-colors cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Export Table</span>
@@ -104,49 +106,73 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
         <table className="w-full text-xs text-left">
           <thead>
             <tr className="bg-[#FAF8F5] border-b border-[#EBE5D9] text-[#8C8376] font-bold uppercase tracking-wider text-[11px] select-none">
-              <th className="py-2.5 px-3 cursor-pointer" onClick={() => handleSort('dateStr')}>
+              <th
+                className="py-2.5 px-3 cursor-pointer"
+                onClick={() => handleSort("dateStr")}
+              >
                 <div className="flex items-center gap-1">
                   <span>Date</span>
                   <ArrowUpDown className="w-3 h-3 text-[#CEC4B5]" />
                 </div>
               </th>
-              <th className="py-2.5 px-3 cursor-pointer" onClick={() => handleSort('channel')}>
+              <th
+                className="py-2.5 px-3 cursor-pointer"
+                onClick={() => handleSort("channel")}
+              >
                 <div className="flex items-center gap-1">
                   <span>Channel</span>
                   <ArrowUpDown className="w-3 h-3 text-[#CEC4B5]" />
                 </div>
               </th>
-              <th className="py-2.5 px-3 cursor-pointer" onClick={() => handleSort('productName')}>
+              <th
+                className="py-2.5 px-3 cursor-pointer"
+                onClick={() => handleSort("productName")}
+              >
                 <div className="flex items-center gap-1">
                   <span>Product & Category</span>
                   <ArrowUpDown className="w-3 h-3 text-[#CEC4B5]" />
                 </div>
               </th>
-              <th className="py-2.5 px-3 text-right cursor-pointer" onClick={() => handleSort('qty')}>
+              <th
+                className="py-2.5 px-3 text-right cursor-pointer"
+                onClick={() => handleSort("qty")}
+              >
                 <div className="flex items-center justify-end gap-1">
                   <span>QTY</span>
                   <ArrowUpDown className="w-3 h-3 text-[#CEC4B5]" />
                 </div>
               </th>
-              <th className="py-2.5 px-3 text-right cursor-pointer" onClick={() => handleSort('saleValue')}>
+              <th
+                className="py-2.5 px-3 text-right cursor-pointer"
+                onClick={() => handleSort("saleValue")}
+              >
                 <div className="flex items-center justify-end gap-1">
                   <span>Sale Value</span>
                   <ArrowUpDown className="w-3 h-3 text-[#CEC4B5]" />
                 </div>
               </th>
-              <th className="py-2.5 px-3 text-right cursor-pointer" onClick={() => handleSort('scoobiesMargin')}>
+              <th
+                className="py-2.5 px-3 text-right cursor-pointer"
+                onClick={() => handleSort("scoobiesMargin")}
+              >
                 <div className="flex items-center justify-end gap-1">
                   <span>Margin</span>
                   <ArrowUpDown className="w-3 h-3 text-[#CEC4B5]" />
                 </div>
               </th>
-              <th className="py-2.5 px-3 cursor-pointer" onClick={() => handleSort('deliveryPlace')}>
+              <th
+                className="py-2.5 px-3 cursor-pointer"
+                onClick={() => handleSort("deliveryPlace")}
+              >
                 <div className="flex items-center gap-1">
                   <span>Location</span>
                   <ArrowUpDown className="w-3 h-3 text-[#CEC4B5]" />
                 </div>
               </th>
-              <th className="py-2.5 px-3 text-center cursor-pointer" onClick={() => handleSort('status')}>
+              <th
+                className="py-2.5 px-3 text-center cursor-pointer"
+                onClick={() => handleSort("status")}
+              >
                 <div className="flex items-center justify-center gap-1">
                   <span>Status</span>
                   <ArrowUpDown className="w-3 h-3 text-[#CEC4B5]" />
@@ -157,7 +183,10 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
           <tbody className="divide-y divide-[#F1EDE5]">
             {paginatedRecords.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-8 text-center text-[#8C8376] font-medium">
+                <td
+                  colSpan={8}
+                  className="py-8 text-center text-[#8C8376] font-medium"
+                >
                   No records match your selected filters.
                 </td>
               </tr>
@@ -173,7 +202,10 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                     </span>
                   </td>
                   <td className="py-2.5 px-3 max-w-[200px]">
-                    <div className="font-bold text-[#2D2A26] truncate" title={r.productName}>
+                    <div
+                      className="font-bold text-[#2D2A26] truncate"
+                      title={r.productName}
+                    >
                       {r.productName}
                     </div>
                     <div className="text-[10px] text-[#8C8376] flex items-center gap-1 font-medium">
@@ -181,14 +213,18 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                       {r.color && <span>• {r.color}</span>}
                     </div>
                   </td>
-                  <td className={`py-2.5 px-3 text-right font-bold whitespace-nowrap ${
-                    r.qty < 0 ? 'text-[#AF8260]' : 'text-[#2D2A26]'
-                  }`}>
+                  <td
+                    className={`py-2.5 px-3 text-right font-bold whitespace-nowrap ${
+                      r.qty < 0 ? "text-[#AF8260]" : "text-[#2D2A26]"
+                    }`}
+                  >
                     {r.qty}
                   </td>
-                  <td className={`py-2.5 px-3 text-right font-black whitespace-nowrap ${
-                    r.saleValue < 0 ? 'text-[#AF8260]' : 'text-[#5F7161]'
-                  }`}>
+                  <td
+                    className={`py-2.5 px-3 text-right font-black whitespace-nowrap ${
+                      r.saleValue < 0 ? "text-[#AF8260]" : "text-[#5F7161]"
+                    }`}
+                  >
                     ₹{r.saleValue.toLocaleString()}
                   </td>
                   <td className="py-2.5 px-3 text-right font-semibold text-[#433E37] whitespace-nowrap">
@@ -196,10 +232,12 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                   </td>
                   <td className="py-2.5 px-3 text-[#433E37] whitespace-nowrap">
                     <div className="font-medium">{r.deliveryPlace}</div>
-                    <div className="text-[10px] text-[#8C8376] font-medium">{r.state} ({r.zone})</div>
+                    <div className="text-[10px] text-[#8C8376] font-medium">
+                      {r.state} ({r.zone})
+                    </div>
                   </td>
                   <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                    {r.status === 'Return' ? (
+                    {r.status === "Return" ? (
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#FAF0E6] text-[#AF8260] border border-[#E8D2C2]">
                         <RotateCcw className="w-2.5 h-2.5" /> Return
                       </span>
@@ -219,16 +257,17 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
       {/* Pagination Footer */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-4 pt-3.5 border-t border-[#EBE5D9] text-xs text-[#8C8376] font-medium">
         <div>
-          Showing {(currentPage - 1) * pageSize + 1} to{' '}
-          {Math.min(currentPage * pageSize, sortedRecords.length)} of{' '}
+          Showing {(currentPage - 1) * pageSize + 1} to{" "}
+          {Math.min(currentPage * pageSize, sortedRecords.length)} of{" "}
           {sortedRecords.length.toLocaleString()} entries
         </div>
 
         <div className="flex items-center gap-1.5 self-center sm:self-auto">
           <button
+            type="button"
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1}
-            className="p-1.5 rounded-lg border border-[#EBE5D9] hover:bg-[#F1EDE5] disabled:opacity-40 disabled:cursor-not-allowed text-[#433E37]"
+            className="p-1.5 rounded-lg border border-[#EBE5D9] hover:bg-[#F1EDE5] disabled:opacity-40 disabled:cursor-not-allowed text-[#433E37] cursor-pointer"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -236,9 +275,10 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
             Page {currentPage} of {totalPages}
           </span>
           <button
+            type="button"
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages}
-            className="p-1.5 rounded-lg border border-[#EBE5D9] hover:bg-[#F1EDE5] disabled:opacity-40 disabled:cursor-not-allowed text-[#433E37]"
+            className="p-1.5 rounded-lg border border-[#EBE5D9] hover:bg-[#F1EDE5] disabled:opacity-40 disabled:cursor-not-allowed text-[#433E37] cursor-pointer"
           >
             <ChevronRight className="w-4 h-4" />
           </button>

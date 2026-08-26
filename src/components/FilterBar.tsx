@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { 
-  X, 
+import React, { useState } from "react";
+import {
+  X,
   SlidersHorizontal,
   ShoppingBag,
   Store,
@@ -8,9 +8,9 @@ import {
   Sparkles,
   RotateCcw,
   Calendar,
-  ChevronDown
-} from 'lucide-react';
-import { FilterState } from '../types';
+  ChevronDown,
+} from "lucide-react";
+import { FilterState } from "../types";
 
 interface FilterBarProps {
   filters: FilterState;
@@ -36,69 +36,84 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Multi-select derived arrays
-  const selectedYears = filters.years && filters.years.length > 0
-    ? filters.years
-    : (filters.year && filters.year !== 'ALL' ? [filters.year] : []);
+  const selectedYears =
+    filters.years && filters.years.length > 0
+      ? filters.years
+      : filters.year && filters.year !== "ALL"
+        ? [filters.year]
+        : [];
 
-  const selectedMonths = filters.months && filters.months.length > 0
-    ? filters.months
-    : (filters.month && filters.month !== 'ALL' ? [filters.month] : []);
+  const selectedMonths =
+    filters.months && filters.months.length > 0
+      ? filters.months
+      : filters.month && filters.month !== "ALL"
+        ? [filters.month]
+        : [];
 
-  const selectedWeeks = filters.weeks && filters.weeks.length > 0
-    ? filters.weeks
-    : (filters.week && filters.week !== 'ALL' ? [filters.week] : []);
+  const selectedWeeks =
+    filters.weeks && filters.weeks.length > 0
+      ? filters.weeks
+      : filters.week && filters.week !== "ALL"
+        ? [filters.week]
+        : [];
 
   const toggleYear = (yr: string) => {
-    if (yr === 'ALL') {
-      onFilterChange({ ...filters, years: [], year: 'ALL' });
+    if (yr === "ALL") {
+      onFilterChange({ ...filters, years: [], year: "ALL" });
       return;
     }
     const exists = selectedYears.includes(yr);
-    const next = exists ? selectedYears.filter((y) => y !== yr) : [...selectedYears, yr];
+    const next = exists
+      ? selectedYears.filter((y) => y !== yr)
+      : [...selectedYears, yr];
     onFilterChange({
       ...filters,
       years: next,
-      year: next.length === 1 ? next[0] : (next.length === 0 ? 'ALL' : 'CUSTOM'),
+      year: next.length === 1 ? next[0] : next.length === 0 ? "ALL" : "CUSTOM",
     });
   };
 
   const toggleMonth = (m: string) => {
-    if (m === 'ALL') {
-      onFilterChange({ ...filters, months: [], month: 'ALL' });
+    if (m === "ALL") {
+      onFilterChange({ ...filters, months: [], month: "ALL" });
       return;
     }
-    const exists = selectedMonths.some((x) => x.toLowerCase() === m.toLowerCase());
+    const exists = selectedMonths.some(
+      (x) => x.toLowerCase() === m.toLowerCase(),
+    );
     const next = exists
       ? selectedMonths.filter((x) => x.toLowerCase() !== m.toLowerCase())
       : [...selectedMonths, m];
     onFilterChange({
       ...filters,
       months: next,
-      month: next.length === 1 ? next[0] : (next.length === 0 ? 'ALL' : 'CUSTOM'),
+      month: next.length === 1 ? next[0] : next.length === 0 ? "ALL" : "CUSTOM",
     });
   };
 
   const toggleWeek = (w: string) => {
-    if (w === 'ALL') {
-      onFilterChange({ ...filters, weeks: [], week: 'ALL' });
+    if (w === "ALL") {
+      onFilterChange({ ...filters, weeks: [], week: "ALL" });
       return;
     }
-    const exists = selectedWeeks.some((x) => x.toLowerCase() === w.toLowerCase());
+    const exists = selectedWeeks.some(
+      (x) => x.toLowerCase() === w.toLowerCase(),
+    );
     const next = exists
       ? selectedWeeks.filter((x) => x.toLowerCase() !== w.toLowerCase())
       : [...selectedWeeks, w];
     onFilterChange({
       ...filters,
       weeks: next,
-      week: next.length === 1 ? next[0] : (next.length === 0 ? 'ALL' : 'CUSTOM'),
+      week: next.length === 1 ? next[0] : next.length === 0 ? "ALL" : "CUSTOM",
     });
   };
 
-  const handleStatusChange = (status: FilterState['status']) => {
+  const handleStatusChange = (status: FilterState["status"]) => {
     onFilterChange({ ...filters, status });
   };
 
-  const handleCampaignChange = (campaign: FilterState['campaign']) => {
+  const handleCampaignChange = (campaign: FilterState["campaign"]) => {
     onFilterChange({ ...filters, campaign });
   };
 
@@ -125,22 +140,22 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
   const resetAllFilters = () => {
     onFilterChange({
-      search: '',
-      year: 'ALL',
+      search: "",
+      year: "ALL",
       years: [],
-      month: 'ALL',
+      month: "ALL",
       months: [],
-      week: 'ALL',
+      week: "ALL",
       weeks: [],
-      dateRangePreset: 'ALL',
-      startDate: '',
-      endDate: '',
+      dateRangePreset: "ALL",
+      startDate: "",
+      endDate: "",
       channels: [],
       categories: [],
       zones: [],
       states: [],
-      status: 'ALL',
-      campaign: 'ALL',
+      status: "ALL",
+      campaign: "ALL",
     });
   };
 
@@ -153,30 +168,54 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     filters.categories.length +
     filters.zones.length +
     filters.states.length +
-    (filters.status !== 'ALL' ? 1 : 0) +
-    (filters.campaign !== 'ALL' ? 1 : 0);
+    (filters.status !== "ALL" ? 1 : 0) +
+    (filters.campaign !== "ALL" ? 1 : 0);
 
   // Filter out invalid/empty strings for clean UI
-  const validZones = availableZones.filter((z) => z && z !== '#N/A' && z !== 'N/A');
-  const validChannels = availableChannels.filter((c) => c && c !== '#N/A' && c !== 'N/A');
-  const validCategories = availableCategories.filter((c) => c && c !== '#N/A' && c !== 'N/A');
+  const validZones = availableZones.filter(
+    (z) => z && z !== "#N/A" && z !== "N/A",
+  );
+  const validChannels = availableChannels.filter(
+    (c) => c && c !== "#N/A" && c !== "N/A",
+  );
+  const validCategories = availableCategories.filter(
+    (c) => c && c !== "#N/A" && c !== "N/A",
+  );
 
   // Determine recent years and extra years for clean display without overflow
   const showCompactYears = availableYears.length <= 4;
-  const recentYears = showCompactYears ? availableYears : availableYears.slice(0, 3);
-  const isOlderYearSelected = !showCompactYears && selectedYears.some((yr) => !recentYears.includes(Number(yr)));
+  const recentYears = showCompactYears
+    ? availableYears
+    : availableYears.slice(0, 3);
+  const isOlderYearSelected =
+    !showCompactYears &&
+    selectedYears.some((yr) => !recentYears.includes(Number(yr)));
 
   // Determine month options
-  const validMonths = availableMonths.filter((m) => m && m !== '#N/A' && m !== 'N/A');
+  const validMonths = availableMonths.filter(
+    (m) => m && m !== "#N/A" && m !== "N/A",
+  );
   const showCompactMonths = validMonths.length <= 4;
-  const recentMonths = showCompactMonths ? validMonths : validMonths.slice(0, 3);
-  const isOlderMonthSelected = !showCompactMonths && selectedMonths.some((m) => !recentMonths.some((rm) => rm.toLowerCase() === m.toLowerCase()));
+  const recentMonths = showCompactMonths
+    ? validMonths
+    : validMonths.slice(0, 3);
+  const isOlderMonthSelected =
+    !showCompactMonths &&
+    selectedMonths.some(
+      (m) => !recentMonths.some((rm) => rm.toLowerCase() === m.toLowerCase()),
+    );
 
   // Determine week options
-  const validWeeks = availableWeeks.filter((w) => w && w !== '#N/A' && w !== 'N/A');
+  const validWeeks = availableWeeks.filter(
+    (w) => w && w !== "#N/A" && w !== "N/A",
+  );
   const showCompactWeeks = validWeeks.length <= 4;
   const recentWeeks = showCompactWeeks ? validWeeks : validWeeks.slice(0, 3);
-  const isOlderWeekSelected = !showCompactWeeks && selectedWeeks.some((w) => !recentWeeks.some((rw) => rw.toLowerCase() === w.toLowerCase()));
+  const isOlderWeekSelected =
+    !showCompactWeeks &&
+    selectedWeeks.some(
+      (w) => !recentWeeks.some((rw) => rw.toLowerCase() === w.toLowerCase()),
+    );
 
   return (
     <div className="bg-white border border-[#EBE5D9] rounded-[24px] shadow-sm p-4 sm:p-5 mb-6">
@@ -186,15 +225,18 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         <div className="flex flex-wrap items-center gap-4">
           {/* Year Filter Controls (Multi-Select) */}
           <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-xs font-bold text-[#8C8376] uppercase tracking-wider mr-1">Year:</span>
-            
+            <span className="text-xs font-bold text-[#8C8376] uppercase tracking-wider mr-1">
+              Year:
+            </span>
+
             <div className="flex items-center gap-1 bg-[#F1EDE5] p-1 rounded-xl border border-[#EBE5D9]">
               <button
-                onClick={() => toggleYear('ALL')}
+                type="button"
+                onClick={() => toggleYear("ALL")}
                 className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
                   selectedYears.length === 0
-                    ? 'bg-[#2D2A26] text-white shadow-2xs font-extrabold'
-                    : 'text-[#8C8376] hover:text-[#2D2A26]'
+                    ? "bg-[#2D2A26] text-white shadow-2xs font-extrabold"
+                    : "text-[#8C8376] hover:text-[#2D2A26]"
                 }`}
               >
                 All Years
@@ -204,12 +246,13 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 const isSelected = selectedYears.includes(String(yr));
                 return (
                   <button
+                    type="button"
                     key={yr}
                     onClick={() => toggleYear(String(yr))}
                     className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
                       isSelected
-                        ? 'bg-[#5F7161] text-white shadow-2xs font-extrabold'
-                        : 'text-[#8C8376] hover:text-[#2D2A26]'
+                        ? "bg-[#5F7161] text-white shadow-2xs font-extrabold"
+                        : "text-[#8C8376] hover:text-[#2D2A26]"
                     }`}
                   >
                     {yr}
@@ -227,22 +270,36 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                     }}
                     className={`pl-2.5 pr-7 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer appearance-none focus:outline-none ${
                       isOlderYearSelected
-                        ? 'bg-[#5F7161] text-white shadow-2xs'
-                        : 'bg-transparent text-[#8C8376] hover:text-[#2D2A26]'
+                        ? "bg-[#5F7161] text-white shadow-2xs"
+                        : "bg-transparent text-[#8C8376] hover:text-[#2D2A26]"
                     }`}
                   >
-                    <option value="" disabled className="bg-white text-[#2D2A26]">
-                      {isOlderYearSelected ? `${selectedYears.filter((yr) => !recentYears.includes(Number(yr))).join(', ')}` : 'More ▾'}
+                    <option
+                      value=""
+                      disabled
+                      className="bg-white text-[#2D2A26]"
+                    >
+                      {isOlderYearSelected
+                        ? `${selectedYears.filter((yr) => !recentYears.includes(Number(yr))).join(", ")}`
+                        : "More ▾"}
                     </option>
                     {availableYears.map((yr) => (
-                      <option key={yr} value={String(yr)} className="bg-white text-[#2D2A26]">
-                        {selectedYears.includes(String(yr)) ? `✓ ${yr}` : String(yr)}
+                      <option
+                        key={yr}
+                        value={String(yr)}
+                        className="bg-white text-[#2D2A26]"
+                      >
+                        {selectedYears.includes(String(yr))
+                          ? `✓ ${yr}`
+                          : String(yr)}
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className={`w-3 h-3 absolute right-2 pointer-events-none ${
-                    isOlderYearSelected ? 'text-white' : 'text-[#8C8376]'
-                  }`} />
+                  <ChevronDown
+                    className={`w-3 h-3 absolute right-2 pointer-events-none ${
+                      isOlderYearSelected ? "text-white" : "text-[#8C8376]"
+                    }`}
+                  />
                 </div>
               )}
             </div>
@@ -251,30 +308,36 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           {/* Month Filter Controls (Multi-Select) */}
           {validMonths.length > 0 && (
             <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-xs font-bold text-[#8C8376] uppercase tracking-wider mr-1">Month:</span>
-              
+              <span className="text-xs font-bold text-[#8C8376] uppercase tracking-wider mr-1">
+                Month:
+              </span>
+
               <div className="flex items-center gap-1 bg-[#F1EDE5] p-1 rounded-xl border border-[#EBE5D9]">
                 <button
-                  onClick={() => toggleMonth('ALL')}
+                  type="button"
+                  onClick={() => toggleMonth("ALL")}
                   className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
                     selectedMonths.length === 0
-                      ? 'bg-[#2D2A26] text-white shadow-2xs font-extrabold'
-                      : 'text-[#8C8376] hover:text-[#2D2A26]'
+                      ? "bg-[#2D2A26] text-white shadow-2xs font-extrabold"
+                      : "text-[#8C8376] hover:text-[#2D2A26]"
                   }`}
                 >
                   All Months
                 </button>
 
                 {recentMonths.map((m) => {
-                  const isSelected = selectedMonths.some((x) => x.toLowerCase() === m.toLowerCase());
+                  const isSelected = selectedMonths.some(
+                    (x) => x.toLowerCase() === m.toLowerCase(),
+                  );
                   return (
                     <button
+                      type="button"
                       key={m}
                       onClick={() => toggleMonth(m)}
                       className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
                         isSelected
-                          ? 'bg-[#5F7161] text-white shadow-2xs font-extrabold'
-                          : 'text-[#8C8376] hover:text-[#2D2A26]'
+                          ? "bg-[#5F7161] text-white shadow-2xs font-extrabold"
+                          : "text-[#8C8376] hover:text-[#2D2A26]"
                       }`}
                     >
                       {m}
@@ -292,22 +355,38 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                       }}
                       className={`pl-2.5 pr-7 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer appearance-none focus:outline-none ${
                         isOlderMonthSelected
-                          ? 'bg-[#5F7161] text-white shadow-2xs'
-                          : 'bg-transparent text-[#8C8376] hover:text-[#2D2A26]'
+                          ? "bg-[#5F7161] text-white shadow-2xs"
+                          : "bg-transparent text-[#8C8376] hover:text-[#2D2A26]"
                       }`}
                     >
-                      <option value="" disabled className="bg-white text-[#2D2A26]">
-                        {isOlderMonthSelected ? `${selectedMonths.filter((m) => !recentMonths.some((rm) => rm.toLowerCase() === m.toLowerCase())).join(', ')}` : 'More ▾'}
+                      <option
+                        value=""
+                        disabled
+                        className="bg-white text-[#2D2A26]"
+                      >
+                        {isOlderMonthSelected
+                          ? `${selectedMonths.filter((m) => !recentMonths.some((rm) => rm.toLowerCase() === m.toLowerCase())).join(", ")}`
+                          : "More ▾"}
                       </option>
                       {validMonths.map((m) => (
-                        <option key={m} value={m} className="bg-white text-[#2D2A26]">
-                          {selectedMonths.some((x) => x.toLowerCase() === m.toLowerCase()) ? `✓ ${m}` : m}
+                        <option
+                          key={m}
+                          value={m}
+                          className="bg-white text-[#2D2A26]"
+                        >
+                          {selectedMonths.some(
+                            (x) => x.toLowerCase() === m.toLowerCase(),
+                          )
+                            ? `✓ ${m}`
+                            : m}
                         </option>
                       ))}
                     </select>
-                    <ChevronDown className={`w-3 h-3 absolute right-2 pointer-events-none ${
-                      isOlderMonthSelected ? 'text-white' : 'text-[#8C8376]'
-                    }`} />
+                    <ChevronDown
+                      className={`w-3 h-3 absolute right-2 pointer-events-none ${
+                        isOlderMonthSelected ? "text-white" : "text-[#8C8376]"
+                      }`}
+                    />
                   </div>
                 )}
               </div>
@@ -316,34 +395,39 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
           {/* Status Filter (Positioned BEFORE Week) */}
           <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-xs font-bold text-[#8C8376] uppercase tracking-wider mr-1">Status:</span>
+            <span className="text-xs font-bold text-[#8C8376] uppercase tracking-wider mr-1">
+              Status:
+            </span>
             <div className="flex items-center gap-1 bg-[#F1EDE5] p-1 rounded-xl border border-[#EBE5D9]">
               <button
-                onClick={() => handleStatusChange('ALL')}
+                type="button"
+                onClick={() => handleStatusChange("ALL")}
                 className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                  filters.status === 'ALL'
-                    ? 'bg-white text-[#2D2A26] shadow-2xs font-extrabold'
-                    : 'text-[#8C8376] hover:text-[#2D2A26]'
+                  filters.status === "ALL"
+                    ? "bg-white text-[#2D2A26] shadow-2xs font-extrabold"
+                    : "text-[#8C8376] hover:text-[#2D2A26]"
                 }`}
               >
                 All
               </button>
               <button
-                onClick={() => handleStatusChange('Dispatched')}
+                type="button"
+                onClick={() => handleStatusChange("Dispatched")}
                 className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                  filters.status === 'Dispatched'
-                    ? 'bg-[#5F7161] text-white shadow-2xs'
-                    : 'text-[#8C8376] hover:text-[#2D2A26]'
+                  filters.status === "Dispatched"
+                    ? "bg-[#5F7161] text-white shadow-2xs"
+                    : "text-[#8C8376] hover:text-[#2D2A26]"
                 }`}
               >
                 Dispatched
               </button>
               <button
-                onClick={() => handleStatusChange('Return')}
+                type="button"
+                onClick={() => handleStatusChange("Return")}
                 className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                  filters.status === 'Return'
-                    ? 'bg-[#AF8260] text-white shadow-2xs'
-                    : 'text-[#8C8376] hover:text-[#2D2A26]'
+                  filters.status === "Return"
+                    ? "bg-[#AF8260] text-white shadow-2xs"
+                    : "text-[#8C8376] hover:text-[#2D2A26]"
                 }`}
               >
                 Returns
@@ -354,30 +438,36 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           {/* Week Filter Controls (Multi-Select, Positioned AFTER Status) */}
           {validWeeks.length > 0 && (
             <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-xs font-bold text-[#8C8376] uppercase tracking-wider mr-1">Week:</span>
-              
+              <span className="text-xs font-bold text-[#8C8376] uppercase tracking-wider mr-1">
+                Week:
+              </span>
+
               <div className="flex items-center gap-1 bg-[#F1EDE5] p-1 rounded-xl border border-[#EBE5D9]">
                 <button
-                  onClick={() => toggleWeek('ALL')}
+                  type="button"
+                  onClick={() => toggleWeek("ALL")}
                   className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
                     selectedWeeks.length === 0
-                      ? 'bg-[#2D2A26] text-white shadow-2xs font-extrabold'
-                      : 'text-[#8C8376] hover:text-[#2D2A26]'
+                      ? "bg-[#2D2A26] text-white shadow-2xs font-extrabold"
+                      : "text-[#8C8376] hover:text-[#2D2A26]"
                   }`}
                 >
                   All Weeks
                 </button>
 
                 {recentWeeks.map((w) => {
-                  const isSelected = selectedWeeks.some((x) => x.toLowerCase() === w.toLowerCase());
+                  const isSelected = selectedWeeks.some(
+                    (x) => x.toLowerCase() === w.toLowerCase(),
+                  );
                   return (
                     <button
+                      type="button"
                       key={w}
                       onClick={() => toggleWeek(w)}
                       className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
                         isSelected
-                          ? 'bg-[#5F7161] text-white shadow-2xs font-extrabold'
-                          : 'text-[#8C8376] hover:text-[#2D2A26]'
+                          ? "bg-[#5F7161] text-white shadow-2xs font-extrabold"
+                          : "text-[#8C8376] hover:text-[#2D2A26]"
                       }`}
                     >
                       {w}
@@ -395,22 +485,38 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                       }}
                       className={`pl-2.5 pr-7 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer appearance-none focus:outline-none ${
                         isOlderWeekSelected
-                          ? 'bg-[#5F7161] text-white shadow-2xs'
-                          : 'bg-transparent text-[#8C8376] hover:text-[#2D2A26]'
+                          ? "bg-[#5F7161] text-white shadow-2xs"
+                          : "bg-transparent text-[#8C8376] hover:text-[#2D2A26]"
                       }`}
                     >
-                      <option value="" disabled className="bg-white text-[#2D2A26]">
-                        {isOlderWeekSelected ? `${selectedWeeks.filter((w) => !recentWeeks.some((rw) => rw.toLowerCase() === w.toLowerCase())).join(', ')}` : 'More ▾'}
+                      <option
+                        value=""
+                        disabled
+                        className="bg-white text-[#2D2A26]"
+                      >
+                        {isOlderWeekSelected
+                          ? `${selectedWeeks.filter((w) => !recentWeeks.some((rw) => rw.toLowerCase() === w.toLowerCase())).join(", ")}`
+                          : "More ▾"}
                       </option>
                       {validWeeks.map((w) => (
-                        <option key={w} value={w} className="bg-white text-[#2D2A26]">
-                          {selectedWeeks.some((x) => x.toLowerCase() === w.toLowerCase()) ? `✓ ${w}` : w}
+                        <option
+                          key={w}
+                          value={w}
+                          className="bg-white text-[#2D2A26]"
+                        >
+                          {selectedWeeks.some(
+                            (x) => x.toLowerCase() === w.toLowerCase(),
+                          )
+                            ? `✓ ${w}`
+                            : w}
                         </option>
                       ))}
                     </select>
-                    <ChevronDown className={`w-3 h-3 absolute right-2 pointer-events-none ${
-                      isOlderWeekSelected ? 'text-white' : 'text-[#8C8376]'
-                    }`} />
+                    <ChevronDown
+                      className={`w-3 h-3 absolute right-2 pointer-events-none ${
+                        isOlderWeekSelected ? "text-white" : "text-[#8C8376]"
+                      }`}
+                    />
                   </div>
                 )}
               </div>
@@ -421,11 +527,12 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         {/* Right Section: Advanced Filters Button */}
         <div className="flex items-center gap-2 shrink-0">
           <button
+            type="button"
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className={`inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl border transition-all ${
+            className={`inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
               showAdvanced || activeFilterCount > 0
-                ? 'bg-[#FAF0E6] border-[#E8D2C2] text-[#AF8260]'
-                : 'bg-[#F9F7F2] border-[#EBE5D9] text-[#433E37] hover:bg-[#F1EDE5]'
+                ? "bg-[#FAF0E6] border-[#E8D2C2] text-[#AF8260]"
+                : "bg-[#F9F7F2] border-[#EBE5D9] text-[#433E37] hover:bg-[#F1EDE5]"
             }`}
           >
             <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -439,8 +546,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
           {activeFilterCount > 0 && (
             <button
+              type="button"
               onClick={resetAllFilters}
-              className="p-2 text-xs text-[#AF8260] hover:bg-[#FAF0E6] rounded-xl transition-colors border border-[#E8D2C2]"
+              className="p-2 text-xs text-[#AF8260] hover:bg-[#FAF0E6] rounded-xl transition-colors border border-[#E8D2C2] cursor-pointer"
               title="Reset all filters"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -463,12 +571,13 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 const isSelected = filters.channels.includes(ch);
                 return (
                   <button
+                    type="button"
                     key={ch}
                     onClick={() => toggleChannel(ch)}
-                    className={`px-2.5 py-1 rounded-lg border text-xs font-semibold transition-all ${
+                    className={`px-2.5 py-1 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-[#5F7161] text-white border-[#4A594C]'
-                        : 'bg-[#F9F7F2] text-[#433E37] border-[#EBE5D9] hover:bg-[#F1EDE5]'
+                        ? "bg-[#5F7161] text-white border-[#4A594C]"
+                        : "bg-[#F9F7F2] text-[#433E37] border-[#EBE5D9] hover:bg-[#F1EDE5]"
                     }`}
                   >
                     {ch}
@@ -489,12 +598,13 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 const isSelected = filters.categories.includes(cat);
                 return (
                   <button
+                    type="button"
                     key={cat}
                     onClick={() => toggleCategory(cat)}
-                    className={`px-2.5 py-1 rounded-lg border text-xs font-semibold transition-all ${
+                    className={`px-2.5 py-1 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-[#AF8260] text-white border-[#8D6546]'
-                        : 'bg-[#F9F7F2] text-[#433E37] border-[#EBE5D9] hover:bg-[#F1EDE5]'
+                        ? "bg-[#AF8260] text-white border-[#8D6546]"
+                        : "bg-[#F9F7F2] text-[#433E37] border-[#EBE5D9] hover:bg-[#F1EDE5]"
                     }`}
                   >
                     {cat}
@@ -515,12 +625,13 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 const isSelected = filters.zones.includes(z);
                 return (
                   <button
+                    type="button"
                     key={z}
                     onClick={() => toggleZone(z)}
-                    className={`px-3 py-1 rounded-lg border text-xs font-semibold transition-all ${
+                    className={`px-3 py-1 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-[#5F7161] text-white border-[#4A594C]'
-                        : 'bg-[#F9F7F2] text-[#433E37] border-[#EBE5D9] hover:bg-[#F1EDE5]'
+                        ? "bg-[#5F7161] text-white border-[#4A594C]"
+                        : "bg-[#F9F7F2] text-[#433E37] border-[#EBE5D9] hover:bg-[#F1EDE5]"
                     }`}
                   >
                     {z}
@@ -537,31 +648,34 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               </label>
               <div className="flex gap-1.5">
                 <button
-                  onClick={() => handleCampaignChange('ALL')}
-                  className={`px-2.5 py-1 rounded-lg border text-xs font-semibold ${
-                    filters.campaign === 'ALL'
-                      ? 'bg-[#2D2A26] text-white border-[#2D2A26]'
-                      : 'bg-[#F9F7F2] text-[#433E37] border-[#EBE5D9] hover:bg-[#F1EDE5]'
+                  type="button"
+                  onClick={() => handleCampaignChange("ALL")}
+                  className={`px-2.5 py-1 rounded-lg border text-xs font-semibold cursor-pointer ${
+                    filters.campaign === "ALL"
+                      ? "bg-[#2D2A26] text-white border-[#2D2A26]"
+                      : "bg-[#F9F7F2] text-[#433E37] border-[#EBE5D9] hover:bg-[#F1EDE5]"
                   }`}
                 >
                   All
                 </button>
                 <button
-                  onClick={() => handleCampaignChange('B2S')}
-                  className={`px-2.5 py-1 rounded-lg border text-xs font-semibold ${
-                    filters.campaign === 'B2S'
-                      ? 'bg-[#AF8260] text-white border-[#8D6546]'
-                      : 'bg-[#F9F7F2] text-[#433E37] border-[#EBE5D9] hover:bg-[#F1EDE5]'
+                  type="button"
+                  onClick={() => handleCampaignChange("B2S")}
+                  className={`px-2.5 py-1 rounded-lg border text-xs font-semibold cursor-pointer ${
+                    filters.campaign === "B2S"
+                      ? "bg-[#AF8260] text-white border-[#8D6546]"
+                      : "bg-[#F9F7F2] text-[#433E37] border-[#EBE5D9] hover:bg-[#F1EDE5]"
                   }`}
                 >
                   Back To School (B2S)
                 </button>
                 <button
-                  onClick={() => handleCampaignChange('NON_B2S')}
-                  className={`px-2.5 py-1 rounded-lg border text-xs font-semibold ${
-                    filters.campaign === 'NON_B2S'
-                      ? 'bg-[#5F7161] text-white border-[#4A594C]'
-                      : 'bg-[#F9F7F2] text-[#433E37] border-[#EBE5D9] hover:bg-[#F1EDE5]'
+                  type="button"
+                  onClick={() => handleCampaignChange("NON_B2S")}
+                  className={`px-2.5 py-1 rounded-lg border text-xs font-semibold cursor-pointer ${
+                    filters.campaign === "NON_B2S"
+                      ? "bg-[#5F7161] text-white border-[#4A594C]"
+                      : "bg-[#F9F7F2] text-[#433E37] border-[#EBE5D9] hover:bg-[#F1EDE5]"
                   }`}
                 >
                   Standard
@@ -578,20 +692,28 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             </label>
             <div className="space-y-2.5">
               <div>
-                <span className="text-[11px] font-semibold text-[#8C8376]">Start Date:</span>
+                <span className="text-[11px] font-semibold text-[#8C8376]">
+                  Start Date:
+                </span>
                 <input
                   type="date"
                   value={filters.startDate}
-                  onChange={(e) => onFilterChange({ ...filters, startDate: e.target.value })}
+                  onChange={(e) =>
+                    onFilterChange({ ...filters, startDate: e.target.value })
+                  }
                   className="w-full mt-1 px-2.5 py-1.5 text-xs bg-[#F9F7F2] border border-[#EBE5D9] rounded-lg font-medium text-[#2D2A26] focus:outline-none focus:ring-2 focus:ring-[#5F7161]"
                 />
               </div>
               <div>
-                <span className="text-[11px] font-semibold text-[#8C8376]">End Date:</span>
+                <span className="text-[11px] font-semibold text-[#8C8376]">
+                  End Date:
+                </span>
                 <input
                   type="date"
                   value={filters.endDate}
-                  onChange={(e) => onFilterChange({ ...filters, endDate: e.target.value })}
+                  onChange={(e) =>
+                    onFilterChange({ ...filters, endDate: e.target.value })
+                  }
                   className="w-full mt-1 px-2.5 py-1.5 text-xs bg-[#F9F7F2] border border-[#EBE5D9] rounded-lg font-medium text-[#2D2A26] focus:outline-none focus:ring-2 focus:ring-[#5F7161]"
                 />
               </div>
@@ -603,82 +725,145 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       {/* Active Filter Chips */}
       {activeFilterCount > 0 && (
         <div className="flex flex-wrap items-center gap-2 mt-4 pt-3.5 border-t border-[#EBE5D9] text-xs">
-          <span className="text-[#8C8376] text-[11px] font-bold uppercase tracking-wider mr-1">Active filters:</span>
+          <span className="text-[#8C8376] text-[11px] font-bold uppercase tracking-wider mr-1">
+            Active filters:
+          </span>
           {selectedYears.map((yr) => (
-            <span key={yr} className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E9EFEA] text-[#5F7161] font-semibold border border-[#C5D5C7]">
+            <span
+              key={yr}
+              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E9EFEA] text-[#5F7161] font-semibold border border-[#C5D5C7]"
+            >
               Year: {yr}
-              <button onClick={() => toggleYear(yr)} className="cursor-pointer">
+              <button
+                type="button"
+                onClick={() => toggleYear(yr)}
+                className="cursor-pointer"
+              >
                 <X className="w-3 h-3 text-[#5F7161] hover:text-[#2D2A26]" />
               </button>
             </span>
           ))}
           {selectedMonths.map((m) => (
-            <span key={m} className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E9EFEA] text-[#5F7161] font-semibold border border-[#C5D5C7]">
+            <span
+              key={m}
+              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E9EFEA] text-[#5F7161] font-semibold border border-[#C5D5C7]"
+            >
               Month: {m}
-              <button onClick={() => toggleMonth(m)} className="cursor-pointer">
+              <button
+                type="button"
+                onClick={() => toggleMonth(m)}
+                className="cursor-pointer"
+              >
                 <X className="w-3 h-3 text-[#5F7161] hover:text-[#2D2A26]" />
               </button>
             </span>
           ))}
-          {filters.status !== 'ALL' && (
+          {filters.status !== "ALL" && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#F1EDE5] text-[#2D2A26] font-semibold border border-[#E4DCD0]">
               Status: {filters.status}
-              <button onClick={() => onFilterChange({ ...filters, status: 'ALL' })}>
+              <button
+                type="button"
+                onClick={() => onFilterChange({ ...filters, status: "ALL" })}
+                className="cursor-pointer"
+              >
                 <X className="w-3 h-3 text-[#8C8376] hover:text-[#2D2A26]" />
               </button>
             </span>
           )}
           {selectedWeeks.map((w) => (
-            <span key={w} className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E9EFEA] text-[#5F7161] font-semibold border border-[#C5D5C7]">
+            <span
+              key={w}
+              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E9EFEA] text-[#5F7161] font-semibold border border-[#C5D5C7]"
+            >
               Week: {w}
-              <button onClick={() => toggleWeek(w)} className="cursor-pointer">
+              <button
+                type="button"
+                onClick={() => toggleWeek(w)}
+                className="cursor-pointer"
+              >
                 <X className="w-3 h-3 text-[#5F7161] hover:text-[#2D2A26]" />
               </button>
             </span>
           ))}
           {(filters.startDate || filters.endDate) && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#F1EDE5] text-[#2D2A26] font-semibold border border-[#E4DCD0]">
-              Date: {filters.startDate || 'Start'} to {filters.endDate || 'End'}
-              <button onClick={() => onFilterChange({ ...filters, startDate: '', endDate: '' })} className="cursor-pointer">
+              Date: {filters.startDate || "Start"} to {filters.endDate || "End"}
+              <button
+                type="button"
+                onClick={() =>
+                  onFilterChange({ ...filters, startDate: "", endDate: "" })
+                }
+                className="cursor-pointer"
+              >
                 <X className="w-3 h-3 text-[#8C8376] hover:text-[#2D2A26]" />
               </button>
             </span>
           )}
           {filters.channels.map((ch) => (
-            <span key={ch} className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E9EFEA] text-[#5F7161] font-semibold border border-[#C5D5C7]">
+            <span
+              key={ch}
+              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E9EFEA] text-[#5F7161] font-semibold border border-[#C5D5C7]"
+            >
               Channel: {ch}
-              <button onClick={() => toggleChannel(ch)}>
+              <button
+                type="button"
+                onClick={() => toggleChannel(ch)}
+                className="cursor-pointer"
+              >
                 <X className="w-3 h-3 text-[#5F7161] hover:text-[#2D2A26]" />
               </button>
             </span>
           ))}
           {filters.categories.map((cat) => (
-            <span key={cat} className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FAF0E6] text-[#AF8260] font-semibold border border-[#E8D2C2]">
+            <span
+              key={cat}
+              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FAF0E6] text-[#AF8260] font-semibold border border-[#E8D2C2]"
+            >
               Category: {cat}
-              <button onClick={() => toggleCategory(cat)}>
+              <button
+                type="button"
+                onClick={() => toggleCategory(cat)}
+                className="cursor-pointer"
+              >
                 <X className="w-3 h-3 text-[#AF8260] hover:text-[#2D2A26]" />
               </button>
             </span>
           ))}
           {filters.zones.map((z) => (
-            <span key={z} className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E9EFEA] text-[#5F7161] font-semibold border border-[#C5D5C7]">
+            <span
+              key={z}
+              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E9EFEA] text-[#5F7161] font-semibold border border-[#C5D5C7]"
+            >
               Zone: {z}
-              <button onClick={() => toggleZone(z)}>
+              <button
+                type="button"
+                onClick={() => toggleZone(z)}
+                className="cursor-pointer"
+              >
                 <X className="w-3 h-3 text-[#5F7161] hover:text-[#2D2A26]" />
               </button>
             </span>
           ))}
-          {filters.campaign !== 'ALL' && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FAF0E6] text-[#AF8260] font-semibold border border-[#E8D2C2]">
-              Campaign: {filters.campaign === 'B2S' ? 'Back To School' : 'Standard'}
-              <button onClick={() => onFilterChange({ ...filters, campaign: 'ALL' })}>
+          {filters.campaign !== "ALL" && (
+            <span
+              key="campaign-chip"
+              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FAF0E6] text-[#AF8260] font-semibold border border-[#E8D2C2]"
+            >
+              Campaign:{" "}
+              {filters.campaign === "B2S" ? "Back To School" : "Standard"}
+              <button
+                type="button"
+                onClick={() => onFilterChange({ ...filters, campaign: "ALL" })}
+                className="cursor-pointer"
+              >
                 <X className="w-3 h-3 text-[#AF8260] hover:text-[#2D2A26]" />
               </button>
             </span>
           )}
           <button
+            type="button"
             onClick={resetAllFilters}
-            className="text-[11px] text-[#AF8260] hover:underline font-bold ml-auto"
+            className="text-[11px] text-[#AF8260] hover:underline font-bold ml-auto cursor-pointer"
           >
             Clear All Filters
           </button>

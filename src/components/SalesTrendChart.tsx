@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   AreaChart,
   Area,
@@ -10,13 +10,19 @@ import {
   Legend,
   BarChart,
   Bar,
-} from 'recharts';
-import { TimeSeriesPoint } from '../types';
+} from "recharts";
+import { TimeSeriesPoint } from "../types";
 
 interface SalesTrendChartProps {
   data: TimeSeriesPoint[];
-  granularity: 'daily' | 'weekly' | 'monthly' | 'yearly';
-  onGranularityChange: (g: 'daily' | 'weekly' | 'monthly' | 'yearly') => void;
+  granularity: "daily" | "weekly" | "monthly" | "yearly";
+  onGranularityChange: (g: "daily" | "weekly" | "monthly" | "yearly") => void;
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ payload: TimeSeriesPoint }>;
+  label?: string;
 }
 
 export const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
@@ -24,19 +30,29 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
   granularity,
   onGranularityChange,
 }) => {
-  const [chartType, setChartType] = useState<'area' | 'bar'>('bar');
-  const [metricView, setMetricView] = useState<'revenue' | 'units' | 'margin'>('revenue');
+  const [chartType, setChartType] = useState<"area" | "bar">("bar");
+  const [metricView, setMetricView] = useState<"revenue" | "units" | "margin">(
+    "revenue",
+  );
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip: React.FC<CustomTooltipProps> = ({
+    active,
+    payload,
+    label,
+  }) => {
     if (active && payload && payload.length) {
       const point: TimeSeriesPoint = payload[0].payload;
       return (
         <div className="bg-[#2D2A26] text-white p-3.5 rounded-2xl shadow-xl text-xs border border-[#433E37] min-w-[190px]">
-          <p className="font-extrabold text-[#F9F7F2] border-b border-[#433E37] pb-1.5 mb-2">{point.label || label}</p>
+          <p className="font-extrabold text-[#F9F7F2] border-b border-[#433E37] pb-1.5 mb-2">
+            {point.label || label}
+          </p>
           <div className="space-y-1.5 font-medium">
             <div className="flex justify-between text-[#C5D5C7]">
               <span>Net Sales:</span>
-              <span className="font-bold text-white">₹{point.netSales.toLocaleString()}</span>
+              <span className="font-bold text-white">
+                ₹{point.netSales.toLocaleString()}
+              </span>
             </div>
             <div className="flex justify-between text-[#CEC4B5]">
               <span>Gross Dispatched:</span>
@@ -81,7 +97,8 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
             </span>
           </div>
           <p className="text-xs text-[#8C8376] font-medium mt-0.5">
-            Track gross sales, net revenue, margins, and unit volumes across periods
+            Track gross sales, net revenue, margins, and unit volumes across
+            periods
           </p>
         </div>
 
@@ -89,25 +106,34 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
           {/* Metric Selector */}
           <div className="flex bg-[#F1EDE5] p-1 rounded-xl text-xs border border-[#EBE5D9]">
             <button
-              onClick={() => setMetricView('revenue')}
-              className={`px-3 py-1 rounded-lg transition-all ${
-                metricView === 'revenue' ? 'bg-white text-[#2D2A26] font-extrabold shadow-2xs' : 'text-[#8C8376] font-semibold hover:text-[#2D2A26]'
+              type="button"
+              onClick={() => setMetricView("revenue")}
+              className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                metricView === "revenue"
+                  ? "bg-white text-[#2D2A26] font-extrabold shadow-2xs"
+                  : "text-[#8C8376] font-semibold hover:text-[#2D2A26]"
               }`}
             >
               Revenue (₹)
             </button>
             <button
-              onClick={() => setMetricView('units')}
-              className={`px-3 py-1 rounded-lg transition-all ${
-                metricView === 'units' ? 'bg-white text-[#2D2A26] font-extrabold shadow-2xs' : 'text-[#8C8376] font-semibold hover:text-[#2D2A26]'
+              type="button"
+              onClick={() => setMetricView("units")}
+              className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                metricView === "units"
+                  ? "bg-white text-[#2D2A26] font-extrabold shadow-2xs"
+                  : "text-[#8C8376] font-semibold hover:text-[#2D2A26]"
               }`}
             >
               Units (Qty)
             </button>
             <button
-              onClick={() => setMetricView('margin')}
-              className={`px-3 py-1 rounded-lg transition-all ${
-                metricView === 'margin' ? 'bg-white text-[#2D2A26] font-extrabold shadow-2xs' : 'text-[#8C8376] font-semibold hover:text-[#2D2A26]'
+              type="button"
+              onClick={() => setMetricView("margin")}
+              className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                metricView === "margin"
+                  ? "bg-white text-[#2D2A26] font-extrabold shadow-2xs"
+                  : "text-[#8C8376] font-semibold hover:text-[#2D2A26]"
               }`}
             >
               Margin (₹)
@@ -117,33 +143,45 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
           {/* Granularity Selector */}
           <div className="flex bg-[#F1EDE5] p-1 rounded-xl text-xs border border-[#EBE5D9]">
             <button
-              onClick={() => onGranularityChange('daily')}
-              className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                granularity === 'daily' ? 'bg-[#5F7161] text-white shadow-2xs' : 'text-[#8C8376] hover:text-[#2D2A26]'
+              type="button"
+              onClick={() => onGranularityChange("daily")}
+              className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                granularity === "daily"
+                  ? "bg-[#5F7161] text-white shadow-2xs"
+                  : "text-[#8C8376] hover:text-[#2D2A26]"
               }`}
             >
               Daily
             </button>
             <button
-              onClick={() => onGranularityChange('weekly')}
-              className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                granularity === 'weekly' ? 'bg-[#5F7161] text-white shadow-2xs' : 'text-[#8C8376] hover:text-[#2D2A26]'
+              type="button"
+              onClick={() => onGranularityChange("weekly")}
+              className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                granularity === "weekly"
+                  ? "bg-[#5F7161] text-white shadow-2xs"
+                  : "text-[#8C8376] hover:text-[#2D2A26]"
               }`}
             >
               Weekly
             </button>
             <button
-              onClick={() => onGranularityChange('monthly')}
-              className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                granularity === 'monthly' ? 'bg-[#5F7161] text-white shadow-2xs' : 'text-[#8C8376] hover:text-[#2D2A26]'
+              type="button"
+              onClick={() => onGranularityChange("monthly")}
+              className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                granularity === "monthly"
+                  ? "bg-[#5F7161] text-white shadow-2xs"
+                  : "text-[#8C8376] hover:text-[#2D2A26]"
               }`}
             >
               Monthly
             </button>
             <button
-              onClick={() => onGranularityChange('yearly')}
-              className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                granularity === 'yearly' ? 'bg-[#5F7161] text-white shadow-2xs' : 'text-[#8C8376] hover:text-[#2D2A26]'
+              type="button"
+              onClick={() => onGranularityChange("yearly")}
+              className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                granularity === "yearly"
+                  ? "bg-[#5F7161] text-white shadow-2xs"
+                  : "text-[#8C8376] hover:text-[#2D2A26]"
               }`}
             >
               Yearly
@@ -153,18 +191,24 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
           {/* Chart Type Toggle */}
           <div className="flex bg-[#F1EDE5] p-1 rounded-xl text-xs border border-[#EBE5D9]">
             <button
-              onClick={() => setChartType('area')}
-              className={`px-2.5 py-1 rounded-lg font-bold ${
-                chartType === 'area' ? 'bg-white text-[#2D2A26] shadow-2xs' : 'text-[#8C8376]'
+              type="button"
+              onClick={() => setChartType("area")}
+              className={`px-2.5 py-1 rounded-lg font-bold cursor-pointer ${
+                chartType === "area"
+                  ? "bg-white text-[#2D2A26] shadow-2xs"
+                  : "text-[#8C8376]"
               }`}
               title="Area view"
             >
               Area
             </button>
             <button
-              onClick={() => setChartType('bar')}
-              className={`px-2.5 py-1 rounded-lg font-bold ${
-                chartType === 'bar' ? 'bg-white text-[#2D2A26] shadow-2xs' : 'text-[#8C8376]'
+              type="button"
+              onClick={() => setChartType("bar")}
+              className={`px-2.5 py-1 rounded-lg font-bold cursor-pointer ${
+                chartType === "bar"
+                  ? "bg-white text-[#2D2A26] shadow-2xs"
+                  : "text-[#8C8376]"
               }`}
               title="Bar view"
             >
@@ -182,8 +226,11 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            {chartType === 'area' ? (
-              <AreaChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+            {chartType === "area" ? (
+              <AreaChart
+                data={data}
+                margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
+              >
                 <defs>
                   <linearGradient id="netSalesGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#5F7161" stopOpacity={0.45} />
@@ -199,22 +246,28 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1EDE5" />
-                <XAxis 
-                  dataKey="label" 
-                  tick={{ fontSize: 11, fill: '#8C8376' }} 
-                  axisLine={{ stroke: '#EBE5D9' }}
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 11, fill: "#8C8376" }}
+                  axisLine={{ stroke: "#EBE5D9" }}
                   tickLine={false}
                 />
-                <YAxis 
-                  tick={{ fontSize: 11, fill: '#8C8376' }}
-                  axisLine={{ stroke: '#EBE5D9' }}
+                <YAxis
+                  tick={{ fontSize: 11, fill: "#8C8376" }}
+                  axisLine={{ stroke: "#EBE5D9" }}
                   tickLine={false}
-                  tickFormatter={(v) => metricView === 'units' ? String(v) : `₹${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`}
+                  tickFormatter={(v) =>
+                    metricView === "units"
+                      ? String(v)
+                      : `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`
+                  }
                 />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                <Legend
+                  wrapperStyle={{ fontSize: "12px", paddingTop: "10px" }}
+                />
 
-                {metricView === 'revenue' && (
+                {metricView === "revenue" && (
                   <>
                     <Area
                       type="monotone"
@@ -237,7 +290,7 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
                   </>
                 )}
 
-                {metricView === 'units' && (
+                {metricView === "units" && (
                   <Area
                     type="monotone"
                     dataKey="netQty"
@@ -249,7 +302,7 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
                   />
                 )}
 
-                {metricView === 'margin' && (
+                {metricView === "margin" && (
                   <Area
                     type="monotone"
                     dataKey="margin"
@@ -262,36 +315,65 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
                 )}
               </AreaChart>
             ) : (
-              <BarChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+              <BarChart
+                data={data}
+                margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1EDE5" />
-                <XAxis 
-                  dataKey="label" 
-                  tick={{ fontSize: 11, fill: '#8C8376' }} 
-                  axisLine={{ stroke: '#EBE5D9' }}
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 11, fill: "#8C8376" }}
+                  axisLine={{ stroke: "#EBE5D9" }}
                   tickLine={false}
                 />
-                <YAxis 
-                  tick={{ fontSize: 11, fill: '#8C8376' }}
-                  axisLine={{ stroke: '#EBE5D9' }}
+                <YAxis
+                  tick={{ fontSize: 11, fill: "#8C8376" }}
+                  axisLine={{ stroke: "#EBE5D9" }}
                   tickLine={false}
-                  tickFormatter={(v) => metricView === 'units' ? String(v) : `₹${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`}
+                  tickFormatter={(v) =>
+                    metricView === "units"
+                      ? String(v)
+                      : `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`
+                  }
                 />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                <Legend
+                  wrapperStyle={{ fontSize: "12px", paddingTop: "10px" }}
+                />
 
-                {metricView === 'revenue' && (
+                {metricView === "revenue" && (
                   <>
-                    <Bar dataKey="netSales" name="Net Revenue" fill="#5F7161" radius={[6, 6, 0, 0]} />
-                    <Bar dataKey="returns" name="Returns" fill="#AF8260" radius={[6, 6, 0, 0]} />
+                    <Bar
+                      dataKey="netSales"
+                      name="Net Revenue"
+                      fill="#5F7161"
+                      radius={[6, 6, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="returns"
+                      name="Returns"
+                      fill="#AF8260"
+                      radius={[6, 6, 0, 0]}
+                    />
                   </>
                 )}
 
-                {metricView === 'units' && (
-                  <Bar dataKey="netQty" name="Net Units Sold" fill="#AF8260" radius={[6, 6, 0, 0]} />
+                {metricView === "units" && (
+                  <Bar
+                    dataKey="netQty"
+                    name="Net Units Sold"
+                    fill="#AF8260"
+                    radius={[6, 6, 0, 0]}
+                  />
                 )}
 
-                {metricView === 'margin' && (
-                  <Bar dataKey="margin" name="Scoobies Margin" fill="#5F7161" radius={[6, 6, 0, 0]} />
+                {metricView === "margin" && (
+                  <Bar
+                    dataKey="margin"
+                    name="Scoobies Margin"
+                    fill="#5F7161"
+                    radius={[6, 6, 0, 0]}
+                  />
                 )}
               </BarChart>
             )}

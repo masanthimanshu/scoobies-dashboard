@@ -1,18 +1,21 @@
-import React from 'react';
-import { 
-  TrendingUp, 
-  AlertTriangle, 
-  Sparkles, 
-  CheckCircle2
-} from 'lucide-react';
-import { ExecutiveInsight } from '../types';
+import React from "react";
+import {
+  TrendingUp,
+  AlertTriangle,
+  Sparkles,
+  CheckCircle2,
+} from "lucide-react";
+import { ExecutiveInsight } from "../types";
 
 interface ExecutiveSummaryProps {
   insights: ExecutiveInsight[];
   totalRecordsCount: number;
 }
 
-export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ insights, totalRecordsCount }) => {
+export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({
+  insights,
+  totalRecordsCount,
+}) => {
   if (insights.length === 0) return null;
 
   return (
@@ -27,7 +30,8 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ insights, to
               Executive Highlights & Briefing
             </h2>
             <p className="text-xs text-[#8C8376] font-medium">
-              Actionable insights distilled from {totalRecordsCount.toLocaleString()} transactions
+              Actionable insights distilled from{" "}
+              {totalRecordsCount.toLocaleString()} transactions
             </p>
           </div>
         </div>
@@ -38,18 +42,18 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ insights, to
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {insights.map((insight, idx) => {
-          let badgeBg = 'bg-[#E9EFEA] text-[#5F7161] border-[#C5D5C7]';
-          let cardBg = 'bg-[#F9F7F2] border-[#EBE5D9]';
+          let badgeBg = "bg-[#E9EFEA] text-[#5F7161] border-[#C5D5C7]";
+          let cardBg = "bg-[#F9F7F2] border-[#EBE5D9]";
           let icon = <TrendingUp className="w-3.5 h-3.5 text-[#5F7161]" />;
 
-          if (insight.type === 'warning') {
-            badgeBg = 'bg-[#FAF0E6] text-[#AF8260] border-[#E8D2C2]';
+          if (insight.type === "warning") {
+            badgeBg = "bg-[#FAF0E6] text-[#AF8260] border-[#E8D2C2]";
             icon = <AlertTriangle className="w-3.5 h-3.5 text-[#AF8260]" />;
-          } else if (insight.type === 'positive') {
-            badgeBg = 'bg-[#E9EFEA] text-[#5F7161] border-[#C5D5C7]';
+          } else if (insight.type === "positive") {
+            badgeBg = "bg-[#E9EFEA] text-[#5F7161] border-[#C5D5C7]";
             icon = <CheckCircle2 className="w-3.5 h-3.5 text-[#5F7161]" />;
-          } else if (insight.type === 'highlight') {
-            badgeBg = 'bg-[#FDF4EB] text-[#E7AB79] border-[#F5DCBF]';
+          } else if (insight.type === "highlight") {
+            badgeBg = "bg-[#FDF4EB] text-[#E7AB79] border-[#F5DCBF]";
             icon = <Sparkles className="w-3.5 h-3.5 text-[#E7AB79]" />;
           }
 
@@ -60,9 +64,11 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ insights, to
             >
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${badgeBg}`}>
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${badgeBg}`}
+                  >
                     {icon}
-                    <span>{insight.metric || 'Key Driver'}</span>
+                    <span>{insight.metric || "Key Driver"}</span>
                   </span>
                 </div>
                 <h3 className="text-xs font-bold text-[#2D2A26] mb-1 leading-snug">

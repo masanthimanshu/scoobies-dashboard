@@ -1,15 +1,15 @@
-import React, { useState, useRef } from 'react';
-import { 
-  UploadCloud, 
-  X, 
-  FileSpreadsheet, 
-  AlertCircle, 
+import React, { useState, useRef } from "react";
+import {
+  UploadCloud,
+  X,
+  FileSpreadsheet,
+  AlertCircle,
   Download,
   Info,
-  Loader2
-} from 'lucide-react';
-import { parseSalesCsv } from '../utils/csvParser';
-import { SaleRecord } from '../types';
+  Loader2,
+} from "lucide-react";
+import { parseSalesCsv } from "../utils/csvParser";
+import { SaleRecord } from "../types";
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -31,8 +31,11 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 
   const handleFileProcess = async (file: File) => {
     if (!file) return;
-    if (!file.name.toLowerCase().endsWith('.csv') && !file.name.toLowerCase().endsWith('.txt')) {
-      setErrorMsg('Please select a valid CSV file (.csv format).');
+    if (
+      !file.name.toLowerCase().endsWith(".csv") &&
+      !file.name.toLowerCase().endsWith(".txt")
+    ) {
+      setErrorMsg("Please select a valid CSV file (.csv format).");
       return;
     }
 
@@ -44,7 +47,9 @@ export const UploadModal: React.FC<UploadModalProps> = ({
       const result = await parseSalesCsv(text);
 
       if (result.records.length === 0) {
-        setErrorMsg('The CSV file appears to be empty or missing recognized sales columns.');
+        setErrorMsg(
+          "The CSV file appears to be empty or missing recognized sales columns.",
+        );
         setLoading(false);
         return;
       }
@@ -52,8 +57,9 @@ export const UploadModal: React.FC<UploadModalProps> = ({
       onDataLoaded(result.records, file.name);
       setLoading(false);
       onClose();
-    } catch (err: any) {
-      setErrorMsg(`Failed to parse CSV file: ${err.message || 'Unknown error'}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      setErrorMsg(`Failed to parse CSV file: ${msg}`);
       setLoading(false);
     }
   };
@@ -67,18 +73,19 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   };
 
   const downloadSampleTemplate = () => {
-    const header = 'Year,Month,Week,Day,Date,Order Number,Customer name,Bar Code,Product name,Color,PRODUCT CATEGORY,QTY,MRP,MRP Value,Scoobies Margin,Retailers Margin,EX-GST Scoobies Margin,Delivery Place,State,Website,Status,Received Payment,Back To School,Zone,Sale Value\n2026,Aug,Week1,1,1/8/2026,16542,Ekta Gupta,SC0000190,Wrapping Sheets (Assorted),Multi,Wrapping Sheets,1,89,89,20,0,16.95,North Delhi,Delhi,Office Website,Dispatched,,With out B2S,North,20';
-    const blob = new Blob([header], { type: 'text/csv;charset=utf-8;' });
+    const header =
+      "Year,Month,Week,Day,Date,Order Number,Customer name,Bar Code,Product name,Color,PRODUCT CATEGORY,QTY,MRP,MRP Value,Scoobies Margin,Retailers Margin,EX-GST Scoobies Margin,Delivery Place,State,Website,Status,Received Payment,Back To School,Zone,Sale Value\n2026,Aug,Week1,1,1/8/2026,16542,Ekta Gupta,SC0000190,Wrapping Sheets (Assorted),Multi,Wrapping Sheets,1,89,89,20,0,16.95,North Delhi,Delhi,Office Website,Dispatched,,With out B2S,North,20";
+    const blob = new Blob([header], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.download = 'sales_report_template.csv';
+    link.download = "sales_report_template.csv";
     link.click();
     URL.revokeObjectURL(url);
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 overflow-y-auto bg-[#2D2A26]/60 backdrop-blur-xs p-4 flex items-start sm:items-center justify-center min-h-screen py-8"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -87,8 +94,9 @@ export const UploadModal: React.FC<UploadModalProps> = ({
       <div className="bg-white rounded-[32px] max-w-xl w-full p-7 shadow-2xl border border-[#EBE5D9] relative animate-in fade-in zoom-in-95 duration-200 my-auto">
         {/* Close Button */}
         <button
+          type="button"
           onClick={onClose}
-          className="absolute right-5 top-5 p-2 text-[#8C8376] hover:text-[#2D2A26] hover:bg-[#F1EDE5] rounded-xl transition-colors"
+          className="absolute right-5 top-5 p-2 text-[#8C8376] hover:text-[#2D2A26] hover:bg-[#F1EDE5] rounded-xl transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -119,23 +127,29 @@ export const UploadModal: React.FC<UploadModalProps> = ({
           onClick={() => fileInputRef.current?.click()}
           className={`border-2 border-dashed rounded-[24px] p-8 text-center cursor-pointer transition-all ${
             dragActive
-              ? 'border-[#5F7161] bg-[#E9EFEA]/60 scale-[0.99]'
-              : 'border-[#CEC4B5] hover:border-[#5F7161] bg-[#F9F7F2]'
+              ? "border-[#5F7161] bg-[#E9EFEA]/60 scale-[0.99]"
+              : "border-[#CEC4B5] hover:border-[#5F7161] bg-[#F9F7F2]"
           }`}
         >
           <input
             ref={fileInputRef}
             type="file"
             accept=".csv,.txt"
-            onChange={(e) => e.target.files?.[0] && handleFileProcess(e.target.files[0])}
+            onChange={(e) =>
+              e.target.files?.[0] && handleFileProcess(e.target.files[0])
+            }
             className="hidden"
           />
 
           {loading ? (
             <div className="flex flex-col items-center justify-center py-4">
               <Loader2 className="w-8 h-8 text-[#5F7161] animate-spin mb-2" />
-              <p className="text-sm font-bold text-[#2D2A26]">Analyzing & Parsing Sales Data...</p>
-              <p className="text-xs text-[#8C8376] mt-1 font-medium">Computing revenue, margins, and trends</p>
+              <p className="text-sm font-bold text-[#2D2A26]">
+                Analyzing & Parsing Sales Data...
+              </p>
+              <p className="text-xs text-[#8C8376] mt-1 font-medium">
+                Computing revenue, margins, and trends
+              </p>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center">
@@ -146,7 +160,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                 Drop CSV Here or Click to Browse
               </p>
               <p className="text-xs text-[#8C8376] font-medium mt-1">
-                Supports standard comma-separated .csv reports with flexible columns
+                Supports standard comma-separated .csv reports with flexible
+                columns
               </p>
             </div>
           )}
@@ -167,8 +182,9 @@ export const UploadModal: React.FC<UploadModalProps> = ({
             <span>Auto-detects columns.</span>
           </div>
           <button
+            type="button"
             onClick={downloadSampleTemplate}
-            className="inline-flex items-center gap-1 text-[#AF8260] hover:underline font-bold"
+            className="inline-flex items-center gap-1 text-[#AF8260] hover:underline font-bold cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Download Sample CSV</span>

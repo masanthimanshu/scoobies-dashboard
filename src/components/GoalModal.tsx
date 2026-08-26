@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Target, X, Check } from 'lucide-react';
+import React, { useState } from "react";
+import { Target, X, Check } from "lucide-react";
 
 interface GoalModalProps {
   isOpen: boolean;
@@ -30,17 +30,17 @@ export const GoalModal: React.FC<GoalModalProps> = ({
   };
 
   const presets = [
-    { label: '₹5 Lakh', value: 500000 },
-    { label: '₹10 Lakh', value: 1000000 },
-    { label: '₹25 Lakh', value: 2500000 },
-    { label: '₹50 Lakh', value: 5000000 },
-    { label: '₹60 Lakh', value: 6000000 },
-    { label: '₹75 Lakh', value: 7500000 },
-    { label: '₹1 Crore', value: 10000000 },
+    { label: "₹5 Lakh", value: 500000 },
+    { label: "₹10 Lakh", value: 1000000 },
+    { label: "₹25 Lakh", value: 2500000 },
+    { label: "₹50 Lakh", value: 5000000 },
+    { label: "₹60 Lakh", value: 6000000 },
+    { label: "₹75 Lakh", value: 7500000 },
+    { label: "₹1 Crore", value: 10000000 },
   ];
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 overflow-y-auto bg-[#2D2A26]/60 backdrop-blur-xs p-4 flex items-start sm:items-center justify-center min-h-screen py-8"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -48,8 +48,9 @@ export const GoalModal: React.FC<GoalModalProps> = ({
     >
       <div className="bg-white rounded-[32px] max-w-md w-full p-7 shadow-2xl border border-[#EBE5D9] relative animate-in fade-in zoom-in-95 duration-200 my-auto">
         <button
+          type="button"
           onClick={onClose}
-          className="absolute right-5 top-5 p-2 text-[#8C8376] hover:text-[#2D2A26] hover:bg-[#F1EDE5] rounded-xl transition-colors"
+          className="absolute right-5 top-5 p-2 text-[#8C8376] hover:text-[#2D2A26] hover:bg-[#F1EDE5] rounded-xl transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -101,10 +102,10 @@ export const GoalModal: React.FC<GoalModalProps> = ({
                   key={p.value}
                   type="button"
                   onClick={() => setGoalInput(String(p.value))}
-                  className={`px-3 py-1 text-xs font-bold rounded-lg border transition-all ${
+                  className={`px-3 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
                     Number(goalInput) === p.value
-                      ? 'bg-[#5F7161] text-white border-[#4A594C]'
-                      : 'bg-[#F9F7F2] text-[#433E37] border-[#EBE5D9] hover:bg-[#F1EDE5]'
+                      ? "bg-[#5F7161] text-white border-[#4A594C]"
+                      : "bg-[#F9F7F2] text-[#433E37] border-[#EBE5D9] hover:bg-[#F1EDE5]"
                   }`}
                 >
                   {p.label}
@@ -120,7 +121,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({
               <span className="text-[#5F7161]">
                 {goalInput && Number(goalInput) > 0
                   ? `${((currentMargin / Number(goalInput)) * 100).toFixed(1)}%`
-                  : '0%'}
+                  : "0%"}
               </span>
             </div>
             <div className="w-full h-2 bg-[#EBE5D9] rounded-full overflow-hidden">
@@ -131,13 +132,15 @@ export const GoalModal: React.FC<GoalModalProps> = ({
                     100,
                     goalInput && Number(goalInput) > 0
                       ? (currentMargin / Number(goalInput)) * 100
-                      : 0
+                      : 0,
                   )}%`,
                 }}
               />
             </div>
             <div className="flex justify-between text-[11px] text-[#8C8376] mt-1.5 font-medium">
-              <span>Current Margin: ₹{Math.round(currentMargin).toLocaleString()}</span>
+              <span>
+                Current Margin: ₹{Math.round(currentMargin).toLocaleString()}
+              </span>
               <span>Target: ₹{Number(goalInput || 0).toLocaleString()}</span>
             </div>
           </div>
@@ -146,13 +149,13 @@ export const GoalModal: React.FC<GoalModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-bold text-[#8C8376] hover:text-[#2D2A26] hover:bg-[#F1EDE5] rounded-xl transition-colors"
+              className="px-4 py-2 text-xs font-bold text-[#8C8376] hover:text-[#2D2A26] hover:bg-[#F1EDE5] rounded-xl transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 text-xs font-extrabold text-white bg-[#5F7161] hover:bg-[#4E5E50] rounded-xl transition-all shadow-sm flex items-center gap-1.5"
+              className="px-5 py-2 text-xs font-extrabold text-white bg-[#5F7161] hover:bg-[#4E5E50] rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
             >
               <Check className="w-3.5 h-3.5" />
               <span>Save Quota</span>

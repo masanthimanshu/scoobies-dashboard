@@ -8,9 +8,12 @@ import {
   ProductMetric,
   GeoMetric,
   ExecutiveInsight,
-} from '../types';
+} from "../types";
 
-export function filterRecords(records: SaleRecord[], filters: FilterState): SaleRecord[] {
+export function filterRecords(
+  records: SaleRecord[],
+  filters: FilterState,
+): SaleRecord[] {
   return records.filter((r) => {
     // Search
     if (filters.search) {
@@ -27,27 +30,55 @@ export function filterRecords(records: SaleRecord[], filters: FilterState): Sale
     }
 
     // Year
-    if (filters.years && filters.years.length > 0 && !filters.years.includes('ALL')) {
+    if (
+      filters.years &&
+      filters.years.length > 0 &&
+      !filters.years.includes("ALL")
+    ) {
       if (!filters.years.map(String).includes(String(r.year))) {
         return false;
       }
-    } else if (filters.year && filters.year !== 'ALL' && String(r.year) !== String(filters.year)) {
+    } else if (
+      filters.year &&
+      filters.year !== "ALL" &&
+      String(r.year) !== String(filters.year)
+    ) {
       return false;
     }
 
     // Month
-    if (filters.months && filters.months.length > 0 && !filters.months.includes('ALL')) {
-      const monthMatch = filters.months.some((m) => m.toLowerCase() === r.month.toLowerCase());
+    if (
+      filters.months &&
+      filters.months.length > 0 &&
+      !filters.months.includes("ALL")
+    ) {
+      const monthMatch = filters.months.some(
+        (m) => m.toLowerCase() === r.month.toLowerCase(),
+      );
       if (!monthMatch) return false;
-    } else if (filters.month && filters.month !== 'ALL' && r.month.toLowerCase() !== filters.month.toLowerCase()) {
+    } else if (
+      filters.month &&
+      filters.month !== "ALL" &&
+      r.month.toLowerCase() !== filters.month.toLowerCase()
+    ) {
       return false;
     }
 
     // Week
-    if (filters.weeks && filters.weeks.length > 0 && !filters.weeks.includes('ALL')) {
-      const weekMatch = filters.weeks.some((w) => w.toLowerCase() === r.week.toLowerCase());
+    if (
+      filters.weeks &&
+      filters.weeks.length > 0 &&
+      !filters.weeks.includes("ALL")
+    ) {
+      const weekMatch = filters.weeks.some(
+        (w) => w.toLowerCase() === r.week.toLowerCase(),
+      );
       if (!weekMatch) return false;
-    } else if (filters.week && filters.week !== 'ALL' && r.week.toLowerCase() !== filters.week.toLowerCase()) {
+    } else if (
+      filters.week &&
+      filters.week !== "ALL" &&
+      r.week.toLowerCase() !== filters.week.toLowerCase()
+    ) {
       return false;
     }
 
@@ -65,7 +96,10 @@ export function filterRecords(records: SaleRecord[], filters: FilterState): Sale
     }
 
     // Category
-    if (filters.categories.length > 0 && !filters.categories.includes(r.category)) {
+    if (
+      filters.categories.length > 0 &&
+      !filters.categories.includes(r.category)
+    ) {
       return false;
     }
 
@@ -80,27 +114,37 @@ export function filterRecords(records: SaleRecord[], filters: FilterState): Sale
     }
 
     // Status
-    if (filters.status === 'Dispatched' && r.status !== 'Dispatched') {
+    if (filters.status === "Dispatched" && r.status !== "Dispatched") {
       return false;
     }
-    if (filters.status === 'Return' && r.status !== 'Return') {
+    if (filters.status === "Return" && r.status !== "Return") {
       return false;
     }
 
     // Campaign
-    if (filters.campaign === 'B2S') {
-      const isB2S = r.backToSchool.toLowerCase().includes('back to school') || r.backToSchool.toLowerCase().includes('b2s');
+    if (filters.campaign === "B2S") {
+      const isB2S =
+        r.backToSchool.toLowerCase().includes("back to school") ||
+        r.backToSchool.toLowerCase().includes("b2s");
       if (!isB2S) return false;
-    } else if (filters.campaign === 'NON_B2S') {
-      const isB2S = r.backToSchool.toLowerCase().includes('back to school') || r.backToSchool.toLowerCase().includes('b2s');
+    } else if (filters.campaign === "NON_B2S") {
+      const isB2S =
+        r.backToSchool.toLowerCase().includes("back to school") ||
+        r.backToSchool.toLowerCase().includes("b2s");
       if (isB2S) return false;
     }
 
     // Value Range
-    if (filters.minSaleValue !== undefined && Math.abs(r.saleValue) < filters.minSaleValue) {
+    if (
+      filters.minSaleValue !== undefined &&
+      Math.abs(r.saleValue) < filters.minSaleValue
+    ) {
       return false;
     }
-    if (filters.maxSaleValue !== undefined && Math.abs(r.saleValue) > filters.maxSaleValue) {
+    if (
+      filters.maxSaleValue !== undefined &&
+      Math.abs(r.saleValue) > filters.maxSaleValue
+    ) {
       return false;
     }
 
@@ -113,8 +157,8 @@ export function filterRecords(records: SaleRecord[], filters: FilterState): Sale
  * Consolidates duplicated calculations across metrics, aggregation, and UI views.
  */
 export function getRecordMetrics(r: SaleRecord) {
-  const isReturn = r.status === 'Return' || r.qty < 0 || r.saleValue < 0;
-  const val = Math.abs(r.saleValue || (r.mrp * r.qty) || 0);
+  const isReturn = r.status === "Return" || r.qty < 0 || r.saleValue < 0;
+  const val = Math.abs(r.saleValue || r.mrp * r.qty || 0);
   const qty = Math.abs(r.qty || 1);
   const margin = r.scoobiesMargin || 0;
   const exGstMargin = r.exGstMargin || 0;
@@ -124,12 +168,18 @@ export function getRecordMetrics(r: SaleRecord) {
 /**
  * Shared helper to calculate percentage safely.
  */
-export function computeSharePct(val: number, total: number, decimals = 1): number {
+export function computeSharePct(
+  val: number,
+  total: number,
+  decimals = 1,
+): number {
   if (!total || total <= 0) return 0;
   return Number(((Math.max(0, val) / total) * 100).toFixed(decimals));
 }
 
-export function computeDashboardMetrics(records: SaleRecord[]): DashboardMetrics {
+export function computeDashboardMetrics(
+  records: SaleRecord[],
+): DashboardMetrics {
   let totalGrossSales = 0;
   let totalNetSales = 0;
   let totalReturnedSales = 0;
@@ -175,16 +225,24 @@ export function computeDashboardMetrics(records: SaleRecord[]): DashboardMetrics
     totalExGstMargin += r.exGstMargin;
     retailersMarginTotal += r.retailersMargin;
 
-    const isB2S = r.backToSchool.toLowerCase().includes('back to school') || r.backToSchool.toLowerCase().includes('b2s');
+    const isB2S =
+      r.backToSchool.toLowerCase().includes("back to school") ||
+      r.backToSchool.toLowerCase().includes("b2s");
     if (isB2S) {
       b2sNetSales += isReturn ? -val : val;
     }
 
     // Channel Aggregation
-    channelMap.set(r.channel, (channelMap.get(r.channel) || 0) + (isReturn ? -val : val));
+    channelMap.set(
+      r.channel,
+      (channelMap.get(r.channel) || 0) + (isReturn ? -val : val),
+    );
 
     // Category Aggregation
-    categoryMap.set(r.category, (categoryMap.get(r.category) || 0) + (isReturn ? -val : val));
+    categoryMap.set(
+      r.category,
+      (categoryMap.get(r.category) || 0) + (isReturn ? -val : val),
+    );
 
     // Product Aggregation
     const prodCurr = productMap.get(r.productName) || { sales: 0, units: 0 };
@@ -198,14 +256,18 @@ export function computeDashboardMetrics(records: SaleRecord[]): DashboardMetrics
   });
 
   const totalOrders = ordersSet.size;
-  const returnRateQtyPct = totalGrossUnits > 0 ? (totalReturnedUnits / totalGrossUnits) * 100 : 0;
-  const returnRateValPct = totalGrossSales > 0 ? (totalReturnedSales / totalGrossSales) * 100 : 0;
+  const returnRateQtyPct =
+    totalGrossUnits > 0 ? (totalReturnedUnits / totalGrossUnits) * 100 : 0;
+  const returnRateValPct =
+    totalGrossSales > 0 ? (totalReturnedSales / totalGrossSales) * 100 : 0;
   const averageOrderValue = totalOrders > 0 ? totalNetSales / totalOrders : 0;
-  const marginPercentage = totalNetSales > 0 ? (totalScoobiesMargin / totalNetSales) * 100 : 0;
-  const b2sSalesPct = totalNetSales > 0 ? (Math.max(0, b2sNetSales) / totalNetSales) * 100 : 0;
+  const marginPercentage =
+    totalNetSales > 0 ? (totalScoobiesMargin / totalNetSales) * 100 : 0;
+  const b2sSalesPct =
+    totalNetSales > 0 ? (Math.max(0, b2sNetSales) / totalNetSales) * 100 : 0;
 
   // Find Tops
-  let topChannel = { name: 'N/A', sales: 0, share: 0 };
+  let topChannel = { name: "N/A", sales: 0, share: 0 };
   channelMap.forEach((sales, name) => {
     if (sales > topChannel.sales) topChannel = { name, sales, share: 0 };
   });
@@ -213,7 +275,7 @@ export function computeDashboardMetrics(records: SaleRecord[]): DashboardMetrics
     topChannel.share = computeSharePct(topChannel.sales, totalNetSales);
   }
 
-  let topCategory = { name: 'N/A', sales: 0, share: 0 };
+  let topCategory = { name: "N/A", sales: 0, share: 0 };
   categoryMap.forEach((sales, name) => {
     if (sales > topCategory.sales) topCategory = { name, sales, share: 0 };
   });
@@ -221,12 +283,13 @@ export function computeDashboardMetrics(records: SaleRecord[]): DashboardMetrics
     topCategory.share = computeSharePct(topCategory.sales, totalNetSales);
   }
 
-  let topProduct = { name: 'N/A', sales: 0, units: 0 };
+  let topProduct = { name: "N/A", sales: 0, units: 0 };
   productMap.forEach((data, name) => {
-    if (data.sales > topProduct.sales) topProduct = { name, sales: data.sales, units: data.units };
+    if (data.sales > topProduct.sales)
+      topProduct = { name, sales: data.sales, units: data.units };
   });
 
-  let topZone = { name: 'N/A', sales: 0, share: 0 };
+  let topZone = { name: "N/A", sales: 0, share: 0 };
   zoneMap.forEach((sales, name) => {
     if (sales > topZone.sales) topZone = { name, sales, share: 0 };
   });
@@ -263,21 +326,33 @@ export function computeDashboardMetrics(records: SaleRecord[]): DashboardMetrics
 
 export function computeTimeSeries(
   records: SaleRecord[],
-  granularity: 'daily' | 'weekly' | 'monthly' | 'yearly' = 'daily'
+  granularity: "daily" | "weekly" | "monthly" | "yearly" = "daily",
 ): TimeSeriesPoint[] {
-  const map = new Map<string, { gross: number; net: number; returns: number; qty: number; count: number; margin: number; ts: number; label: string }>();
+  const map = new Map<
+    string,
+    {
+      gross: number;
+      net: number;
+      returns: number;
+      qty: number;
+      count: number;
+      margin: number;
+      ts: number;
+      label: string;
+    }
+  >();
 
   records.forEach((r) => {
     let key = r.dateStr; // default YYYY-MM-DD
     let label = r.dateStr;
 
-    if (granularity === 'weekly') {
+    if (granularity === "weekly") {
       key = `${r.year}-${r.month}-${r.week}`;
       label = `${r.month} ${r.week}`;
-    } else if (granularity === 'monthly') {
+    } else if (granularity === "monthly") {
       key = `${r.year}-${r.month}`;
       label = `${r.month} ${r.year}`;
-    } else if (granularity === 'yearly') {
+    } else if (granularity === "yearly") {
       key = `${r.year}`;
       label = `${r.year}`;
     }
@@ -333,11 +408,25 @@ export function computeTimeSeries(
   });
 }
 
-export function computeChannelMetrics(records: SaleRecord[], totalNetSales: number): ChannelMetric[] {
-  const map = new Map<string, { gross: number; net: number; returns: number; orders: Set<string>; units: number; returnUnits: number; margin: number }>();
+export function computeChannelMetrics(
+  records: SaleRecord[],
+  totalNetSales: number,
+): ChannelMetric[] {
+  const map = new Map<
+    string,
+    {
+      gross: number;
+      net: number;
+      returns: number;
+      orders: Set<string>;
+      units: number;
+      returnUnits: number;
+      margin: number;
+    }
+  >();
 
   records.forEach((r) => {
-    const ch = r.channel || 'Direct';
+    const ch = r.channel || "Direct";
     const { isReturn, val, qty } = getRecordMetrics(r);
 
     const curr = map.get(ch) || {
@@ -372,7 +461,10 @@ export function computeChannelMetrics(records: SaleRecord[], totalNetSales: numb
       const orderCount = data.orders.size;
       const avgOrderValue = orderCount > 0 ? data.net / orderCount : 0;
       const totalAttempted = data.units + data.returnUnits * 2;
-      const returnRate = totalAttempted > 0 ? (data.returnUnits / (data.units + data.returnUnits)) * 100 : 0;
+      const returnRate =
+        totalAttempted > 0
+          ? (data.returnUnits / (data.units + data.returnUnits)) * 100
+          : 0;
       const sharePct = computeSharePct(data.net, totalNetSales);
 
       return {
@@ -392,14 +484,25 @@ export function computeChannelMetrics(records: SaleRecord[], totalNetSales: numb
     .sort((a, b) => b.netSales - a.netSales);
 }
 
-export function computeCategoryMetrics(records: SaleRecord[], totalNetSales: number): CategoryMetric[] {
+export function computeCategoryMetrics(
+  records: SaleRecord[],
+  totalNetSales: number,
+): CategoryMetric[] {
   const map = new Map<
     string,
-    { gross: number; net: number; returns: number; units: number; returnUnits: number; orders: Set<string>; margin: number }
+    {
+      gross: number;
+      net: number;
+      returns: number;
+      units: number;
+      returnUnits: number;
+      orders: Set<string>;
+      margin: number;
+    }
   >();
 
   records.forEach((r) => {
-    const cat = r.category || 'OTHER';
+    const cat = r.category || "OTHER";
     const { isReturn, val, qty } = getRecordMetrics(r);
 
     const curr = map.get(cat) || {
@@ -433,7 +536,8 @@ export function computeCategoryMetrics(records: SaleRecord[], totalNetSales: num
     .map(([category, data]) => {
       const sharePct = computeSharePct(data.net, totalNetSales);
       const totalAttempted = data.units + data.returnUnits;
-      const returnRate = totalAttempted > 0 ? (data.returnUnits / totalAttempted) * 100 : 0;
+      const returnRate =
+        totalAttempted > 0 ? (data.returnUnits / totalAttempted) * 100 : 0;
       return {
         category,
         sales: Math.round(data.net),
@@ -450,7 +554,10 @@ export function computeCategoryMetrics(records: SaleRecord[], totalNetSales: num
     .sort((a, b) => b.sales - a.sales);
 }
 
-export function computeProductMetrics(records: SaleRecord[], totalNetSales: number = 0): ProductMetric[] {
+export function computeProductMetrics(
+  records: SaleRecord[],
+  totalNetSales: number = 0,
+): ProductMetric[] {
   const map = new Map<
     string,
     {
@@ -471,7 +578,7 @@ export function computeProductMetrics(records: SaleRecord[], totalNetSales: numb
   records.forEach((r) => {
     const name = r.productName;
     const { isReturn, val, qty } = getRecordMetrics(r);
-    const ch = r.channel ? r.channel.trim() : 'Direct';
+    const ch = r.channel ? r.channel.trim() : "Direct";
 
     const curr = map.get(name) || {
       barCode: r.barCode,
@@ -512,13 +619,17 @@ export function computeProductMetrics(records: SaleRecord[], totalNetSales: numb
   return Array.from(map.entries())
     .map(([productName, data]) => {
       const grossUnits = data.units + data.returnUnits;
-      const returnRate = grossUnits > 0 ? (data.returnUnits / grossUnits) * 100 : 0;
+      const returnRate =
+        grossUnits > 0 ? (data.returnUnits / grossUnits) * 100 : 0;
       const sharePct = computeSharePct(data.net, totalNetSales);
       const channelArray = Array.from(data.channels);
       const returnChannelArray = Array.from(data.returnChannels);
-      const primaryChannel = returnChannelArray.length > 0 
-        ? returnChannelArray.join(', ') 
-        : (channelArray.length > 0 ? channelArray.join(', ') : 'Direct');
+      const primaryChannel =
+        returnChannelArray.length > 0
+          ? returnChannelArray.join(", ")
+          : channelArray.length > 0
+            ? channelArray.join(", ")
+            : "Direct";
 
       return {
         productName,
@@ -541,13 +652,20 @@ export function computeProductMetrics(records: SaleRecord[], totalNetSales: numb
     .sort((a, b) => b.netSales - a.netSales);
 }
 
-export function computeGeoMetrics(records: SaleRecord[], type: 'zone' | 'state' | 'city', totalNetSales: number): GeoMetric[] {
-  const map = new Map<string, { sales: number; orders: Set<string>; units: number }>();
+export function computeGeoMetrics(
+  records: SaleRecord[],
+  type: "zone" | "state" | "city",
+  totalNetSales: number,
+): GeoMetric[] {
+  const map = new Map<
+    string,
+    { sales: number; orders: Set<string>; units: number }
+  >();
 
   records.forEach((r) => {
     let key = r.zone;
-    if (type === 'state') key = r.state || 'Unassigned';
-    if (type === 'city') key = r.deliveryPlace || 'Unassigned';
+    if (type === "state") key = r.state || "Unassigned";
+    if (type === "city") key = r.deliveryPlace || "Unassigned";
 
     const { isReturn, val, qty } = getRecordMetrics(r);
 
@@ -581,7 +699,7 @@ export function generateExecutiveInsights(
   categories: CategoryMetric[],
   products: ProductMetric[],
   zones: GeoMetric[],
-  records?: SaleRecord[]
+  records?: SaleRecord[],
 ): ExecutiveInsight[] {
   const insights: ExecutiveInsight[] = [];
 
@@ -621,15 +739,16 @@ export function generateExecutiveInsights(
       const exGstVal = r.exGstMargin || 0;
 
       // Month
-      let monthName = r.month || '';
+      let monthName = r.month || "";
       if (!monthName && r.dateStr) {
         const d = new Date(r.dateStr);
         if (!isNaN(d.getTime())) {
-          monthName = d.toLocaleString('default', { month: 'long' });
+          monthName = d.toLocaleString("default", { month: "long" });
         }
       }
-      if (!monthName) monthName = 'August';
-      const yr = r.year || (r.timestamp ? new Date(r.timestamp).getFullYear() : 2026);
+      if (!monthName) monthName = "August";
+      const yr =
+        r.year || (r.timestamp ? new Date(r.timestamp).getFullYear() : 2026);
       const monthLabel = `${monthName} ${yr}`;
       const monthKey = `${yr}-${monthName}`;
 
@@ -646,7 +765,7 @@ export function generateExecutiveInsights(
       // Week
       const weekName = r.week || `Week ${Math.ceil(r.day / 7)}`;
       const weekLabel = r.month ? `${weekName} (${r.month})` : weekName;
-      const weekKey = `${yr}-${r.month || 'Aug'}-${weekName}`;
+      const weekKey = `${yr}-${r.month || "Aug"}-${weekName}`;
 
       const currWeek = weekMap.get(weekKey) || {
         label: weekLabel,
@@ -697,13 +816,16 @@ export function generateExecutiveInsights(
 
     if (monthlyList.length > 0 && monthlyList[0].profit > 0) {
       const topMonth = monthlyList[0];
-      const marginPctStr = topMonth.marginPct > 0 ? ` (${topMonth.marginPct.toFixed(1)}% margin)` : '';
+      const marginPctStr =
+        topMonth.marginPct > 0
+          ? ` (${topMonth.marginPct.toFixed(1)}% margin)`
+          : "";
       insights.push({
-        type: 'positive',
+        type: "positive",
         title: `Most Profitable Month: ${topMonth.label}`,
         description: `Delivered ₹${Math.round(topMonth.profit).toLocaleString()} in profit${marginPctStr} on ₹${Math.round(topMonth.netSales).toLocaleString()} net sales across ${topMonth.orderCount} orders.`,
         metric: `₹${Math.round(topMonth.profit).toLocaleString()} Profit`,
-        iconName: 'Calendar',
+        iconName: "Calendar",
       });
     }
 
@@ -721,13 +843,16 @@ export function generateExecutiveInsights(
 
     if (weeklyList.length > 0 && weeklyList[0].profit > 0) {
       const topWeek = weeklyList[0];
-      const marginPctStr = topWeek.marginPct > 0 ? ` (${topWeek.marginPct.toFixed(1)}% margin)` : '';
+      const marginPctStr =
+        topWeek.marginPct > 0
+          ? ` (${topWeek.marginPct.toFixed(1)}% margin)`
+          : "";
       insights.push({
-        type: 'positive',
+        type: "positive",
         title: `Most Profitable Week: ${topWeek.label}`,
         description: `Delivered ₹${Math.round(topWeek.profit).toLocaleString()} in profit${marginPctStr} on ₹${Math.round(topWeek.netSales).toLocaleString()} net sales across ${topWeek.orderCount} orders.`,
         metric: `₹${Math.round(topWeek.profit).toLocaleString()} Profit`,
-        iconName: 'TrendingUp',
+        iconName: "TrendingUp",
       });
     }
   }
@@ -736,11 +861,11 @@ export function generateExecutiveInsights(
   if (channels.length > 0) {
     const topCh = channels[0];
     insights.push({
-      type: 'highlight',
+      type: "highlight",
       title: `${topCh.channel} is Leading Sales`,
       description: `Generated ₹${topCh.netSales.toLocaleString()} in net revenue (${topCh.sharePct.toFixed(1)}% of total) across ${topCh.orderCount} orders.`,
       metric: `₹${topCh.netSales.toLocaleString()}`,
-      iconName: 'TrendingUp',
+      iconName: "TrendingUp",
     });
   }
 
@@ -748,32 +873,37 @@ export function generateExecutiveInsights(
   if (metrics.totalNetSales > 0) {
     const marginPct = metrics.marginPercentage.toFixed(1);
     insights.push({
-      type: metrics.marginPercentage > 40 ? 'positive' : 'neutral',
+      type: metrics.marginPercentage > 40 ? "positive" : "neutral",
       title: `Gross Margin at ${marginPct}%`,
       description: `Scoobies total margin generated is ₹${Math.round(metrics.totalScoobiesMargin).toLocaleString()} (Ex-GST: ₹${Math.round(metrics.totalExGstMargin).toLocaleString()}).`,
       metric: `${marginPct}%`,
-      iconName: 'Percent',
+      iconName: "Percent",
     });
   }
 
   // Return Watchlist
-  const highReturnProds = products.filter((p) => p.returnUnits > 0 && (p.units + p.returnUnits) >= 3 && p.returnRate > 20);
+  const highReturnProds = products.filter(
+    (p) =>
+      p.returnUnits > 0 && p.units + p.returnUnits >= 3 && p.returnRate > 20,
+  );
   if (highReturnProds.length > 0) {
-    const worst = highReturnProds.sort((a, b) => b.returnRate - a.returnRate)[0];
+    const worst = highReturnProds.sort(
+      (a, b) => b.returnRate - a.returnRate,
+    )[0];
     insights.push({
-      type: 'warning',
+      type: "warning",
       title: `High Return Item: ${worst.productName}`,
       description: `${worst.returnUnits} units returned (${worst.returnRate}% return rate), resulting in ₹${worst.returns.toLocaleString()} refunded value.`,
       metric: `${worst.returnRate}% Return Rate`,
-      iconName: 'AlertTriangle',
+      iconName: "AlertTriangle",
     });
   } else if (metrics.returnRateQtyPct > 0) {
     insights.push({
-      type: metrics.returnRateQtyPct > 10 ? 'warning' : 'positive',
+      type: metrics.returnRateQtyPct > 10 ? "warning" : "positive",
       title: `Overall Return Rate: ${metrics.returnRateQtyPct.toFixed(1)}%`,
       description: `${metrics.totalReturnedUnits} returned units vs ${metrics.totalGrossUnits} dispatched units. Total return value: ₹${Math.round(metrics.totalReturnedSales).toLocaleString()}.`,
       metric: `${metrics.returnRateQtyPct.toFixed(1)}%`,
-      iconName: 'RotateCcw',
+      iconName: "RotateCcw",
     });
   }
 
@@ -781,22 +911,22 @@ export function generateExecutiveInsights(
   if (zones.length > 0) {
     const topZone = zones[0];
     insights.push({
-      type: 'positive',
+      type: "positive",
       title: `Top Geographical Zone: ${topZone.name}`,
       description: `Dominating regional demand with ${topZone.sharePct.toFixed(1)}% of sales and ${topZone.orders} orders fulfilled.`,
       metric: `₹${topZone.sales.toLocaleString()}`,
-      iconName: 'MapPin',
+      iconName: "MapPin",
     });
   }
 
   // Back To School Campaign
   if (metrics.b2sNetSales > 0) {
     insights.push({
-      type: 'highlight',
+      type: "highlight",
       title: `Back To School Campaign`,
       description: `Contributed ₹${Math.round(metrics.b2sNetSales).toLocaleString()} (${metrics.b2sSalesPct.toFixed(1)}% of total net sales).`,
       metric: `${metrics.b2sSalesPct.toFixed(1)}%`,
-      iconName: 'Sparkles',
+      iconName: "Sparkles",
     });
   }
 

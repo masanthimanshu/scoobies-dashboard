@@ -1,8 +1,14 @@
-import React, { useRef, useState } from 'react';
-import { X, Printer, CheckCircle2, Download, Loader2 } from 'lucide-react';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
-import { DashboardMetrics, ChannelMetric, CategoryMetric, ProductMetric, GeoMetric } from '../types';
+import React, { useRef, useState } from "react";
+import { X, Printer, CheckCircle2, Download, Loader2 } from "lucide-react";
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
+import {
+  DashboardMetrics,
+  ChannelMetric,
+  CategoryMetric,
+  ProductMetric,
+  GeoMetric,
+} from "../types";
 
 interface PrintReportViewProps {
   isOpen: boolean;
@@ -41,14 +47,14 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
         scale: 2,
         useCORS: true,
         logging: false,
-        backgroundColor: '#ffffff',
+        backgroundColor: "#ffffff",
       });
 
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
       });
 
       const imgWidth = 210; // A4 width in mm
@@ -57,23 +63,25 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
       let heightLeft = imgHeight;
       let position = 0;
 
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
 
       while (heightLeft > 0) {
         position = heightLeft - imgHeight;
         pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
       }
 
-      pdf.save(`Scoobies_Sales_Report_${new Date().toISOString().slice(0, 10)}.pdf`);
+      pdf.save(
+        `Scoobies_Sales_Report_${new Date().toISOString().slice(0, 10)}.pdf`,
+      );
     } catch (error) {
-      console.error('PDF export error:', error);
+      console.error("PDF export error:", error);
       try {
         window.print();
       } catch (printErr) {
-        console.error('Print error:', printErr);
+        console.error("Print error:", printErr);
       }
     } finally {
       setIsExporting(false);
@@ -88,14 +96,14 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
     }
   };
 
-  const currentDate = new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+  const currentDate = new Date().toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 overflow-y-auto bg-[#2D2A26]/70 backdrop-blur-xs p-3 sm:p-6 flex justify-center items-start print:p-0 print:bg-white"
       onClick={(e) => {
         if (e.target === e.currentTarget && !isExporting) onClose();
@@ -105,11 +113,16 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
         {/* Top Action Header - scrolls naturally with report */}
         <div className="pb-5 border-b border-[#EBE5D9] flex items-center justify-between print:hidden">
           <div className="flex items-center gap-2">
-            <span className="font-extrabold text-sm sm:text-base text-[#2D2A26]">Executive Sales Report</span>
-            <span className="text-xs text-[#8C8376] hidden sm:inline">• Ready for PDF Export</span>
+            <span className="font-extrabold text-sm sm:text-base text-[#2D2A26]">
+              Executive Sales Report
+            </span>
+            <span className="text-xs text-[#8C8376] hidden sm:inline">
+              • Ready for PDF Export
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={handleDownloadPdf}
               disabled={isExporting}
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#5F7161] hover:bg-[#4E5E50] text-white text-xs font-bold rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60"
@@ -127,6 +140,7 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
               )}
             </button>
             <button
+              type="button"
               onClick={handlePrint}
               disabled={isExporting}
               className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 bg-[#F1EDE5] hover:bg-[#E5DFD3] text-[#2D2A26] text-xs font-bold rounded-xl transition-all border border-[#EBE5D9] cursor-pointer"
@@ -136,6 +150,7 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
               <span>Print</span>
             </button>
             <button
+              type="button"
               onClick={onClose}
               className="p-2 text-[#8C8376] hover:text-[#2D2A26] hover:bg-[#F1EDE5] rounded-xl transition-colors cursor-pointer"
               title="Close Preview"
@@ -146,7 +161,10 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
         </div>
 
         {/* Printable Report Document Ref */}
-        <div ref={reportRef} className="p-4 sm:p-6 bg-white text-[#2D2A26] font-sans">
+        <div
+          ref={reportRef}
+          className="p-4 sm:p-6 bg-white text-[#2D2A26] font-sans"
+        >
           {/* Document Title Header */}
           <div className="flex items-start justify-between pb-6 border-b border-[#EBE5D9]">
             <div>
@@ -158,9 +176,15 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
               </p>
             </div>
             <div className="text-right text-xs">
-              <div className="font-bold text-[#5F7161]">Report Date: {currentDate}</div>
-              <div className="text-[#8C8376] mt-0.5 font-medium">Source: {fileName}</div>
-              <div className="text-[#8C8376] font-medium">{totalRecordsCount} transactions</div>
+              <div className="font-bold text-[#5F7161]">
+                Report Date: {currentDate}
+              </div>
+              <div className="text-[#8C8376] mt-0.5 font-medium">
+                Source: {fileName}
+              </div>
+              <div className="text-[#8C8376] font-medium">
+                {totalRecordsCount} transactions
+              </div>
             </div>
           </div>
 
@@ -173,7 +197,10 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
               <div className="text-xl font-black text-[#5F7161] mt-1">
                 ₹{Math.round(metrics?.totalNetSales || 0).toLocaleString()}
               </div>
-              <span className="text-[10px] text-[#8C8376]">Gross: ₹{Math.round(metrics?.totalGrossSales || 0).toLocaleString()}</span>
+              <span className="text-[10px] text-[#8C8376]">
+                Gross: ₹
+                {Math.round(metrics?.totalGrossSales || 0).toLocaleString()}
+              </span>
             </div>
 
             <div className="bg-[#FAF8F5] p-4 rounded-2xl border border-[#EBE5D9]">
@@ -183,7 +210,9 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
               <div className="text-xl font-black text-[#AF8260] mt-1">
                 {(metrics?.totalUnitsSold || 0).toLocaleString()}
               </div>
-              <span className="text-[10px] text-[#8C8376]">{(metrics?.totalOrders || 0).toLocaleString()} total orders</span>
+              <span className="text-[10px] text-[#8C8376]">
+                {(metrics?.totalOrders || 0).toLocaleString()} total orders
+              </span>
             </div>
 
             <div className="bg-[#FAF8F5] p-4 rounded-2xl border border-[#EBE5D9]">
@@ -191,9 +220,12 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                 Scoobies Margin
               </span>
               <div className="text-xl font-black text-[#5F7161] mt-1">
-                ₹{Math.round(metrics?.totalScoobiesMargin || 0).toLocaleString()}
+                ₹
+                {Math.round(metrics?.totalScoobiesMargin || 0).toLocaleString()}
               </div>
-              <span className="text-[10px] font-bold text-[#5F7161]">{(metrics?.marginPercentage || 0).toFixed(1)}% margin rate</span>
+              <span className="text-[10px] font-bold text-[#5F7161]">
+                {(metrics?.marginPercentage || 0).toFixed(1)}% margin rate
+              </span>
             </div>
 
             <div className="bg-[#FAF8F5] p-4 rounded-2xl border border-[#EBE5D9]">
@@ -203,7 +235,10 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
               <div className="text-xl font-black text-[#AF8260] mt-1">
                 {(metrics?.returnRateQtyPct || 0).toFixed(1)}%
               </div>
-              <span className="text-[10px] text-[#8C8376]">₹{Math.round(metrics?.totalReturnedSales || 0).toLocaleString()} refunded</span>
+              <span className="text-[10px] text-[#8C8376]">
+                ₹{Math.round(metrics?.totalReturnedSales || 0).toLocaleString()}{" "}
+                refunded
+              </span>
             </div>
           </div>
 
@@ -224,9 +259,15 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                 <tbody className="divide-y divide-[#F1EDE5]">
                   {channels.slice(0, 10).map((c) => (
                     <tr key={c.channel}>
-                      <td className="py-1.5 font-bold text-[#2D2A26]">{c.channel}</td>
-                      <td className="py-1.5 text-right font-black text-[#5F7161]">₹{c.netSales.toLocaleString()}</td>
-                      <td className="py-1.5 text-right text-[#AF8260] font-bold">{c.sharePct.toFixed(1)}%</td>
+                      <td className="py-1.5 font-bold text-[#2D2A26]">
+                        {c.channel}
+                      </td>
+                      <td className="py-1.5 text-right font-black text-[#5F7161]">
+                        ₹{c.netSales.toLocaleString()}
+                      </td>
+                      <td className="py-1.5 text-right text-[#AF8260] font-bold">
+                        {c.sharePct.toFixed(1)}%
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -248,9 +289,15 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                 <tbody className="divide-y divide-[#F1EDE5]">
                   {categories.slice(0, 10).map((cat) => (
                     <tr key={cat.category}>
-                      <td className="py-1.5 font-bold text-[#2D2A26]">{cat.category}</td>
-                      <td className="py-1.5 text-right text-[#433E37]">{cat.units.toLocaleString()}</td>
-                      <td className="py-1.5 text-right font-black text-[#5F7161]">₹{cat.sales.toLocaleString()}</td>
+                      <td className="py-1.5 font-bold text-[#2D2A26]">
+                        {cat.category}
+                      </td>
+                      <td className="py-1.5 text-right text-[#433E37]">
+                        {cat.units.toLocaleString()}
+                      </td>
+                      <td className="py-1.5 text-right font-black text-[#5F7161]">
+                        ₹{cat.sales.toLocaleString()}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -276,11 +323,19 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
               <tbody className="divide-y divide-[#F1EDE5]">
                 {topProducts.slice(0, 10).map((p, idx) => (
                   <tr key={p.productName}>
-                    <td className="py-1.5 text-[#8C8376] font-bold">{idx + 1}</td>
-                    <td className="py-1.5 font-bold text-[#2D2A26]">{p.productName}</td>
+                    <td className="py-1.5 text-[#8C8376] font-bold">
+                      {idx + 1}
+                    </td>
+                    <td className="py-1.5 font-bold text-[#2D2A26]">
+                      {p.productName}
+                    </td>
                     <td className="py-1.5 text-[#8C8376]">{p.category}</td>
-                    <td className="py-1.5 text-right font-semibold">{p.units}</td>
-                    <td className="py-1.5 text-right font-black text-[#5F7161]">₹{p.netSales.toLocaleString()}</td>
+                    <td className="py-1.5 text-right font-semibold">
+                      {p.units}
+                    </td>
+                    <td className="py-1.5 text-right font-black text-[#5F7161]">
+                      ₹{p.netSales.toLocaleString()}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -307,12 +362,24 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                 <tbody className="divide-y divide-[#F1EDE5]">
                   {cities.slice(0, 10).map((c, idx) => (
                     <tr key={`${c.name}-${idx}`}>
-                      <td className="py-1.5 text-[#8C8376] font-bold">{idx + 1}</td>
-                      <td className="py-1.5 font-bold text-[#2D2A26]">{c.name || 'Unassigned'}</td>
-                      <td className="py-1.5 text-right text-[#433E37]">{c.orders.toLocaleString()}</td>
-                      <td className="py-1.5 text-right font-semibold">{c.units.toLocaleString()}</td>
-                      <td className="py-1.5 text-right font-black text-[#5F7161]">₹{c.sales.toLocaleString()}</td>
-                      <td className="py-1.5 text-right text-[#AF8260] font-bold">{c.sharePct.toFixed(1)}%</td>
+                      <td className="py-1.5 text-[#8C8376] font-bold">
+                        {idx + 1}
+                      </td>
+                      <td className="py-1.5 font-bold text-[#2D2A26]">
+                        {c.name || "Unassigned"}
+                      </td>
+                      <td className="py-1.5 text-right text-[#433E37]">
+                        {c.orders.toLocaleString()}
+                      </td>
+                      <td className="py-1.5 text-right font-semibold">
+                        {c.units.toLocaleString()}
+                      </td>
+                      <td className="py-1.5 text-right font-black text-[#5F7161]">
+                        ₹{c.sales.toLocaleString()}
+                      </td>
+                      <td className="py-1.5 text-right text-[#AF8260] font-bold">
+                        {c.sharePct.toFixed(1)}%
+                      </td>
                     </tr>
                   ))}
                 </tbody>
