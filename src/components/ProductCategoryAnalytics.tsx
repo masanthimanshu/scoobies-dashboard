@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   BarChart,
   Bar,
@@ -10,6 +10,11 @@ import {
 } from "recharts";
 import { ShoppingBag, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
 import { CategoryMetric, ProductMetric } from "../types";
+import {
+  formatCurrency,
+  formatNumber,
+  formatPercent,
+} from "../utils/formatters";
 
 interface ProductCategoryAnalyticsProps {
   categories: CategoryMetric[];
@@ -24,10 +29,11 @@ export const ProductCategoryAnalytics: React.FC<
   );
   const [showAllCategories, setShowAllCategories] = useState(false);
 
-  const topProductsList = products.slice(0, 10);
-  const displayedCategories = showAllCategories
-    ? categories
-    : categories.slice(0, 12);
+  const topProductsList = useMemo(() => products.slice(0, 10), [products]);
+  const displayedCategories = useMemo(
+    () => (showAllCategories ? categories : categories.slice(0, 12)),
+    [showAllCategories, categories],
+  );
   const hasMoreThan12Categories = categories.length > 12;
 
   return (
@@ -113,9 +119,11 @@ export const ProductCategoryAnalytics: React.FC<
                   ) => {
                     const share = item?.payload?.sharePct;
                     const shareText =
-                      share !== undefined ? ` • ${share}% of total sales` : "";
+                      share !== undefined
+                        ? ` • ${formatPercent(share)} of total sales`
+                        : "";
                     return [
-                      `₹${Number(val || 0).toLocaleString()}${shareText}`,
+                      `${formatCurrency(Number(val || 0))}${shareText}`,
                       "Net Sales",
                     ];
                   }}
@@ -168,14 +176,14 @@ export const ProductCategoryAnalytics: React.FC<
                       </span>
                     </td>
                     <td className="py-2 text-right text-[#433E37] font-bold">
-                      {p.units.toLocaleString()}
+                      {formatNumber(p.units)}
                     </td>
                     <td className="py-2 text-right font-black text-[#5F7161]">
-                      ₹{p.netSales.toLocaleString()}
+                      {formatCurrency(p.netSales)}
                     </td>
                     <td className="py-2 text-right">
                       <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-[#FAF0E6] text-[#AF8260] border border-[#E8D2C2] text-[10px] font-bold">
-                        {p.sharePct ? `${p.sharePct.toFixed(1)}%` : "0.0%"}
+                        {formatPercent(p.sharePct)}
                       </span>
                     </td>
                   </tr>
@@ -204,12 +212,12 @@ export const ProductCategoryAnalytics: React.FC<
                       {cat.category}
                     </span>
                     <span className="text-xs font-bold text-[#AF8260]">
-                      {cat.sharePct.toFixed(1)}%
+                      {formatPercent(cat.sharePct)}
                     </span>
                   </div>
 
                   <div className="text-xl font-black text-[#5F7161]">
-                    ₹{cat.sales.toLocaleString()}
+                    {formatCurrency(cat.sales)}
                   </div>
 
                   {/* Returns Metric Display inside Category Box */}
@@ -221,7 +229,7 @@ export const ProductCategoryAnalytics: React.FC<
                           Returns
                         </span>
                         <span className="font-bold">
-                          ₹{cat.returns.toLocaleString()}
+                          {formatCurrency(cat.returns)}
                           {cat.returnUnits !== undefined && cat.returnUnits > 0
                             ? ` (${cat.returnUnits} ${cat.returnUnits === 1 ? "unit" : "units"})`
                             : ""}
@@ -240,8 +248,8 @@ export const ProductCategoryAnalytics: React.FC<
                 </div>
 
                 <div className="flex justify-between items-center text-[11px] text-[#8C8376] font-medium mt-3 pt-2.5 border-t border-[#EBE5D9]">
-                  <span>{cat.units.toLocaleString()} units sold</span>
-                  <span>{cat.orders} orders</span>
+                  <span>{formatNumber(cat.units)} units sold</span>
+                  <span>{formatNumber(cat.orders)} orders</span>
                 </div>
               </div>
             ))}

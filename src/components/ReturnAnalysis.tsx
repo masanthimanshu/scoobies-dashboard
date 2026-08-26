@@ -17,6 +17,11 @@ import {
   SaleRecord,
 } from "../types";
 import { getRecordMetrics } from "../utils/analytics";
+import {
+  formatCurrency,
+  formatNumber,
+  formatPercent,
+} from "../utils/formatters";
 
 interface ReturnAnalysisProps {
   records?: SaleRecord[];
@@ -58,7 +63,6 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
   // Compute product returns dynamically based on selected channel filter
   const channelScopedReturnedProducts = useMemo(() => {
     if (records && records.length > 0) {
-      // Group records by product within the selected channel scope
       const prodMap = new Map<
         string,
         {
@@ -75,32 +79,42 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
         }
       >();
 
-      records.forEach((r) => {
+      const targetChannelLower =
+        selectedChannelFilter !== "ALL"
+          ? selectedChannelFilter.toLowerCase()
+          : null;
+
+      for (let i = 0; i < records.length; i++) {
+        const r = records[i];
         const channelName = r.channel ? r.channel.trim() : "Direct";
 
         // If a specific channel is selected, ignore records from other channels
         if (
-          selectedChannelFilter !== "ALL" &&
-          channelName.toLowerCase() !== selectedChannelFilter.toLowerCase()
+          targetChannelLower &&
+          channelName.toLowerCase() !== targetChannelLower
         ) {
-          return;
+          continue;
         }
 
         const name = r.productName || "Unknown";
         const { isReturn, val, qty } = getRecordMetrics(r);
 
-        const curr = prodMap.get(name) || {
-          productName: name,
-          barCode: r.barCode || "",
-          category: r.category || "General",
-          returnChannels: new Set<string>(),
-          channels: new Set<string>(),
-          grossSales: 0,
-          netSales: 0,
-          returns: 0,
-          units: 0,
-          returnUnits: 0,
-        };
+        let curr = prodMap.get(name);
+        if (!curr) {
+          curr = {
+            productName: name,
+            barCode: r.barCode || "",
+            category: r.category || "General",
+            returnChannels: new Set<string>(),
+            channels: new Set<string>(),
+            grossSales: 0,
+            netSales: 0,
+            returns: 0,
+            units: 0,
+            returnUnits: 0,
+          };
+          prodMap.set(name, curr);
+        }
 
         curr.channels.add(channelName);
 
@@ -114,9 +128,7 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
           curr.netSales += val;
           curr.units += qty;
         }
-
-        prodMap.set(name, curr);
-      });
+      }
 
       // Filter strictly to products that have returnUnits > 0 or returns > 0 in this channel scope
       const list: ProductMetric[] = [];
@@ -209,7 +221,6 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
   const activeScopeSummary = useMemo(() => {
     if (selectedChannelFilter === "ALL") {
       return {
-        title: "All Channels",
         refundedValue: metrics?.totalReturnedSales ?? 0,
         returnUnits: metrics?.totalReturnedUnits ?? 0,
         returnRate: metrics?.returnRateValPct ?? 0,
@@ -219,16 +230,13 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
     const ch = channels.find(
       (c) => c.channel.toLowerCase() === selectedChannelFilter.toLowerCase(),
     );
-    const totalRef = channelScopedReturnedProducts.reduce(
-      (sum, p) => sum + p.returns,
-      0,
-    );
-    const totalUnits = channelScopedReturnedProducts.reduce(
-      (sum, p) => sum + p.returnUnits,
-      0,
-    );
+    let totalRef = 0;
+    let totalUnits = 0;
+    for (let i = 0; i < channelScopedReturnedProducts.length; i++) {
+      totalRef += channelScopedReturnedProducts[i].returns;
+      totalUnits += channelScopedReturnedProducts[i].returnUnits;
+    }
     return {
-      title: selectedChannelFilter,
       refundedValue: ch ? ch.returns : totalRef,
       returnUnits: ch ? ch.returnUnits : totalUnits,
       returnRate: ch ? ch.returnRate : 0,
@@ -283,9 +291,9 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
                 : "Total Refunded"}
             </span>
             <span className="text-sm font-black text-[#AF8260]">
-              ₹{(activeScopeSummary.refundedValue ?? 0).toLocaleString()}
+              {formatCurrency(activeScopeSummary.refundedValue)}
               <span className="text-[11px] font-semibold text-[#8C8376] ml-1">
-                ({(activeScopeSummary.returnRate ?? 0).toFixed(1)}%)
+                ({formatPercent(activeScopeSummary.returnRate)})
               </span>
             </span>
           </div>
@@ -297,7 +305,7 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
                 : "Returned Units"}
             </span>
             <span className="text-sm font-black text-[#2D2A26]">
-              {(activeScopeSummary.returnUnits ?? 0).toLocaleString()} units
+              {formatNumber(activeScopeSummary.returnUnits)} units
             </span>
           </div>
         </div>
@@ -338,15 +346,14 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
               )}
             </div>
             <div className="text-lg font-black text-[#2D2A26]">
-              ₹{(metrics?.totalReturnedSales ?? 0).toLocaleString()}
+              {formatCurrency(metrics?.totalReturnedSales)}
             </div>
             <div className="flex justify-between items-center text-[11px] text-[#8C8376] mt-2 pt-2 border-t border-[#EBE5D9]">
               <span>
-                {(metrics?.totalReturnedUnits ?? 0).toLocaleString()} units
-                returned
+                {formatNumber(metrics?.totalReturnedUnits)} units returned
               </span>
               <span className="font-bold text-[#AF8260]">
-                {(metrics?.returnRateValPct ?? 0).toFixed(1)}% rate
+                {formatPercent(metrics?.returnRateValPct)} rate
               </span>
             </div>
           </button>
@@ -388,20 +395,20 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
                           : "bg-[#E9EFEA] text-[#5F7161]"
                     }`}
                   >
-                    {ch.returnRate.toFixed(1)}% rate
+                    {formatPercent(ch.returnRate)} rate
                   </span>
                 </div>
 
                 <div className="text-lg font-black text-[#AF8260]">
-                  ₹{(ch.returns ?? 0).toLocaleString()}
+                  {formatCurrency(ch.returns)}
                 </div>
 
                 <div className="flex justify-between items-center text-[11px] text-[#8C8376] mt-2 pt-2 border-t border-[#EBE5D9]">
                   <span>
-                    {ch.returnUnits ?? 0}{" "}
+                    {formatNumber(ch.returnUnits)}{" "}
                     {ch.returnUnits === 1 ? "unit" : "units"}
                   </span>
-                  <span>{ch.returnSharePct.toFixed(1)}% of total</span>
+                  <span>{formatPercent(ch.returnSharePct)} of total</span>
                 </div>
               </button>
             );
@@ -449,11 +456,12 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
               className="px-2.5 py-1.5 text-xs bg-white border border-[#EBE5D9] rounded-xl text-[#2D2A26] font-medium focus:outline-hidden focus:ring-1 focus:ring-[#AF8260] cursor-pointer"
             >
               <option value="ALL">
-                All Channels ({metrics?.totalReturnedUnits ?? 0} total units)
+                All Channels ({formatNumber(metrics?.totalReturnedUnits)} total
+                units)
               </option>
               {channelsWithReturns.map((ch) => (
                 <option key={ch.channel} value={ch.channel}>
-                  {ch.channel} ({ch.returnUnits ?? 0} returned)
+                  {ch.channel} ({formatNumber(ch.returnUnits)} returned)
                 </option>
               ))}
             </select>
@@ -577,7 +585,8 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
                         </div>
                       </td>
                       <td className="py-3 px-3 text-right font-black text-[#AF8260]">
-                        {p.returnUnits} {p.returnUnits === 1 ? "unit" : "units"}
+                        {formatNumber(p.returnUnits)}{" "}
+                        {p.returnUnits === 1 ? "unit" : "units"}
                       </td>
                       <td className="py-3 px-3 text-right">
                         <span
@@ -589,11 +598,11 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
                                 : "bg-[#FAF0E6] text-[#AF8260] border-[#E8D2C2]"
                           }`}
                         >
-                          {p.returnRate}%
+                          {formatPercent(p.returnRate)}
                         </span>
                       </td>
                       <td className="py-3 px-3.5 text-right font-bold text-[#2D2A26]">
-                        ₹{(p.returns ?? 0).toLocaleString()}
+                        {formatCurrency(p.returns)}
                       </td>
                     </tr>
                   );
@@ -636,11 +645,9 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
                 <strong className="text-[#2D2A26]">
                   {highestReturnChannel.channel}
                 </strong>{" "}
-                accounts for the largest share of refunds (₹
-                {(
-                  highestReturnChannel.returns ?? 0
-                ).toLocaleString()} across{" "}
-                {highestReturnChannel.returnUnits ?? 0} units).
+                accounts for the largest share of refunds (
+                {formatCurrency(highestReturnChannel.returns)} across{" "}
+                {formatNumber(highestReturnChannel.returnUnits)} units).
               </span>
             ) : (
               <span>

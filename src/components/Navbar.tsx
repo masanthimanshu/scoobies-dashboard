@@ -11,6 +11,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
+import { formatCurrency, formatNumber } from "../utils/formatters";
 
 interface NavbarProps {
   fileName: string;
@@ -89,7 +90,7 @@ export const Navbar: FC<NavbarProps> = ({
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-bold text-[#2D2A26] whitespace-nowrap">
-                  Margin Target: ₹{salesTarget.toLocaleString()}
+                  Margin Target: {formatCurrency(salesTarget)}
                 </span>
                 <Pencil className="w-3 h-3 text-[#8C8376] group-hover:text-[#AF8260] transition-colors shrink-0" />
               </div>
@@ -107,8 +108,7 @@ export const Navbar: FC<NavbarProps> = ({
                 </span>
                 <span className="text-[#C4BAA9]">|</span>
                 <span className="text-[#8C8376] whitespace-nowrap">
-                  {filteredRows.toLocaleString()} / {totalRows.toLocaleString()}{" "}
-                  rows
+                  {formatNumber(filteredRows)} / {formatNumber(totalRows)} rows
                 </span>
               </div>
             ) : (

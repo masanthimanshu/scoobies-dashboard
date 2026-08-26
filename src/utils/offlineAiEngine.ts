@@ -1,4 +1,5 @@
 import { DistilledSalesContext } from "./aiContextDistiller";
+import { formatCurrency, formatNumber, formatPercent } from "./formatters";
 
 /**
  * Deterministic offline intelligence engine.
@@ -20,7 +21,7 @@ export function generateOfflineStrategicBrief(
   const targetProgress =
     kpis.targetGap <= 0
       ? "✅ Target Quota Achieved!"
-      : `₹${kpis.targetGap.toLocaleString()} gap remaining (${kpis.targetProgressPct}% achieved)`;
+      : `${formatCurrency(kpis.targetGap)} gap remaining (${formatPercent(kpis.targetProgressPct)} achieved)`;
 
   const worstReturnItem =
     returnWatchlist.length > 0 ? returnWatchlist[0] : null;
@@ -28,32 +29,32 @@ export function generateOfflineStrategicBrief(
   return `### 📊 EXECUTIVE STRATEGIC BRIEF (OFFLINE DIAGNOSTIC)
 
 #### 1. Performance Overview
-- **Net Revenue**: **₹${kpis.netSales.toLocaleString()}** fulfilled across **${kpis.totalOrders.toLocaleString()} orders** (${kpis.totalUnits.toLocaleString()} units sold).
-- **Margin Health**: **₹${kpis.scoobiesMargin.toLocaleString()}** (${kpis.scoobiesMarginPct}% margin) — *${marginHealth}*.
-- **Quota Progress**: **${targetProgress}** against the ₹${kpis.salesTarget.toLocaleString()} goal.
-- **Average Order Value (AOV)**: **₹${kpis.averageOrderValue.toLocaleString()}**.
+- **Net Revenue**: **${formatCurrency(kpis.netSales)}** fulfilled across **${formatNumber(kpis.totalOrders)} orders** (${formatNumber(kpis.totalUnits)} units sold).
+- **Margin Health**: **${formatCurrency(kpis.scoobiesMargin)}** (${formatPercent(kpis.scoobiesMarginPct)} margin) — *${marginHealth}*.
+- **Quota Progress**: **${targetProgress}** against the ${formatCurrency(kpis.salesTarget)} goal.
+- **Average Order Value (AOV)**: **${formatCurrency(kpis.averageOrderValue)}**.
 
 #### 2. Channel Economics & Dominance
-- **Primary Driver**: **${topChannel ? topChannel.name : "N/A"}** contributes **${topChannel ? topChannel.sharePct : 0}%** of net revenue (₹${topChannel ? topChannel.netSales.toLocaleString() : 0}) with an AOV of ₹${topChannel ? topChannel.aov.toLocaleString() : 0}.
-- **Channel Margins**: ${channels.map((c) => `**${c.name}** (₹${c.margin.toLocaleString()} margin, ${c.returnRatePct}% returns)`).join(" | ")}.
+- **Primary Driver**: **${topChannel ? topChannel.name : "N/A"}** contributes **${topChannel ? formatPercent(topChannel.sharePct) : "0%"}** of net revenue (${topChannel ? formatCurrency(topChannel.netSales) : "₹0"}) with an AOV of ${topChannel ? formatCurrency(topChannel.aov) : "₹0"}.
+- **Channel Margins**: ${channels.map((c) => `**${c.name}** (${formatCurrency(c.margin)} margin, ${formatPercent(c.returnRatePct)} returns)`).join(" | ")}.
 
 #### 3. Top Profit Multipliers
 ${topMarginDrivers
   .slice(0, 3)
   .map(
     (p, i) =>
-      `${i + 1}. **${p.name}** — ₹${p.margin.toLocaleString()} margin (${p.units} units sold)`,
+      `${i + 1}. **${p.name}** — ${formatCurrency(p.margin)} margin (${formatNumber(p.units)} units sold)`,
   )
   .join("\n")}
 
 #### 4. Critical Margin Leaks & Return Risks
 ${
   worstReturnItem
-    ? `⚠️ **High Return Alert**: **${worstReturnItem.name}** has a **${worstReturnItem.returnRatePct}% return rate** (${worstReturnItem.returnUnits} units returned), causing a **₹${worstReturnItem.returnedValue.toLocaleString()}** refund leak.`
-    : `✅ Overall return rate is healthy at **${kpis.returnRateQtyPct}%** with no severe product anomalies.`
+    ? `⚠️ **High Return Alert**: **${worstReturnItem.name}** has a **${formatPercent(worstReturnItem.returnRatePct)} return rate** (${formatNumber(worstReturnItem.returnUnits)} units returned), causing a **${formatCurrency(worstReturnItem.returnedValue)}** refund leak.`
+    : `✅ Overall return rate is healthy at **${formatPercent(kpis.returnRateQtyPct)}** with no severe product anomalies.`
 }
 
 #### 5. Demand Velocity
-- Peak velocity observed during **${trends.peakPeriod.label}** (₹${trends.peakPeriod.sales.toLocaleString()}).
-- Average sales velocity is **₹${trends.averagePeriodSales.toLocaleString()}** per active period.`;
+- Peak velocity observed during **${trends.peakPeriod.label}** (${formatCurrency(trends.peakPeriod.sales)}).
+- Average sales velocity is **${formatCurrency(trends.averagePeriodSales)}** per active period.`;
 }

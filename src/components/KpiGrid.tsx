@@ -8,6 +8,11 @@ import {
   Target,
 } from "lucide-react";
 import { DashboardMetrics } from "../types";
+import {
+  formatCurrency,
+  formatNumber,
+  formatPercent,
+} from "../utils/formatters";
 
 interface KpiGridProps {
   metrics: DashboardMetrics;
@@ -38,13 +43,13 @@ export const KpiGrid: React.FC<KpiGridProps> = ({
         </div>
         <div className="mt-3">
           <div className="text-2xl font-black text-[#5F7161] tracking-tight">
-            ₹{Math.round(metrics.totalNetSales).toLocaleString()}
+            {formatCurrency(metrics.totalNetSales)}
           </div>
           <div className="flex items-center gap-1.5 mt-1 text-xs text-[#8C8376]">
             <span>
               Gross:{" "}
               <strong className="text-[#433E37]">
-                ₹{Math.round(metrics.totalGrossSales).toLocaleString()}
+                {formatCurrency(metrics.totalGrossSales)}
               </strong>
             </span>
           </div>
@@ -63,11 +68,13 @@ export const KpiGrid: React.FC<KpiGridProps> = ({
         </div>
         <div className="mt-3">
           <div className="text-2xl font-black text-[#AF8260] tracking-tight">
-            {metrics.totalUnitsSold.toLocaleString()}{" "}
+            {formatNumber(metrics.totalUnitsSold)}{" "}
             <span className="text-xs font-bold text-[#8C8376]">units</span>
           </div>
           <div className="flex items-center gap-1.5 mt-1 text-xs text-[#8C8376]">
-            <span>{metrics.totalGrossUnits} gross dispatched</span>
+            <span>
+              {formatNumber(metrics.totalGrossUnits)} gross dispatched
+            </span>
           </div>
         </div>
       </div>
@@ -84,14 +91,14 @@ export const KpiGrid: React.FC<KpiGridProps> = ({
         </div>
         <div className="mt-3">
           <div className="text-2xl font-black text-[#2D2A26] tracking-tight">
-            {metrics.totalOrders.toLocaleString()}{" "}
+            {formatNumber(metrics.totalOrders)}{" "}
             <span className="text-xs font-bold text-[#8C8376]">orders</span>
           </div>
           <div className="flex items-center gap-1.5 mt-1 text-xs text-[#8C8376]">
             <span>
               AOV:{" "}
               <strong className="text-[#2D2A26]">
-                ₹{Math.round(metrics.averageOrderValue).toLocaleString()}
+                {formatCurrency(metrics.averageOrderValue)}
               </strong>
             </span>
           </div>
@@ -110,11 +117,11 @@ export const KpiGrid: React.FC<KpiGridProps> = ({
         </div>
         <div className="mt-3">
           <div className="text-2xl font-black text-[#5F7161] tracking-tight">
-            ₹{Math.round(metrics.totalScoobiesMargin).toLocaleString()}
+            {formatCurrency(metrics.totalScoobiesMargin)}
           </div>
           <div className="flex items-center gap-1.5 mt-1 text-xs text-[#8C8376]">
             <span className="font-bold text-[#5F7161] bg-[#E9EFEA] px-1.5 py-0.5 rounded-md">
-              {metrics.marginPercentage.toFixed(1)}% margin
+              {formatPercent(metrics.marginPercentage)} margin
             </span>
           </div>
         </div>
@@ -132,13 +139,13 @@ export const KpiGrid: React.FC<KpiGridProps> = ({
         </div>
         <div className="mt-3">
           <div className="text-2xl font-black text-[#AF8260] tracking-tight">
-            {metrics.returnRateQtyPct.toFixed(1)}%
+            {formatPercent(metrics.returnRateQtyPct)}
           </div>
           <div className="flex items-center gap-1.5 mt-1 text-xs text-[#8C8376]">
             <span className="text-[#AF8260] font-semibold">
-              -₹{Math.round(metrics.totalReturnedSales).toLocaleString()}
+              -{formatCurrency(metrics.totalReturnedSales)}
             </span>
-            <span>({metrics.totalReturnedUnits} units)</span>
+            <span>({formatNumber(metrics.totalReturnedUnits)} units)</span>
           </div>
         </div>
       </div>
@@ -158,7 +165,7 @@ export const KpiGrid: React.FC<KpiGridProps> = ({
           <div className="flex items-baseline justify-between">
             <div className="text-2xl font-black">{targetPct.toFixed(0)}%</div>
             <span className="text-xs text-[#D9E3D8] font-medium">
-              of ₹{salesTarget.toLocaleString()}
+              of {formatCurrency(salesTarget)}
             </span>
           </div>
           <div className="w-full h-2 bg-[#4A594C] rounded-full mt-2 overflow-hidden">
@@ -170,7 +177,7 @@ export const KpiGrid: React.FC<KpiGridProps> = ({
           <div className="text-[11px] text-[#D9E3D8] mt-1.5 flex justify-between font-medium">
             <span>
               {remainingToTarget > 0
-                ? `₹${Math.round(remainingToTarget).toLocaleString()} left`
+                ? `${formatCurrency(remainingToTarget)} left`
                 : "Goal Met!"}
             </span>
             <span className="underline font-bold">Edit Goal</span>

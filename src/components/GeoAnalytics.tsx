@@ -1,6 +1,11 @@
 import React, { useState } from "react";
 import { Compass, ChevronDown, ChevronUp } from "lucide-react";
 import { GeoMetric } from "../types";
+import {
+  formatCurrency,
+  formatNumber,
+  formatPercent,
+} from "../utils/formatters";
 
 interface GeoAnalyticsProps {
   zones: GeoMetric[];
@@ -89,12 +94,12 @@ export const GeoAnalytics: React.FC<GeoAnalyticsProps> = ({
                 </span>
               </div>
               <span className="text-xs font-bold text-[#5F7161]">
-                {item.sharePct.toFixed(1)}%
+                {formatPercent(item.sharePct)}
               </span>
             </div>
 
             <div className="text-lg font-black text-[#2D2A26] mt-2">
-              ₹{item.sales.toLocaleString()}
+              {formatCurrency(item.sales)}
             </div>
 
             <div className="w-full h-1.5 bg-[#EBE5D9] rounded-full mt-2 overflow-hidden">
@@ -107,8 +112,8 @@ export const GeoAnalytics: React.FC<GeoAnalyticsProps> = ({
             </div>
 
             <div className="flex justify-between items-center text-[11px] text-[#8C8376] font-medium mt-2.5">
-              <span>{item.orders.toLocaleString()} orders</span>
-              <span>{item.units.toLocaleString()} units</span>
+              <span>{formatNumber(item.orders)} orders</span>
+              <span>{formatNumber(item.units)} units</span>
             </div>
           </div>
         ))}

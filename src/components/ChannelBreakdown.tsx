@@ -1,22 +1,17 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { Store, ChevronDown, ChevronUp } from "lucide-react";
 import { ChannelMetric } from "../types";
+import {
+  CHART_PALETTE,
+  formatCurrency,
+  formatNumber,
+  formatPercent,
+} from "../utils/formatters";
 
 interface ChannelBreakdownProps {
   channels: ChannelMetric[];
 }
-
-const NATURAL_COLORS = [
-  "#5F7161", // Forest Sage
-  "#AF8260", // Terracotta
-  "#E7AB79", // Ochre Amber
-  "#6A7C6C", // Deep Sage
-  "#C59B76", // Sandalwood
-  "#869688", // Muted Olive
-  "#8C8376", // Warm Stone
-  "#2D2A26", // Espresso
-];
 
 export const ChannelBreakdown: React.FC<ChannelBreakdownProps> = ({
   channels,
@@ -26,15 +21,17 @@ export const ChannelBreakdown: React.FC<ChannelBreakdownProps> = ({
   const displayedChannels = showAll ? channels : channels.slice(0, 10);
   const hasMoreThan10 = channels.length > 10;
 
-  const pieData = channels
-    .filter((c) => c.netSales > 0)
-    .slice(0, 8)
-    .map((c) => ({
-      name: c.channel,
-      value: c.netSales,
-      share: c.sharePct,
-      orders: c.orderCount,
-    }));
+  const pieData = useMemo(() => {
+    return channels
+      .filter((c) => c.netSales > 0)
+      .slice(0, 8)
+      .map((c) => ({
+        name: c.channel,
+        value: c.netSales,
+        share: c.sharePct,
+        orders: c.orderCount,
+      }));
+  }, [channels]);
 
   return (
     <div className="bg-white border border-[#EBE5D9] rounded-[28px] p-6 shadow-sm mb-6">
@@ -72,7 +69,7 @@ export const ChannelBreakdown: React.FC<ChannelBreakdownProps> = ({
                   {pieData.map((_, index) => (
                     <Cell
                       key={`cell-${index}`}
-                      fill={NATURAL_COLORS[index % NATURAL_COLORS.length]}
+                      fill={CHART_PALETTE[index % CHART_PALETTE.length]}
                     />
                   ))}
                 </Pie>
@@ -82,12 +79,11 @@ export const ChannelBreakdown: React.FC<ChannelBreakdownProps> = ({
                     name: unknown,
                     item: { payload?: { share?: number } },
                   ) => {
-                    const share =
-                      item?.payload?.share !== undefined
-                        ? item.payload.share.toFixed(1)
-                        : "0.0";
+                    const share = item?.payload?.share;
+                    const shareStr =
+                      share !== undefined ? ` (${formatPercent(share)})` : "";
                     return [
-                      `₹${Number(val || 0).toLocaleString()} (${share}%)`,
+                      `${formatCurrency(Number(val || 0))}${shareStr}`,
                       String(name || ""),
                     ];
                   }}
@@ -132,22 +128,22 @@ export const ChannelBreakdown: React.FC<ChannelBreakdownProps> = ({
                       className="w-2.5 h-2.5 rounded-full shrink-0"
                       style={{
                         backgroundColor:
-                          NATURAL_COLORS[idx % NATURAL_COLORS.length],
+                          CHART_PALETTE[idx % CHART_PALETTE.length],
                       }}
                     />
                     <span className="truncate max-w-[130px]">{ch.channel}</span>
                   </td>
                   <td className="py-2.5 text-right font-black text-[#5F7161]">
-                    ₹{ch.netSales.toLocaleString()}
+                    {formatCurrency(ch.netSales)}
                   </td>
                   <td className="py-2.5 text-right font-bold text-[#AF8260]">
-                    {ch.sharePct.toFixed(1)}%
+                    {formatPercent(ch.sharePct)}
                   </td>
                   <td className="py-2.5 text-right text-[#433E37] font-semibold">
-                    {ch.orderCount.toLocaleString()}
+                    {formatNumber(ch.orderCount)}
                   </td>
                   <td className="py-2.5 text-right text-[#8C8376] font-medium">
-                    ₹{ch.avgOrderValue.toLocaleString()}
+                    {formatCurrency(ch.avgOrderValue)}
                   </td>
                   <td className="py-2.5 text-right">
                     <span
@@ -159,7 +155,7 @@ export const ChannelBreakdown: React.FC<ChannelBreakdownProps> = ({
                             : "bg-[#E9EFEA] text-[#5F7161] border border-[#C5D5C7]"
                       }`}
                     >
-                      {ch.returnRate.toFixed(1)}%
+                      {formatPercent(ch.returnRate)}
                     </span>
                   </td>
                 </tr>

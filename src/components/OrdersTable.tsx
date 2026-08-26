@@ -9,6 +9,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { SaleRecord } from "../types";
+import { formatCurrency, formatNumber } from "../utils/formatters";
 
 interface OrdersTableProps {
   records: SaleRecord[];
@@ -49,26 +50,31 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
   };
 
   const sortedRecords = useMemo(() => {
-    return [...records].sort((a, b) => {
-      let valA = a[sortField];
-      let valB = b[sortField];
+    const list = [...records];
+    return list.sort((a, b) => {
+      const valA = a[sortField];
+      const valB = b[sortField];
 
-      if (typeof valA === "string") {
-        valA = (valA as string).toLowerCase();
-        valB = ((valB as string) || "").toLowerCase();
+      if (typeof valA === "number" && typeof valB === "number") {
+        return sortAsc ? valA - valB : valB - valA;
       }
 
-      if (valA < valB) return sortAsc ? -1 : 1;
-      if (valA > valB) return sortAsc ? 1 : -1;
+      const strA = String(valA || "").toLowerCase();
+      const strB = String(valB || "").toLowerCase();
+
+      if (strA < strB) return sortAsc ? -1 : 1;
+      if (strA > strB) return sortAsc ? 1 : -1;
       return 0;
     });
   }, [records, sortField, sortAsc]);
 
   const totalPages = Math.ceil(sortedRecords.length / pageSize) || 1;
-  const paginatedRecords = sortedRecords.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize,
-  );
+  const paginatedRecords = useMemo(() => {
+    return sortedRecords.slice(
+      (currentPage - 1) * pageSize,
+      currentPage * pageSize,
+    );
+  }, [sortedRecords, currentPage, pageSize]);
 
   return (
     <div className="bg-white border border-[#EBE5D9] rounded-[28px] p-6 shadow-sm mb-6">
@@ -79,7 +85,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
             Orders & Line-Items Data Explorer
           </h3>
           <p className="text-xs text-[#8C8376] font-medium mt-0.5">
-            Showing {records.length.toLocaleString()} transactions matching your
+            Showing {formatNumber(records.length)} transactions matching your
             active filters
           </p>
         </div>
@@ -182,10 +188,10 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                       r.saleValue < 0 ? "text-[#AF8260]" : "text-[#5F7161]"
                     }`}
                   >
-                    ₹{r.saleValue.toLocaleString()}
+                    {formatCurrency(r.saleValue)}
                   </td>
                   <td className="py-2.5 px-3 text-right font-semibold text-[#433E37] whitespace-nowrap">
-                    ₹{r.scoobiesMargin.toLocaleString()}
+                    {formatCurrency(r.scoobiesMargin)}
                   </td>
                   <td className="py-2.5 px-3 text-[#433E37] whitespace-nowrap">
                     <div className="font-medium">{r.deliveryPlace}</div>
@@ -220,7 +226,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
             <>
               Showing {(currentPage - 1) * pageSize + 1} to{" "}
               {Math.min(currentPage * pageSize, sortedRecords.length)} of{" "}
-              {sortedRecords.length.toLocaleString()} entries
+              {formatNumber(sortedRecords.length)} entries
             </>
           )}
         </div>

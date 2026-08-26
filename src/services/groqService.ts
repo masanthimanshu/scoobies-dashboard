@@ -16,7 +16,8 @@ export function getActiveGroqApiKey(): string {
   if (localKey && localKey.trim()) {
     return localKey.trim();
   }
-  const envKey = import.meta.env.GROQ_API_KEY;
+  const envKey =
+    import.meta.env.GROQ_API_KEY || import.meta.env.VITE_GROQ_API_KEY;
   if (envKey && typeof envKey === "string" && envKey.trim()) {
     return envKey.trim();
   }

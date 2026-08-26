@@ -28,6 +28,11 @@ import {
 } from "../utils/aiContextDistiller";
 import { generateOfflineStrategicBrief } from "../utils/offlineAiEngine";
 import { SaleRecord } from "../types";
+import {
+  formatCurrency,
+  formatNumber,
+  formatPercent,
+} from "../utils/formatters";
 
 // Configure marked with GitHub Flavored Markdown and line breaks
 marked.setOptions({
@@ -243,7 +248,7 @@ Ensure \`GROQ_API_KEY\` is defined in your \`.env\` file to enable real-time Gro
     {
       icon: <Target className="w-3.5 h-3.5 text-[#5F7161]" />,
       title: `Plan to Hit ₹${(distilledContext.kpis.salesTarget / 100000).toFixed(1)}L Target`,
-      prompt: `Analyze our current margin target quota of ₹${distilledContext.kpis.salesTarget.toLocaleString()}. What is our remaining quota gap, and what specific run-rate, channel levers, and product mix adjustments do we need to hit or exceed this goal?`,
+      prompt: `Analyze our current margin target quota of ${formatCurrency(distilledContext.kpis.salesTarget)}. What is our remaining quota gap, and what specific run-rate, channel levers, and product mix adjustments do we need to hit or exceed this goal?`,
     },
     {
       icon: <Layers className="w-3.5 h-3.5 text-blue-500" />,
@@ -283,7 +288,7 @@ Ensure \`GROQ_API_KEY\` is defined in your \`.env\` file to enable real-time Gro
               </div>
               <p className="text-xs text-[#8C8376] font-medium flex items-center gap-1.5">
                 <span>
-                  {distilledContext.datasetInfo.totalRecords.toLocaleString()}{" "}
+                  {formatNumber(distilledContext.datasetInfo.totalRecords)}{" "}
                   transactions distilled
                 </span>
                 <span>•</span>
@@ -351,7 +356,7 @@ Ensure \`GROQ_API_KEY\` is defined in your \`.env\` file to enable real-time Gro
                       Net Sales
                     </div>
                     <div className="text-xs font-black text-[#2D2A26]">
-                      ₹{distilledContext.kpis.netSales.toLocaleString()}
+                      {formatCurrency(distilledContext.kpis.netSales)}
                     </div>
                   </div>
                   <div className="bg-[#FAF8F5] rounded-xl p-2 border border-[#EBE5D9]">
@@ -359,7 +364,7 @@ Ensure \`GROQ_API_KEY\` is defined in your \`.env\` file to enable real-time Gro
                       Margin Rate
                     </div>
                     <div className="text-xs font-black text-[#5F7161]">
-                      {distilledContext.kpis.scoobiesMarginPct}%
+                      {formatPercent(distilledContext.kpis.scoobiesMarginPct)}
                     </div>
                   </div>
                   <div className="bg-[#FAF8F5] rounded-xl p-2 border border-[#EBE5D9]">
@@ -367,7 +372,7 @@ Ensure \`GROQ_API_KEY\` is defined in your \`.env\` file to enable real-time Gro
                       Return Rate
                     </div>
                     <div className="text-xs font-black text-[#AF8260]">
-                      {distilledContext.kpis.returnRateQtyPct}%
+                      {formatPercent(distilledContext.kpis.returnRateQtyPct)}
                     </div>
                   </div>
                   <div className="bg-[#FAF8F5] rounded-xl p-2 border border-[#EBE5D9]">
@@ -375,7 +380,10 @@ Ensure \`GROQ_API_KEY\` is defined in your \`.env\` file to enable real-time Gro
                       Target Quota
                     </div>
                     <div className="text-xs font-black text-[#2D2A26]">
-                      {distilledContext.kpis.targetProgressPct}%
+                      {formatPercent(
+                        distilledContext.kpis.targetProgressPct,
+                        0,
+                      )}
                     </div>
                   </div>
                 </div>
@@ -598,8 +606,8 @@ Ensure \`GROQ_API_KEY\` is defined in your \`.env\` file to enable real-time Gro
               <Sparkles className="w-3 h-3 text-[#5F7161]" />
               <span>
                 Token-Optimized Context (
-                {distilledContext.datasetInfo.totalRecords.toLocaleString()}{" "}
-                rows distilled)
+                {formatNumber(distilledContext.datasetInfo.totalRecords)} rows
+                distilled)
               </span>
             </span>
             <span>

@@ -8,6 +8,7 @@ import {
   TimeSeriesPoint,
   FilterState,
 } from "../types";
+import { formatCurrency, formatNumber, formatPercent } from "./formatters";
 
 export interface DistilledSalesContext {
   datasetInfo: {
@@ -160,15 +161,17 @@ export function buildDistilledContext(
     activeFilters.push(`Campaign: ${filters.campaign}`);
   }
 
-  // Date span
+  // Fast linear O(N) Date span computation (avoids expensive full array clone & sort)
   let minDate = "";
   let maxDate = "";
   if (records.length > 0) {
-    const sortedDates = [...records].sort((a, b) =>
-      a.dateStr.localeCompare(b.dateStr),
-    );
-    minDate = sortedDates[0]?.dateStr || "";
-    maxDate = sortedDates[sortedDates.length - 1]?.dateStr || "";
+    minDate = records[0].dateStr;
+    maxDate = records[0].dateStr;
+    for (let i = 1; i < records.length; i++) {
+      const d = records[i].dateStr;
+      if (d && d < minDate) minDate = d;
+      if (d && d > maxDate) maxDate = d;
+    }
   }
   const dateSpan =
     minDate && maxDate ? `${minDate} to ${maxDate}` : "Active Dataset Range";
@@ -226,7 +229,7 @@ export function buildDistilledContext(
       units: p.units,
     }));
 
-  // High return watchlist (Return rate > 12% with at least 2 returned units)
+  // High return watchlist (Return rate > 10% with at least 2 returned units)
   const returnWatchlist = productMetrics
     .filter((p) => p.returnUnits >= 2 && p.returnRate > 10)
     .sort((a, b) => b.returns - a.returns || b.returnRate - a.returnRate)
@@ -261,7 +264,8 @@ export function buildDistilledContext(
   let totalPeriodSales = 0;
 
   if (timeSeries.length > 0) {
-    timeSeries.forEach((pt) => {
+    for (let i = 0; i < timeSeries.length; i++) {
+      const pt = timeSeries[i];
       totalPeriodSales += pt.netSales;
       if (pt.netSales > peakPeriod.sales) {
         peakPeriod = {
@@ -277,7 +281,7 @@ export function buildDistilledContext(
           orders: pt.orderCount,
         };
       }
-    });
+    }
     if (troughPeriod.sales === Infinity) {
       troughPeriod = { label: "N/A", sales: 0, orders: 0 };
     }
@@ -356,26 +360,26 @@ export function formatDistilledContextToMarkdown(
     trends,
   } = ctx;
 
-  let md = `### CURRENT SALES DATASET CONTEXT
-- **Dataset File**: ${datasetInfo.fileName} (${datasetInfo.totalRecords.toLocaleString()} active transaction rows)
+  return `### CURRENT SALES DATASET CONTEXT
+- **Dataset File**: ${datasetInfo.fileName} (${formatNumber(datasetInfo.totalRecords)} active transaction rows)
 - **Active Filters**: ${datasetInfo.activeFiltersDescription}
 - **Date Span**: ${datasetInfo.dateSpan}
 
 ### 1. FINANCIAL & OPERATIONAL KPIS
-- **Net Revenue**: ₹${kpis.netSales.toLocaleString()} (Gross: ₹${kpis.grossSales.toLocaleString()})
-- **Refunds / Returns**: ₹${kpis.returnsValue.toLocaleString()} (${kpis.returnRateValPct}% of value, ${kpis.returnRateQtyPct}% of quantity; ${kpis.totalReturnedUnits} returned units)
-- **Total Orders Fulfilled**: ${kpis.totalOrders.toLocaleString()} | **Net Units Sold**: ${kpis.totalUnits.toLocaleString()}
-- **Average Order Value (AOV)**: ₹${kpis.averageOrderValue.toLocaleString()}
-- **Scoobies Margin**: ₹${kpis.scoobiesMargin.toLocaleString()} (${kpis.scoobiesMarginPct}% margin rate)
-- **Ex-GST Margin**: ₹${kpis.exGstMargin.toLocaleString()} | **Retailers Margin**: ₹${kpis.retailersMargin.toLocaleString()}
-- **Margin Quota Target**: ₹${kpis.salesTarget.toLocaleString()} (Achieved: ${kpis.targetProgressPct}%, Quota Gap: ₹${kpis.targetGap.toLocaleString()})
-- **Back-to-School (B2S) Contribution**: ₹${kpis.b2sNetSales.toLocaleString()} (${kpis.b2sContributionPct}% of total net revenue)
+- **Net Revenue**: ${formatCurrency(kpis.netSales)} (Gross: ${formatCurrency(kpis.grossSales)})
+- **Refunds / Returns**: ${formatCurrency(kpis.returnsValue)} (${formatPercent(kpis.returnRateValPct)} of value, ${formatPercent(kpis.returnRateQtyPct)} of quantity; ${formatNumber(kpis.totalReturnedUnits)} returned units)
+- **Total Orders Fulfilled**: ${formatNumber(kpis.totalOrders)} | **Net Units Sold**: ${formatNumber(kpis.totalUnits)}
+- **Average Order Value (AOV)**: ${formatCurrency(kpis.averageOrderValue)}
+- **Scoobies Margin**: ${formatCurrency(kpis.scoobiesMargin)} (${formatPercent(kpis.scoobiesMarginPct)} margin rate)
+- **Ex-GST Margin**: ${formatCurrency(kpis.exGstMargin)} | **Retailers Margin**: ${formatCurrency(kpis.retailersMargin)}
+- **Margin Quota Target**: ${formatCurrency(kpis.salesTarget)} (Achieved: ${formatPercent(kpis.targetProgressPct)}, Quota Gap: ${formatCurrency(kpis.targetGap)})
+- **Back-to-School (B2S) Contribution**: ${formatCurrency(kpis.b2sNetSales)} (${formatPercent(kpis.b2sContributionPct)} of total net revenue)
 
 ### 2. SALES CHANNELS ECONOMICS
 ${channels
   .map(
     (c) =>
-      `- **${c.name}**: ₹${c.netSales.toLocaleString()} net sales (${c.sharePct}% share) | ${c.orderCount} orders | AOV: ₹${c.aov.toLocaleString()} | Margin: ₹${c.margin.toLocaleString()} | Return Rate: ${c.returnRatePct}%`,
+      `- **${c.name}**: ${formatCurrency(c.netSales)} net sales (${formatPercent(c.sharePct)} share) | ${formatNumber(c.orderCount)} orders | AOV: ${formatCurrency(c.aov)} | Margin: ${formatCurrency(c.margin)} | Return Rate: ${formatPercent(c.returnRatePct)}`,
   )
   .join("\n")}
 
@@ -383,7 +387,7 @@ ${channels
 ${topVolumeProducts
   .map(
     (p, i) =>
-      `${i + 1}. **${p.name}** (${p.category}) — Net Sales: ₹${p.sales.toLocaleString()} (${p.units} units) | Margin: ₹${p.margin.toLocaleString()} | Return Rate: ${p.returnRatePct}%`,
+      `${i + 1}. **${p.name}** (${p.category}) — Net Sales: ${formatCurrency(p.sales)} (${formatNumber(p.units)} units) | Margin: ${formatCurrency(p.margin)} | Return Rate: ${formatPercent(p.returnRatePct)}`,
   )
   .join("\n")}
 
@@ -391,7 +395,7 @@ ${topVolumeProducts
 ${topMarginDrivers
   .map(
     (p, i) =>
-      `${i + 1}. **${p.name}** (${p.category}) — Profit Margin: ₹${p.margin.toLocaleString()} on ₹${p.sales.toLocaleString()} sales (${p.units} units)`,
+      `${i + 1}. **${p.name}** (${p.category}) — Profit Margin: ${formatCurrency(p.margin)} on ${formatCurrency(p.sales)} sales (${formatNumber(p.units)} units)`,
   )
   .join("\n")}
 
@@ -401,7 +405,7 @@ ${
     ? returnWatchlist
         .map(
           (r, i) =>
-            `${i + 1}. **${r.name}** (${r.category}) — ${r.returnUnits} units returned (${r.returnRatePct}% return rate) | Lost Value: ₹${r.returnedValue.toLocaleString()}${
+            `${i + 1}. **${r.name}** (${r.category}) — ${r.returnUnits} units returned (${formatPercent(r.returnRatePct)} return rate) | Lost Value: ${formatCurrency(r.returnedValue)}${
               r.channels && r.channels.length > 0
                 ? ` (Channels: ${r.channels.join(", ")})`
                 : ""
@@ -415,20 +419,18 @@ ${
 ${categories
   .map(
     (cat) =>
-      `- **${cat.name}**: ₹${cat.sales.toLocaleString()} (${cat.sharePct}% share, ${cat.units} units) | Margin: ₹${cat.margin.toLocaleString()} (${cat.marginPct}% margin)`,
+      `- **${cat.name}**: ${formatCurrency(cat.sales)} (${formatPercent(cat.sharePct)} share, ${formatNumber(cat.units)} units) | Margin: ${formatCurrency(cat.margin)} (${formatPercent(cat.marginPct)} margin)`,
   )
   .join("\n")}
 
 ### 7. GEOGRAPHIC DEMAND HUBS
-- **Top Zones**: ${regions.topZones.map((z) => `${z.name} (₹${z.sales.toLocaleString()}, ${z.sharePct}%)`).join(", ")}
-- **Top States**: ${regions.topStates.map((s) => `${s.name} (₹${s.sales.toLocaleString()}, ${s.sharePct}%)`).join(", ")}
+- **Top Zones**: ${regions.topZones.map((z) => `${z.name} (${formatCurrency(z.sales)}, ${formatPercent(z.sharePct)})`).join(", ")}
+- **Top States**: ${regions.topStates.map((s) => `${s.name} (${formatCurrency(s.sales)}, ${formatPercent(s.sharePct)})`).join(", ")}
 
 ### 8. TEMPORAL VELOCITY & MOMENTUM
-- **Peak Period**: ${trends.peakPeriod.label} (₹${trends.peakPeriod.sales.toLocaleString()} across ${trends.peakPeriod.orders} orders)
-- **Trough Period**: ${trends.troughPeriod.label} (₹${trends.troughPeriod.sales.toLocaleString()})
-- **Average Period Velocity**: ₹${trends.averagePeriodSales.toLocaleString()}`;
-
-  return md;
+- **Peak Period**: ${trends.peakPeriod.label} (${formatCurrency(trends.peakPeriod.sales)} across ${formatNumber(trends.peakPeriod.orders)} orders)
+- **Trough Period**: ${trends.troughPeriod.label} (${formatCurrency(trends.troughPeriod.sales)})
+- **Average Period Velocity**: ${formatCurrency(trends.averagePeriodSales)}`;
 }
 
 /**
@@ -454,20 +456,21 @@ export function extractTargetedMicroSlice(
         string,
         { units: number; sales: number; returns: number }
       >();
-      channelRecords.forEach((r) => {
-        const item = topItems.get(r.productName) || {
-          units: 0,
-          sales: 0,
-          returns: 0,
-        };
+
+      for (let i = 0; i < channelRecords.length; i++) {
+        const r = channelRecords[i];
+        let item = topItems.get(r.productName);
+        if (!item) {
+          item = { units: 0, sales: 0, returns: 0 };
+          topItems.set(r.productName, item);
+        }
         if (r.status === "Return") {
           item.returns += r.qty;
         } else {
           item.units += r.qty;
           item.sales += r.saleValue;
         }
-        topItems.set(r.productName, item);
-      });
+      }
 
       const topItemEntries = Array.from(topItems.entries())
         .sort((a, b) => b[1].sales - a[1].sales)
@@ -475,9 +478,9 @@ export function extractTargetedMicroSlice(
 
       matchedSlices.push(
         `#### DEEP-DIVE SLICE: ${ch.name.toUpperCase()} CHANNEL
-- Total Channel Orders: ${ch.orderCount} | Net Revenue: ₹${ch.netSales.toLocaleString()} | Return Rate: ${ch.returnRatePct}%
+- Total Channel Orders: ${formatNumber(ch.orderCount)} | Net Revenue: ${formatCurrency(ch.netSales)} | Return Rate: ${formatPercent(ch.returnRatePct)}
 - Top 5 SKUs on ${ch.name}:
-${topItemEntries.map(([name, data]) => `  • ${name}: ₹${Math.round(data.sales).toLocaleString()} (${data.units} sold, ${data.returns} returned)`).join("\n")}`,
+${topItemEntries.map(([name, data]) => `  • ${name}: ${formatCurrency(data.sales)} (${formatNumber(data.units)} sold, ${formatNumber(data.returns)} returned)`).join("\n")}`,
       );
     }
   });

@@ -1,11 +1,27 @@
 import Papa from "papaparse";
 import { SaleRecord } from "../types";
+import { isValidFilterOption } from "./formatters";
 
 export interface ParseResult {
   records: SaleRecord[];
   errors: string[];
   totalRows: number;
 }
+
+const MONTHS_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
 
 /**
  * Normalizes number fields from diverse formats (e.g., "  1,829.66 ", " - ", "-329.03", "₹1,200", etc.)
@@ -35,23 +51,11 @@ function parseDateComponents(
   dateFormatted: string;
   timestamp: number;
 } {
-  const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
   let y = yearHint || 2026;
   let mName = monthHint || "Aug";
-  let mIndex = months.findIndex((m) => m.toLowerCase() === mName.toLowerCase());
+  let mIndex = MONTHS_SHORT.findIndex(
+    (m) => m.toLowerCase() === mName.toLowerCase(),
+  );
   if (mIndex === -1) mIndex = 7; // default Aug
   let d = dayHint || 1;
 
@@ -72,7 +76,7 @@ function parseDateComponents(
           mIndex = Math.max(0, Math.min(11, parts[1] - 1));
           y = parts[2];
         }
-        mName = months[mIndex] || mName;
+        mName = MONTHS_SHORT[mIndex] || mName;
       }
     }
   }
@@ -93,20 +97,8 @@ function parseDateComponents(
  * Normalizes strings by trimming and stripping null / error values.
  */
 function cleanString(val: unknown, fallback = ""): string {
-  if (val === null || val === undefined) return fallback;
-  const s = String(val).trim();
-  if (
-    s === "#N/A" ||
-    s === "N/A" ||
-    s === "#VALUE!" ||
-    s === "#REF!" ||
-    s === "null" ||
-    s === "undefined" ||
-    s === ""
-  ) {
-    return fallback;
-  }
-  return s;
+  if (!isValidFilterOption(val)) return fallback;
+  return String(val).trim();
 }
 
 /**
@@ -117,7 +109,8 @@ function findValue(
   possibleKeys: string[],
 ): unknown {
   const rowKeys = Object.keys(row);
-  for (const key of possibleKeys) {
+  for (let i = 0; i < possibleKeys.length; i++) {
+    const key = possibleKeys[i];
     const directMatch = row[key];
     if (
       directMatch !== undefined &&
@@ -127,11 +120,12 @@ function findValue(
       return directMatch;
     }
     const cleanTarget = key.toLowerCase().replace(/[^a-z0-9]/g, "");
-    const matchedKey = rowKeys.find(
-      (k) => k.toLowerCase().replace(/[^a-z0-9]/g, "") === cleanTarget,
-    );
-    if (matchedKey && row[matchedKey] !== undefined && row[matchedKey] !== "") {
-      return row[matchedKey];
+    for (let j = 0; j < rowKeys.length; j++) {
+      const k = rowKeys[j];
+      if (k.toLowerCase().replace(/[^a-z0-9]/g, "") === cleanTarget) {
+        const val = row[k];
+        if (val !== undefined && val !== "") return val;
+      }
     }
   }
   return "";

@@ -29,6 +29,7 @@ import {
   generateExecutiveInsights,
 } from "./utils/analytics";
 import { buildDistilledContext } from "./utils/aiContextDistiller";
+import { isValidFilterOption } from "./utils/formatters";
 import { SaleRecord, FilterState } from "./types";
 
 const DEFAULT_FILTERS: FilterState = {
@@ -49,17 +50,32 @@ const DEFAULT_FILTERS: FilterState = {
   campaign: "ALL",
 };
 
+const MONTH_ORDER = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
 function extractUniqueValues(
   records: SaleRecord[],
   key: keyof SaleRecord,
 ): string[] {
   const set = new Set<string>();
-  records.forEach((r) => {
-    const val = r[key];
-    if (typeof val === "string" && val.trim()) {
+  for (let i = 0; i < records.length; i++) {
+    const val = records[i][key];
+    if (typeof val === "string" && isValidFilterOption(val)) {
       set.add(val.trim());
     }
-  });
+  }
   return Array.from(set).sort();
 }
 
@@ -110,34 +126,21 @@ export default function App() {
   // Available metadata for filters
   const availableYears = useMemo(() => {
     const yearsSet = new Set<number>();
-    records.forEach((r) => {
-      const y = Number(r.year);
+    for (let i = 0; i < records.length; i++) {
+      const y = Number(records[i].year);
       if (!isNaN(y) && y > 0) {
         yearsSet.add(y);
       }
-    });
+    }
     return Array.from(yearsSet).sort((a: number, b: number) => b - a);
   }, [records]);
 
   const availableMonths = useMemo(() => {
-    const MONTH_ORDER = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
     const set = new Set<string>();
-    records.forEach((r) => {
-      if (r.month) set.add(r.month);
-    });
+    for (let i = 0; i < records.length; i++) {
+      const m = records[i].month;
+      if (isValidFilterOption(m)) set.add(m);
+    }
     return Array.from(set).sort((a, b) => {
       const idxA = MONTH_ORDER.findIndex(
         (m) =>
@@ -156,9 +159,10 @@ export default function App() {
 
   const availableWeeks = useMemo(() => {
     const set = new Set<string>();
-    records.forEach((r) => {
-      if (r.week) set.add(r.week);
-    });
+    for (let i = 0; i < records.length; i++) {
+      const w = records[i].week;
+      if (isValidFilterOption(w)) set.add(w);
+    }
     return Array.from(set).sort((a, b) => {
       const numA = parseInt(a.replace(/\D/g, ""), 10);
       const numB = parseInt(b.replace(/\D/g, ""), 10);
@@ -228,13 +232,7 @@ export default function App() {
       zoneMetrics,
       filteredRecords,
     );
-  }, [
-    metrics,
-    channelMetrics,
-    productMetrics,
-    zoneMetrics,
-    filteredRecords,
-  ]);
+  }, [metrics, channelMetrics, productMetrics, zoneMetrics, filteredRecords]);
 
   // Distilled context for Groq GPT OSS 120B
   const distilledContext = useMemo(() => {

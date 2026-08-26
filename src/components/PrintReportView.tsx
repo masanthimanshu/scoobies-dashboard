@@ -9,6 +9,11 @@ import {
   ProductMetric,
   GeoMetric,
 } from "../types";
+import {
+  formatCurrency,
+  formatNumber,
+  formatPercent,
+} from "../utils/formatters";
 
 interface PrintReportViewProps {
   isOpen: boolean;
@@ -183,7 +188,7 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                 Source: {fileName}
               </div>
               <div className="text-[#8C8376] font-medium">
-                {totalRecordsCount} transactions
+                {formatNumber(totalRecordsCount)} transactions
               </div>
             </div>
           </div>
@@ -195,11 +200,10 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                 Net Revenue
               </span>
               <div className="text-xl font-black text-[#5F7161] mt-1">
-                ₹{Math.round(metrics?.totalNetSales || 0).toLocaleString()}
+                {formatCurrency(metrics?.totalNetSales)}
               </div>
               <span className="text-[10px] text-[#8C8376]">
-                Gross: ₹
-                {Math.round(metrics?.totalGrossSales || 0).toLocaleString()}
+                Gross: {formatCurrency(metrics?.totalGrossSales)}
               </span>
             </div>
 
@@ -208,10 +212,10 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                 Units Sold
               </span>
               <div className="text-xl font-black text-[#AF8260] mt-1">
-                {(metrics?.totalUnitsSold || 0).toLocaleString()}
+                {formatNumber(metrics?.totalUnitsSold)}
               </div>
               <span className="text-[10px] text-[#8C8376]">
-                {(metrics?.totalOrders || 0).toLocaleString()} total orders
+                {formatNumber(metrics?.totalOrders)} total orders
               </span>
             </div>
 
@@ -220,11 +224,10 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                 Scoobies Margin
               </span>
               <div className="text-xl font-black text-[#5F7161] mt-1">
-                ₹
-                {Math.round(metrics?.totalScoobiesMargin || 0).toLocaleString()}
+                {formatCurrency(metrics?.totalScoobiesMargin)}
               </div>
               <span className="text-[10px] font-bold text-[#5F7161]">
-                {(metrics?.marginPercentage || 0).toFixed(1)}% margin rate
+                {formatPercent(metrics?.marginPercentage)} margin rate
               </span>
             </div>
 
@@ -233,11 +236,10 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                 Returns Rate
               </span>
               <div className="text-xl font-black text-[#AF8260] mt-1">
-                {(metrics?.returnRateQtyPct || 0).toFixed(1)}%
+                {formatPercent(metrics?.returnRateQtyPct)}
               </div>
               <span className="text-[10px] text-[#8C8376]">
-                ₹{Math.round(metrics?.totalReturnedSales || 0).toLocaleString()}{" "}
-                refunded
+                {formatCurrency(metrics?.totalReturnedSales)} refunded
               </span>
             </div>
           </div>
@@ -263,10 +265,10 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                         {c.channel}
                       </td>
                       <td className="py-1.5 text-right font-black text-[#5F7161]">
-                        ₹{c.netSales.toLocaleString()}
+                        {formatCurrency(c.netSales)}
                       </td>
                       <td className="py-1.5 text-right text-[#AF8260] font-bold">
-                        {c.sharePct.toFixed(1)}%
+                        {formatPercent(c.sharePct)}
                       </td>
                     </tr>
                   ))}
@@ -293,10 +295,10 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                         {cat.category}
                       </td>
                       <td className="py-1.5 text-right text-[#433E37]">
-                        {cat.units.toLocaleString()}
+                        {formatNumber(cat.units)}
                       </td>
                       <td className="py-1.5 text-right font-black text-[#5F7161]">
-                        ₹{cat.sales.toLocaleString()}
+                        {formatCurrency(cat.sales)}
                       </td>
                     </tr>
                   ))}
@@ -331,10 +333,10 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                     </td>
                     <td className="py-1.5 text-[#8C8376]">{p.category}</td>
                     <td className="py-1.5 text-right font-semibold">
-                      {p.units}
+                      {formatNumber(p.units)}
                     </td>
                     <td className="py-1.5 text-right font-black text-[#5F7161]">
-                      ₹{p.netSales.toLocaleString()}
+                      {formatCurrency(p.netSales)}
                     </td>
                   </tr>
                 ))}
@@ -369,16 +371,16 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                         {c.name || "Unassigned"}
                       </td>
                       <td className="py-1.5 text-right text-[#433E37]">
-                        {c.orders.toLocaleString()}
+                        {formatNumber(c.orders)}
                       </td>
                       <td className="py-1.5 text-right font-semibold">
-                        {c.units.toLocaleString()}
+                        {formatNumber(c.units)}
                       </td>
                       <td className="py-1.5 text-right font-black text-[#5F7161]">
-                        ₹{c.sales.toLocaleString()}
+                        {formatCurrency(c.sales)}
                       </td>
                       <td className="py-1.5 text-right text-[#AF8260] font-bold">
-                        {c.sharePct.toFixed(1)}%
+                        {formatPercent(c.sharePct)}
                       </td>
                     </tr>
                   ))}

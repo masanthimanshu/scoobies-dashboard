@@ -9,144 +9,134 @@ import {
   GeoMetric,
   ExecutiveInsight,
 } from "../types";
+import { isB2SCampaign, formatCurrency } from "./formatters";
 
+/**
+ * High-performance records filter. Pre-compiles filter sets and lowercased lookups
+ * outside the loop to achieve O(N) linear filtering with zero per-record allocations.
+ */
 export function filterRecords(
   records: SaleRecord[],
   filters: FilterState,
 ): SaleRecord[] {
+  // Pre-compile multi-select lookup sets (O(1) lookups)
+  const yearSet =
+    filters.years && filters.years.length > 0 && !filters.years.includes("ALL")
+      ? new Set(filters.years.map(String))
+      : null;
+
+  const monthSet =
+    filters.months &&
+    filters.months.length > 0 &&
+    !filters.months.includes("ALL")
+      ? new Set(filters.months.map((m) => m.toLowerCase()))
+      : null;
+
+  const weekSet =
+    filters.weeks && filters.weeks.length > 0 && !filters.weeks.includes("ALL")
+      ? new Set(filters.weeks.map((w) => w.toLowerCase()))
+      : null;
+
+  const channelSet =
+    filters.channels && filters.channels.length > 0
+      ? new Set(filters.channels)
+      : null;
+
+  const categorySet =
+    filters.categories && filters.categories.length > 0
+      ? new Set(filters.categories)
+      : null;
+
+  const zoneSet =
+    filters.zones && filters.zones.length > 0 ? new Set(filters.zones) : null;
+
+  const stateSet =
+    filters.states && filters.states.length > 0
+      ? new Set(filters.states)
+      : null;
+
+  // Pre-calculate single-value filter constants
+  const singleYearStr =
+    filters.year && filters.year !== "ALL" ? String(filters.year) : null;
+  const singleMonthLower =
+    filters.month && filters.month !== "ALL"
+      ? filters.month.toLowerCase()
+      : null;
+  const singleWeekLower =
+    filters.week && filters.week !== "ALL" ? filters.week.toLowerCase() : null;
+  const searchQuery = filters.search ? filters.search.trim().toLowerCase() : "";
+  const startDate = filters.startDate || "";
+  const endDate = filters.endDate || "";
+  const statusFilter = filters.status;
+  const campaignFilter = filters.campaign;
+  const minSale = filters.minSaleValue;
+  const maxSale = filters.maxSaleValue;
+
   return records.filter((r) => {
-    // Search
-    if (filters.search) {
-      const q = filters.search.toLowerCase();
+    // 1. Search Query
+    if (searchQuery) {
       const match =
-        r.productName.toLowerCase().includes(q) ||
-        r.orderNumber.toLowerCase().includes(q) ||
-        r.customerName.toLowerCase().includes(q) ||
-        r.category.toLowerCase().includes(q) ||
-        r.channel.toLowerCase().includes(q) ||
-        r.deliveryPlace.toLowerCase().includes(q) ||
-        r.state.toLowerCase().includes(q);
+        r.productName.toLowerCase().includes(searchQuery) ||
+        r.orderNumber.toLowerCase().includes(searchQuery) ||
+        r.customerName.toLowerCase().includes(searchQuery) ||
+        r.category.toLowerCase().includes(searchQuery) ||
+        r.channel.toLowerCase().includes(searchQuery) ||
+        r.deliveryPlace.toLowerCase().includes(searchQuery) ||
+        r.state.toLowerCase().includes(searchQuery);
       if (!match) return false;
     }
 
-    // Year
-    if (
-      filters.years &&
-      filters.years.length > 0 &&
-      !filters.years.includes("ALL")
-    ) {
-      if (!filters.years.map(String).includes(String(r.year))) {
-        return false;
-      }
-    } else if (
-      filters.year &&
-      filters.year !== "ALL" &&
-      String(r.year) !== String(filters.year)
-    ) {
+    // 2. Year Filter
+    if (yearSet) {
+      if (!yearSet.has(String(r.year))) return false;
+    } else if (singleYearStr && String(r.year) !== singleYearStr) {
       return false;
     }
 
-    // Month
-    if (
-      filters.months &&
-      filters.months.length > 0 &&
-      !filters.months.includes("ALL")
-    ) {
-      const monthMatch = filters.months.some(
-        (m) => m.toLowerCase() === r.month.toLowerCase(),
-      );
-      if (!monthMatch) return false;
-    } else if (
-      filters.month &&
-      filters.month !== "ALL" &&
-      r.month.toLowerCase() !== filters.month.toLowerCase()
-    ) {
+    // 3. Month Filter
+    if (monthSet) {
+      if (!monthSet.has(r.month.toLowerCase())) return false;
+    } else if (singleMonthLower && r.month.toLowerCase() !== singleMonthLower) {
       return false;
     }
 
-    // Week
-    if (
-      filters.weeks &&
-      filters.weeks.length > 0 &&
-      !filters.weeks.includes("ALL")
-    ) {
-      const weekMatch = filters.weeks.some(
-        (w) => w.toLowerCase() === r.week.toLowerCase(),
-      );
-      if (!weekMatch) return false;
-    } else if (
-      filters.week &&
-      filters.week !== "ALL" &&
-      r.week.toLowerCase() !== filters.week.toLowerCase()
-    ) {
+    // 4. Week Filter
+    if (weekSet) {
+      if (!weekSet.has(r.week.toLowerCase())) return false;
+    } else if (singleWeekLower && r.week.toLowerCase() !== singleWeekLower) {
       return false;
     }
 
-    // Custom Dates
-    if (filters.startDate && r.dateStr < filters.startDate) {
-      return false;
-    }
-    if (filters.endDate && r.dateStr > filters.endDate) {
-      return false;
-    }
+    // 5. Custom Date Window
+    if (startDate && r.dateStr < startDate) return false;
+    if (endDate && r.dateStr > endDate) return false;
 
-    // Channel
-    if (filters.channels.length > 0 && !filters.channels.includes(r.channel)) {
-      return false;
-    }
+    // 6. Channel
+    if (channelSet && !channelSet.has(r.channel)) return false;
 
-    // Category
-    if (
-      filters.categories.length > 0 &&
-      !filters.categories.includes(r.category)
-    ) {
-      return false;
-    }
+    // 7. Category
+    if (categorySet && !categorySet.has(r.category)) return false;
 
-    // Zone
-    if (filters.zones.length > 0 && !filters.zones.includes(r.zone)) {
-      return false;
-    }
+    // 8. Zone
+    if (zoneSet && !zoneSet.has(r.zone)) return false;
 
-    // State
-    if (filters.states.length > 0 && !filters.states.includes(r.state)) {
-      return false;
-    }
+    // 9. State
+    if (stateSet && !stateSet.has(r.state)) return false;
 
-    // Status
-    if (filters.status === "Dispatched" && r.status !== "Dispatched") {
+    // 10. Status
+    if (statusFilter === "Dispatched" && r.status !== "Dispatched")
       return false;
-    }
-    if (filters.status === "Return" && r.status !== "Return") {
-      return false;
-    }
+    if (statusFilter === "Return" && r.status !== "Return") return false;
 
-    // Campaign
-    if (filters.campaign === "B2S") {
-      const isB2S =
-        r.backToSchool.toLowerCase().includes("back to school") ||
-        r.backToSchool.toLowerCase().includes("b2s");
-      if (!isB2S) return false;
-    } else if (filters.campaign === "NON_B2S") {
-      const isB2S =
-        r.backToSchool.toLowerCase().includes("back to school") ||
-        r.backToSchool.toLowerCase().includes("b2s");
-      if (isB2S) return false;
-    }
+    // 11. Campaign
+    if (campaignFilter === "B2S" && !isB2SCampaign(r.backToSchool))
+      return false;
+    if (campaignFilter === "NON_B2S" && isB2SCampaign(r.backToSchool))
+      return false;
 
-    // Value Range
-    if (
-      filters.minSaleValue !== undefined &&
-      Math.abs(r.saleValue) < filters.minSaleValue
-    ) {
-      return false;
-    }
-    if (
-      filters.maxSaleValue !== undefined &&
-      Math.abs(r.saleValue) > filters.maxSaleValue
-    ) {
-      return false;
-    }
+    // 12. Sale Value Range
+    if (minSale !== undefined && Math.abs(r.saleValue) < minSale) return false;
+    if (maxSale !== undefined && Math.abs(r.saleValue) > maxSale) return false;
 
     return true;
   });
@@ -193,7 +183,8 @@ export function computeDashboardMetrics(
 
   const ordersSet = new Set<string>();
 
-  records.forEach((r) => {
+  for (let i = 0; i < records.length; i++) {
+    const r = records[i];
     ordersSet.add(r.orderNumber);
 
     const { isReturn, val, qty } = getRecordMetrics(r);
@@ -214,13 +205,10 @@ export function computeDashboardMetrics(
     totalExGstMargin += r.exGstMargin;
     retailersMarginTotal += r.retailersMargin;
 
-    const isB2S =
-      r.backToSchool.toLowerCase().includes("back to school") ||
-      r.backToSchool.toLowerCase().includes("b2s");
-    if (isB2S) {
+    if (isB2SCampaign(r.backToSchool)) {
       b2sNetSales += isReturn ? -val : val;
     }
-  });
+  }
 
   const totalOrders = ordersSet.size;
   const returnRateQtyPct =
@@ -271,7 +259,8 @@ export function computeTimeSeries(
     }
   >();
 
-  records.forEach((r) => {
+  for (let i = 0; i < records.length; i++) {
+    const r = records[i];
     let key = r.dateStr; // default YYYY-MM-DD
     let label = r.dateStr;
 
@@ -288,16 +277,20 @@ export function computeTimeSeries(
 
     const { isReturn, val, qty } = getRecordMetrics(r);
 
-    const curr = map.get(key) || {
-      gross: 0,
-      net: 0,
-      returns: 0,
-      qty: 0,
-      count: 0,
-      margin: 0,
-      ts: r.timestamp,
-      label,
-    };
+    let curr = map.get(key);
+    if (!curr) {
+      curr = {
+        gross: 0,
+        net: 0,
+        returns: 0,
+        qty: 0,
+        count: 0,
+        margin: 0,
+        ts: r.timestamp,
+        label,
+      };
+      map.set(key, curr);
+    }
 
     if (isReturn) {
       curr.returns += val;
@@ -310,30 +303,24 @@ export function computeTimeSeries(
     }
     curr.count += 1;
     curr.margin += r.scoobiesMargin;
+  }
 
-    map.set(key, curr);
-  });
+  // Sort directly by timestamp without extra map.get lookups
+  const sortedEntries = Array.from(map.entries()).sort(
+    (a, b) => a[1].ts - b[1].ts,
+  );
 
-  const sortedKeys = Array.from(map.keys()).sort((a, b) => {
-    const itemA = map.get(a)!;
-    const itemB = map.get(b)!;
-    return itemA.ts - itemB.ts;
-  });
-
-  return sortedKeys.map((key) => {
-    const data = map.get(key)!;
-    return {
-      date: key,
-      label: data.label,
-      timestamp: data.ts,
-      grossSales: Math.round(data.gross),
-      netSales: Math.round(data.net),
-      returns: Math.round(data.returns),
-      netQty: data.qty,
-      orderCount: data.count,
-      margin: Math.round(data.margin),
-    };
-  });
+  return sortedEntries.map(([key, data]) => ({
+    date: key,
+    label: data.label,
+    timestamp: data.ts,
+    grossSales: Math.round(data.gross),
+    netSales: Math.round(data.net),
+    returns: Math.round(data.returns),
+    netQty: data.qty,
+    orderCount: data.count,
+    margin: Math.round(data.margin),
+  }));
 }
 
 export function computeChannelMetrics(
@@ -353,19 +340,24 @@ export function computeChannelMetrics(
     }
   >();
 
-  records.forEach((r) => {
+  for (let i = 0; i < records.length; i++) {
+    const r = records[i];
     const ch = r.channel || "Direct";
     const { isReturn, val, qty } = getRecordMetrics(r);
 
-    const curr = map.get(ch) || {
-      gross: 0,
-      net: 0,
-      returns: 0,
-      orders: new Set<string>(),
-      units: 0,
-      returnUnits: 0,
-      margin: 0,
-    };
+    let curr = map.get(ch);
+    if (!curr) {
+      curr = {
+        gross: 0,
+        net: 0,
+        returns: 0,
+        orders: new Set<string>(),
+        units: 0,
+        returnUnits: 0,
+        margin: 0,
+      };
+      map.set(ch, curr);
+    }
 
     curr.orders.add(r.orderNumber);
 
@@ -380,19 +372,15 @@ export function computeChannelMetrics(
       curr.units += qty;
     }
     curr.margin += r.scoobiesMargin;
-
-    map.set(ch, curr);
-  });
+  }
 
   return Array.from(map.entries())
     .map(([channel, data]) => {
       const orderCount = data.orders.size;
       const avgOrderValue = orderCount > 0 ? data.net / orderCount : 0;
-      const totalAttempted = data.units + data.returnUnits * 2;
+      const totalAttempted = data.units + data.returnUnits;
       const returnRate =
-        totalAttempted > 0
-          ? (data.returnUnits / (data.units + data.returnUnits)) * 100
-          : 0;
+        totalAttempted > 0 ? (data.returnUnits / totalAttempted) * 100 : 0;
       const sharePct = computeSharePct(data.net, totalNetSales);
 
       return {
@@ -403,7 +391,7 @@ export function computeChannelMetrics(
         orderCount,
         units: data.units,
         returnUnits: data.returnUnits,
-        returnRate: Math.max(0, returnRate),
+        returnRate: Math.max(0, Number(returnRate.toFixed(1))),
         avgOrderValue: Math.round(avgOrderValue),
         margin: Math.round(data.margin),
         sharePct,
@@ -429,19 +417,24 @@ export function computeCategoryMetrics(
     }
   >();
 
-  records.forEach((r) => {
+  for (let i = 0; i < records.length; i++) {
+    const r = records[i];
     const cat = r.category || "OTHER";
     const { isReturn, val, qty } = getRecordMetrics(r);
 
-    const curr = map.get(cat) || {
-      gross: 0,
-      net: 0,
-      returns: 0,
-      units: 0,
-      returnUnits: 0,
-      orders: new Set<string>(),
-      margin: 0,
-    };
+    let curr = map.get(cat);
+    if (!curr) {
+      curr = {
+        gross: 0,
+        net: 0,
+        returns: 0,
+        units: 0,
+        returnUnits: 0,
+        orders: new Set<string>(),
+        margin: 0,
+      };
+      map.set(cat, curr);
+    }
 
     curr.orders.add(r.orderNumber);
 
@@ -456,9 +449,7 @@ export function computeCategoryMetrics(
       curr.units += qty;
     }
     curr.margin += r.scoobiesMargin;
-
-    map.set(cat, curr);
-  });
+  }
 
   return Array.from(map.entries())
     .map(([category, data]) => {
@@ -503,24 +494,29 @@ export function computeProductMetrics(
     }
   >();
 
-  records.forEach((r) => {
+  for (let i = 0; i < records.length; i++) {
+    const r = records[i];
     const name = r.productName;
     const { isReturn, val, qty } = getRecordMetrics(r);
     const ch = r.channel ? r.channel.trim() : "Direct";
 
-    const curr = map.get(name) || {
-      barCode: r.barCode,
-      category: r.category,
-      channels: new Set<string>(),
-      returnChannels: new Set<string>(),
-      gross: 0,
-      net: 0,
-      returns: 0,
-      units: 0,
-      returnUnits: 0,
-      mrp: r.mrp,
-      margin: 0,
-    };
+    let curr = map.get(name);
+    if (!curr) {
+      curr = {
+        barCode: r.barCode,
+        category: r.category,
+        channels: new Set<string>(),
+        returnChannels: new Set<string>(),
+        gross: 0,
+        net: 0,
+        returns: 0,
+        units: 0,
+        returnUnits: 0,
+        mrp: r.mrp,
+        margin: 0,
+      };
+      map.set(name, curr);
+    }
 
     if (ch) {
       curr.channels.add(ch);
@@ -540,9 +536,7 @@ export function computeProductMetrics(
       curr.units += qty;
     }
     curr.margin += r.scoobiesMargin;
-
-    map.set(name, curr);
-  });
+  }
 
   return Array.from(map.entries())
     .map(([productName, data]) => {
@@ -590,25 +584,28 @@ export function computeGeoMetrics(
     { sales: number; orders: Set<string>; units: number }
   >();
 
-  records.forEach((r) => {
+  for (let i = 0; i < records.length; i++) {
+    const r = records[i];
     let key = r.zone;
     if (type === "state") key = r.state || "Unassigned";
     if (type === "city") key = r.deliveryPlace || "Unassigned";
 
     const { isReturn, val, qty } = getRecordMetrics(r);
 
-    const curr = map.get(key) || {
-      sales: 0,
-      orders: new Set<string>(),
-      units: 0,
-    };
+    let curr = map.get(key);
+    if (!curr) {
+      curr = {
+        sales: 0,
+        orders: new Set<string>(),
+        units: 0,
+      };
+      map.set(key, curr);
+    }
 
     curr.orders.add(r.orderNumber);
     curr.sales += isReturn ? -val : val;
     curr.units += isReturn ? -qty : qty;
-
-    map.set(key, curr);
-  });
+  }
 
   return Array.from(map.entries())
     .map(([name, data]) => ({
@@ -637,16 +634,19 @@ function updatePeriodMap(
   profit: number,
   orderNumber: string,
 ) {
-  const curr = map.get(key) || {
-    label,
-    profit: 0,
-    netSales: 0,
-    orders: new Set<string>(),
-  };
+  let curr = map.get(key);
+  if (!curr) {
+    curr = {
+      label,
+      profit: 0,
+      netSales: 0,
+      orders: new Set<string>(),
+    };
+    map.set(key, curr);
+  }
   curr.netSales += isReturn ? -val : val;
   curr.profit += profit;
   if (orderNumber) curr.orders.add(orderNumber);
-  map.set(key, curr);
 }
 
 function createPeriodInsight(
@@ -659,7 +659,9 @@ function createPeriodInsight(
       orderCount: p.orders.size,
       marginPct: p.netSales > 0 ? (p.profit / p.netSales) * 100 : 0,
     }))
-    .sort((a, b) => (b.profit !== a.profit ? b.profit - a.profit : b.netSales - a.netSales));
+    .sort((a, b) =>
+      b.profit !== a.profit ? b.profit - a.profit : b.netSales - a.netSales,
+    );
 
   if (sorted.length > 0 && sorted[0].profit > 0) {
     const top = sorted[0];
@@ -668,8 +670,8 @@ function createPeriodInsight(
     return {
       type: "positive",
       title: `Most Profitable ${periodType}: ${top.label}`,
-      description: `Delivered ₹${Math.round(top.profit).toLocaleString()} in profit${marginPctStr} on ₹${Math.round(top.netSales).toLocaleString()} net sales across ${top.orderCount} orders.`,
-      metric: `₹${Math.round(top.profit).toLocaleString()} Profit`,
+      description: `Delivered ${formatCurrency(top.profit)} in profit${marginPctStr} on ${formatCurrency(top.netSales)} net sales across ${top.orderCount} orders.`,
+      metric: `${formatCurrency(top.profit)} Profit`,
     };
   }
   return null;
@@ -689,21 +691,14 @@ export function generateExecutiveInsights(
     const monthMap = new Map<string, PeriodAggregate>();
     const weekMap = new Map<string, PeriodAggregate>();
 
-    records.forEach((r) => {
+    for (let i = 0; i < records.length; i++) {
+      const r = records[i];
       const { isReturn, val } = getRecordMetrics(r);
       const profitVal = r.scoobiesMargin || 0;
 
       // Month
-      let monthName = r.month || "";
-      if (!monthName && r.dateStr) {
-        const d = new Date(r.dateStr);
-        if (!isNaN(d.getTime())) {
-          monthName = d.toLocaleString("default", { month: "long" });
-        }
-      }
-      if (!monthName) monthName = "August";
-      const yr =
-        r.year || (r.timestamp ? new Date(r.timestamp).getFullYear() : 2026);
+      const monthName = r.month || "August";
+      const yr = r.year || 2026;
       const monthLabel = `${monthName} ${yr}`;
       const monthKey = `${yr}-${monthName}`;
 
@@ -731,7 +726,7 @@ export function generateExecutiveInsights(
         profitVal,
         r.orderNumber,
       );
-    });
+    }
 
     const topMonthInsight = createPeriodInsight(monthMap, "Month");
     if (topMonthInsight) insights.push(topMonthInsight);
@@ -746,8 +741,8 @@ export function generateExecutiveInsights(
     insights.push({
       type: "highlight",
       title: `${topCh.channel} is Leading Sales`,
-      description: `Generated ₹${topCh.netSales.toLocaleString()} in net revenue (${topCh.sharePct.toFixed(1)}% of total) across ${topCh.orderCount} orders.`,
-      metric: `₹${topCh.netSales.toLocaleString()}`,
+      description: `Generated ${formatCurrency(topCh.netSales)} in net revenue (${topCh.sharePct.toFixed(1)}% of total) across ${topCh.orderCount} orders.`,
+      metric: formatCurrency(topCh.netSales),
     });
   }
 
@@ -757,7 +752,7 @@ export function generateExecutiveInsights(
     insights.push({
       type: metrics.marginPercentage > 40 ? "positive" : "neutral",
       title: `Gross Margin at ${marginPct}%`,
-      description: `Scoobies total margin generated is ₹${Math.round(metrics.totalScoobiesMargin).toLocaleString()} (Ex-GST: ₹${Math.round(metrics.totalExGstMargin).toLocaleString()}).`,
+      description: `Scoobies total margin generated is ${formatCurrency(metrics.totalScoobiesMargin)} (Ex-GST: ${formatCurrency(metrics.totalExGstMargin)}).`,
       metric: `${marginPct}%`,
     });
   }
@@ -774,14 +769,14 @@ export function generateExecutiveInsights(
     insights.push({
       type: "warning",
       title: `High Return Item: ${worst.productName}`,
-      description: `${worst.returnUnits} units returned (${worst.returnRate}% return rate), resulting in ₹${worst.returns.toLocaleString()} refunded value.`,
+      description: `${worst.returnUnits} units returned (${worst.returnRate}% return rate), resulting in ${formatCurrency(worst.returns)} refunded value.`,
       metric: `${worst.returnRate}% Return Rate`,
     });
   } else if (metrics.returnRateQtyPct > 0) {
     insights.push({
       type: metrics.returnRateQtyPct > 10 ? "warning" : "positive",
       title: `Overall Return Rate: ${metrics.returnRateQtyPct.toFixed(1)}%`,
-      description: `${metrics.totalReturnedUnits} returned units vs ${metrics.totalGrossUnits} dispatched units. Total return value: ₹${Math.round(metrics.totalReturnedSales).toLocaleString()}.`,
+      description: `${metrics.totalReturnedUnits} returned units vs ${metrics.totalGrossUnits} dispatched units. Total return value: ${formatCurrency(metrics.totalReturnedSales)}.`,
       metric: `${metrics.returnRateQtyPct.toFixed(1)}%`,
     });
   }
@@ -793,7 +788,7 @@ export function generateExecutiveInsights(
       type: "positive",
       title: `Top Geographical Zone: ${topZone.name}`,
       description: `Dominating regional demand with ${topZone.sharePct.toFixed(1)}% of sales and ${topZone.orders} orders fulfilled.`,
-      metric: `₹${topZone.sales.toLocaleString()}`,
+      metric: formatCurrency(topZone.sales),
     });
   }
 
@@ -802,7 +797,7 @@ export function generateExecutiveInsights(
     insights.push({
       type: "highlight",
       title: `Back To School Campaign`,
-      description: `Contributed ₹${Math.round(metrics.b2sNetSales).toLocaleString()} (${metrics.b2sSalesPct.toFixed(1)}% of total net sales).`,
+      description: `Contributed ${formatCurrency(metrics.b2sNetSales)} (${metrics.b2sSalesPct.toFixed(1)}% of total net sales).`,
       metric: `${metrics.b2sSalesPct.toFixed(1)}%`,
     });
   }

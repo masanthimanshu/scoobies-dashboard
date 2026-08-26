@@ -6,6 +6,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { ExecutiveInsight } from "../types";
+import { formatNumber } from "../utils/formatters";
 
 interface ExecutiveSummaryProps {
   insights: ExecutiveInsight[];
@@ -55,7 +56,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({
             </h2>
             <p className="text-xs text-[#8C8376] font-medium">
               Actionable insights distilled from{" "}
-              {totalRecordsCount.toLocaleString()} transactions
+              {formatNumber(totalRecordsCount)} transactions
             </p>
           </div>
         </div>

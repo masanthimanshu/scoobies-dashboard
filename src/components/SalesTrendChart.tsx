@@ -12,6 +12,7 @@ import {
   Bar,
 } from "recharts";
 import { TimeSeriesPoint } from "../types";
+import { formatCurrency, formatNumber } from "../utils/formatters";
 
 interface SalesTrendChartProps {
   data: TimeSeriesPoint[];
@@ -25,6 +26,54 @@ interface CustomTooltipProps {
   label?: string;
 }
 
+const CustomTooltip: React.FC<CustomTooltipProps> = ({
+  active,
+  payload,
+  label,
+}) => {
+  if (active && payload && payload.length) {
+    const point: TimeSeriesPoint = payload[0].payload;
+    return (
+      <div className="bg-[#2D2A26] text-white p-3.5 rounded-2xl shadow-xl text-xs border border-[#433E37] min-w-[190px]">
+        <p className="font-extrabold text-[#F9F7F2] border-b border-[#433E37] pb-1.5 mb-2">
+          {point.label || label}
+        </p>
+        <div className="space-y-1.5 font-medium">
+          <div className="flex justify-between text-[#C5D5C7]">
+            <span>Net Sales:</span>
+            <span className="font-bold text-white">
+              {formatCurrency(point.netSales)}
+            </span>
+          </div>
+          <div className="flex justify-between text-[#CEC4B5]">
+            <span>Gross Dispatched:</span>
+            <span>{formatCurrency(point.grossSales)}</span>
+          </div>
+          {point.returns > 0 && (
+            <div className="flex justify-between text-[#E7AB79]">
+              <span>Returns:</span>
+              <span>-{formatCurrency(point.returns)}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-[#E7AB79] pt-1.5 border-t border-[#433E37]">
+            <span>Net Units Sold:</span>
+            <span className="font-bold">{formatNumber(point.netQty)}</span>
+          </div>
+          <div className="flex justify-between text-[#FAF0E6]">
+            <span>Scoobies Margin:</span>
+            <span>{formatCurrency(point.margin)}</span>
+          </div>
+          <div className="flex justify-between text-[#CEC4B5]">
+            <span>Orders:</span>
+            <span>{formatNumber(point.orderCount)}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 export const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
   data,
   granularity,
@@ -34,54 +83,6 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
   const [metricView, setMetricView] = useState<"revenue" | "units" | "margin">(
     "revenue",
   );
-
-  const CustomTooltip: React.FC<CustomTooltipProps> = ({
-    active,
-    payload,
-    label,
-  }) => {
-    if (active && payload && payload.length) {
-      const point: TimeSeriesPoint = payload[0].payload;
-      return (
-        <div className="bg-[#2D2A26] text-white p-3.5 rounded-2xl shadow-xl text-xs border border-[#433E37] min-w-[190px]">
-          <p className="font-extrabold text-[#F9F7F2] border-b border-[#433E37] pb-1.5 mb-2">
-            {point.label || label}
-          </p>
-          <div className="space-y-1.5 font-medium">
-            <div className="flex justify-between text-[#C5D5C7]">
-              <span>Net Sales:</span>
-              <span className="font-bold text-white">
-                ₹{point.netSales.toLocaleString()}
-              </span>
-            </div>
-            <div className="flex justify-between text-[#CEC4B5]">
-              <span>Gross Dispatched:</span>
-              <span>₹{point.grossSales.toLocaleString()}</span>
-            </div>
-            {point.returns > 0 && (
-              <div className="flex justify-between text-[#E7AB79]">
-                <span>Returns:</span>
-                <span>-₹{point.returns.toLocaleString()}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-[#E7AB79] pt-1.5 border-t border-[#433E37]">
-              <span>Net Units Sold:</span>
-              <span className="font-bold">{point.netQty.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between text-[#FAF0E6]">
-              <span>Scoobies Margin:</span>
-              <span>₹{point.margin.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between text-[#CEC4B5]">
-              <span>Orders:</span>
-              <span>{point.orderCount}</span>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <div className="bg-white border border-[#EBE5D9] rounded-[28px] p-6 shadow-sm mb-6">

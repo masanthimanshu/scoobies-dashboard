@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   X,
   SlidersHorizontal,
@@ -11,6 +11,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { FilterState } from "../types";
+import { isValidFilterOption } from "../utils/formatters";
 
 interface FilterBarProps {
   filters: FilterState;
@@ -38,14 +39,8 @@ const TimeFilterGroup: React.FC<TimeFilterGroupProps> = ({
   selectedItems,
   onToggle,
 }) => {
-  const validItems = items.filter(
-    (item) =>
-      item !== undefined &&
-      item !== null &&
-      item !== "" &&
-      item !== "#N/A" &&
-      item !== "N/A",
-  );
+  const validItems = useMemo(() => items.filter(isValidFilterOption), [items]);
+
   if (validItems.length === 0) return null;
 
   const showCompact = validItems.length <= 4;
@@ -67,7 +62,7 @@ const TimeFilterGroup: React.FC<TimeFilterGroupProps> = ({
         <button
           type="button"
           onClick={() => onToggle("ALL")}
-          className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
+          className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
             selectedItems.length === 0
               ? "bg-[#2D2A26] text-white shadow-2xs font-extrabold"
               : "text-[#8C8376] hover:text-[#2D2A26]"
@@ -86,7 +81,7 @@ const TimeFilterGroup: React.FC<TimeFilterGroupProps> = ({
               type="button"
               key={str}
               onClick={() => onToggle(str)}
-              className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
+              className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                 isSelected
                   ? "bg-[#5F7161] text-white shadow-2xs font-extrabold"
                   : "text-[#8C8376] hover:text-[#2D2A26]"
@@ -153,7 +148,7 @@ const TimeFilterGroup: React.FC<TimeFilterGroupProps> = ({
 
 interface FilterChipProps {
   label: string;
-  value: string;
+  value: string | number;
   onRemove: () => void;
   variant?: "green" | "brown" | "neutral";
 }
@@ -202,26 +197,29 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Multi-select derived arrays
-  const selectedYears =
-    filters.years && filters.years.length > 0
+  const selectedYears = useMemo(() => {
+    return filters.years && filters.years.length > 0
       ? filters.years
       : filters.year && filters.year !== "ALL"
         ? [filters.year]
         : [];
+  }, [filters.years, filters.year]);
 
-  const selectedMonths =
-    filters.months && filters.months.length > 0
+  const selectedMonths = useMemo(() => {
+    return filters.months && filters.months.length > 0
       ? filters.months
       : filters.month && filters.month !== "ALL"
         ? [filters.month]
         : [];
+  }, [filters.months, filters.month]);
 
-  const selectedWeeks =
-    filters.weeks && filters.weeks.length > 0
+  const selectedWeeks = useMemo(() => {
+    return filters.weeks && filters.weeks.length > 0
       ? filters.weeks
       : filters.week && filters.week !== "ALL"
         ? [filters.week]
         : [];
+  }, [filters.weeks, filters.week]);
 
   const toggleTimeFilter = (
     arrKey: "years" | "months" | "weeks",
@@ -278,27 +276,45 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     });
   };
 
-  const activeFilterCount =
-    selectedYears.length +
-    selectedMonths.length +
-    selectedWeeks.length +
-    (filters.startDate || filters.endDate ? 1 : 0) +
-    filters.channels.length +
-    filters.categories.length +
-    filters.zones.length +
-    filters.states.length +
-    (filters.status !== "ALL" ? 1 : 0) +
-    (filters.campaign !== "ALL" ? 1 : 0);
+  const activeFilterCount = useMemo(() => {
+    return (
+      selectedYears.length +
+      selectedMonths.length +
+      selectedWeeks.length +
+      (filters.startDate || filters.endDate ? 1 : 0) +
+      filters.channels.length +
+      filters.categories.length +
+      filters.zones.length +
+      filters.states.length +
+      (filters.status !== "ALL" ? 1 : 0) +
+      (filters.campaign !== "ALL" ? 1 : 0)
+    );
+  }, [
+    selectedYears.length,
+    selectedMonths.length,
+    selectedWeeks.length,
+    filters.startDate,
+    filters.endDate,
+    filters.channels.length,
+    filters.categories.length,
+    filters.zones.length,
+    filters.states.length,
+    filters.status,
+    filters.campaign,
+  ]);
 
-  // Filter out invalid/empty strings for clean UI
-  const validZones = availableZones.filter(
-    (z) => z && z !== "#N/A" && z !== "N/A",
+  // Memoize valid filter option lists
+  const validZones = useMemo(
+    () => availableZones.filter(isValidFilterOption),
+    [availableZones],
   );
-  const validChannels = availableChannels.filter(
-    (c) => c && c !== "#N/A" && c !== "N/A",
+  const validChannels = useMemo(
+    () => availableChannels.filter(isValidFilterOption),
+    [availableChannels],
   );
-  const validCategories = availableCategories.filter(
-    (c) => c && c !== "#N/A" && c !== "N/A",
+  const validCategories = useMemo(
+    () => availableCategories.filter(isValidFilterOption),
+    [availableCategories],
   );
 
   return (
@@ -338,7 +354,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               <button
                 type="button"
                 onClick={() => onFilterChange({ ...filters, status: "ALL" })}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   filters.status === "ALL"
                     ? "bg-white text-[#2D2A26] shadow-2xs font-extrabold"
                     : "text-[#8C8376] hover:text-[#2D2A26]"
@@ -351,7 +367,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 onClick={() =>
                   onFilterChange({ ...filters, status: "Dispatched" })
                 }
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   filters.status === "Dispatched"
                     ? "bg-[#5F7161] text-white shadow-2xs"
                     : "text-[#8C8376] hover:text-[#2D2A26]"
@@ -362,7 +378,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               <button
                 type="button"
                 onClick={() => onFilterChange({ ...filters, status: "Return" })}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   filters.status === "Return"
                     ? "bg-[#AF8260] text-white shadow-2xs"
                     : "text-[#8C8376] hover:text-[#2D2A26]"
@@ -601,7 +617,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               label="Year"
               value={yr}
               onRemove={() =>
-                toggleTimeFilter("years", "year", selectedYears, yr)
+                toggleTimeFilter("years", "year", selectedYears, String(yr))
               }
             />
           ))}
@@ -671,9 +687,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           {filters.campaign !== "ALL" && (
             <FilterChip
               label="Campaign"
-              value={
-                filters.campaign === "B2S" ? "Back To School" : "Standard"
-              }
+              value={filters.campaign === "B2S" ? "Back To School" : "Standard"}
               variant="brown"
               onRemove={() => onFilterChange({ ...filters, campaign: "ALL" })}
             />

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Target, X, Check } from "lucide-react";
+import { formatCurrency } from "../utils/formatters";
 
 interface GoalModalProps {
   isOpen: boolean;
@@ -38,6 +39,10 @@ export const GoalModal: React.FC<GoalModalProps> = ({
     { label: "₹75 Lakh", value: 7500000 },
     { label: "₹1 Crore", value: 10000000 },
   ];
+
+  const numericGoal = Number(goalInput) || 0;
+  const achievementPct =
+    numericGoal > 0 ? (currentMargin / numericGoal) * 100 : 0;
 
   return (
     <div
@@ -119,29 +124,20 @@ export const GoalModal: React.FC<GoalModalProps> = ({
             <div className="flex justify-between font-bold text-[#2D2A26] mb-1">
               <span>Margin Achievement:</span>
               <span className="text-[#5F7161]">
-                {goalInput && Number(goalInput) > 0
-                  ? `${((currentMargin / Number(goalInput)) * 100).toFixed(1)}%`
-                  : "0%"}
+                {numericGoal > 0 ? `${achievementPct.toFixed(1)}%` : "0%"}
               </span>
             </div>
             <div className="w-full h-2 bg-[#EBE5D9] rounded-full overflow-hidden">
               <div
                 className="h-full bg-[#AF8260] rounded-full"
                 style={{
-                  width: `${Math.min(
-                    100,
-                    goalInput && Number(goalInput) > 0
-                      ? (currentMargin / Number(goalInput)) * 100
-                      : 0,
-                  )}%`,
+                  width: `${Math.min(100, achievementPct)}%`,
                 }}
               />
             </div>
             <div className="flex justify-between text-[11px] text-[#8C8376] mt-1.5 font-medium">
-              <span>
-                Current Margin: ₹{Math.round(currentMargin).toLocaleString()}
-              </span>
-              <span>Target: ₹{Number(goalInput || 0).toLocaleString()}</span>
+              <span>Current Margin: {formatCurrency(currentMargin)}</span>
+              <span>Target: {formatCurrency(numericGoal)}</span>
             </div>
           </div>
 
