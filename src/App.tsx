@@ -14,6 +14,8 @@ import { OrdersTable } from "./components/OrdersTable";
 import { UploadModal } from "./components/UploadModal";
 import { GoalModal } from "./components/GoalModal";
 import { PrintReportView } from "./components/PrintReportView";
+import { AiFloatingButton } from "./components/AiFloatingButton";
+import { AiAdvisorDrawer } from "./components/AiAdvisorDrawer";
 
 import { INITIAL_CSV_DATA } from "./data/sampleCsv";
 import { parseSalesCsv } from "./utils/csvParser";
@@ -27,6 +29,7 @@ import {
   computeGeoMetrics,
   generateExecutiveInsights,
 } from "./utils/analytics";
+import { buildDistilledContext } from "./utils/aiContextDistiller";
 import { SaleRecord, FilterState } from "./types";
 
 const DEFAULT_FILTERS: FilterState = {
@@ -37,7 +40,6 @@ const DEFAULT_FILTERS: FilterState = {
   months: [],
   week: "ALL",
   weeks: [],
-  dateRangePreset: "ALL",
   startDate: "",
   endDate: "",
   channels: [],
@@ -57,10 +59,24 @@ export default function App() {
   >("daily");
   const [salesTarget, setSalesTarget] = useState<number>(2500000); // default ₹25 Lakh target
 
-  // Modals
+  // Modals & Drawers
   const [isUploadOpen, setIsUploadOpen] = useState<boolean>(false);
   const [isGoalOpen, setIsGoalOpen] = useState<boolean>(false);
   const [isPrintOpen, setIsPrintOpen] = useState<boolean>(false);
+  const [isAiDrawerOpen, setIsAiDrawerOpen] = useState<boolean>(false);
+  const [aiInitialPrompt, setAiInitialPrompt] = useState<string | null>(null);
+
+  // Global Keyboard Shortcut (⌘J or Ctrl+J to toggle AI panel)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j") {
+        e.preventDefault();
+        setIsAiDrawerOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Load default dataset on mount
   useEffect(() => {
@@ -228,6 +244,40 @@ export default function App() {
     filteredRecords,
   ]);
 
+  // Distilled context for Groq GPT OSS 120B
+  const distilledContext = useMemo(() => {
+    return buildDistilledContext(
+      filteredRecords,
+      metrics,
+      channelMetrics,
+      categoryMetrics,
+      productMetrics,
+      zoneMetrics,
+      stateMetrics,
+      timeSeriesData,
+      salesTarget,
+      filters,
+      fileName,
+    );
+  }, [
+    filteredRecords,
+    metrics,
+    channelMetrics,
+    categoryMetrics,
+    productMetrics,
+    zoneMetrics,
+    stateMetrics,
+    timeSeriesData,
+    salesTarget,
+    filters,
+    fileName,
+  ]);
+
+  const handleOpenAiDeepDive = (prompt?: string) => {
+    if (prompt) setAiInitialPrompt(prompt);
+    setIsAiDrawerOpen(true);
+  };
+
   // Export Filtered CSV
   const handleExportFilteredCsv = () => {
     if (filteredRecords.length === 0) return;
@@ -305,6 +355,7 @@ export default function App() {
         <ExecutiveSummary
           insights={executiveInsights}
           totalRecordsCount={filteredRecords.length}
+          onOpenAiDeepDive={handleOpenAiDeepDive}
         />
 
         {/* Basket Size & AOV across Channels */}
@@ -375,6 +426,23 @@ export default function App() {
         cities={cityMetrics}
         fileName={fileName}
         totalRecordsCount={filteredRecords.length}
+      />
+
+      {/* Floating Action Button (Bottom-Right) */}
+      <AiFloatingButton
+        isOpen={isAiDrawerOpen}
+        onClick={() => setIsAiDrawerOpen(true)}
+        filteredCount={filteredRecords.length}
+      />
+
+      {/* Right Slide-over AI Advisor Drawer */}
+      <AiAdvisorDrawer
+        isOpen={isAiDrawerOpen}
+        onClose={() => setIsAiDrawerOpen(false)}
+        distilledContext={distilledContext}
+        rawRecords={filteredRecords}
+        initialPrompt={aiInitialPrompt}
+        onClearInitialPrompt={() => setAiInitialPrompt(null)}
       />
     </div>
   );

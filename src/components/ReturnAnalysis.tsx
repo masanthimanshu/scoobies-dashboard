@@ -37,7 +37,6 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
   const [sortBy, setSortBy] = useState<"units" | "value" | "rate" | "name">(
     "units",
   );
-  const [sortDirection] = useState<"desc" | "asc">("desc");
   const [showAllReturns, setShowAllReturns] = useState(false);
 
   // Channels with return metrics for the breakdown cards (only channels with returns)
@@ -194,16 +193,12 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = ({
 
     // Sort
     return [...list].sort((a, b) => {
-      let comp = 0;
-      if (sortBy === "units") comp = b.returnUnits - a.returnUnits;
-      else if (sortBy === "value") comp = b.returns - a.returns;
-      else if (sortBy === "rate") comp = b.returnRate - a.returnRate;
-      else if (sortBy === "name")
-        comp = a.productName.localeCompare(b.productName);
-
-      return sortDirection === "desc" ? comp : -comp;
+      if (sortBy === "units") return b.returnUnits - a.returnUnits;
+      if (sortBy === "value") return b.returns - a.returns;
+      if (sortBy === "rate") return b.returnRate - a.returnRate;
+      return a.productName.localeCompare(b.productName);
     });
-  }, [channelScopedReturnedProducts, searchTerm, sortBy, sortDirection]);
+  }, [channelScopedReturnedProducts, searchTerm, sortBy]);
 
   const displayedProducts = showAllReturns
     ? filteredReturnedProducts

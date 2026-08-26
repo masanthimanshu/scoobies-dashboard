@@ -5,16 +5,12 @@ export interface ParseResult {
   records: SaleRecord[];
   errors: string[];
   totalRows: number;
-  years: number[];
-  channels: string[];
-  categories: string[];
-  zones: string[];
 }
 
 /**
  * Normalizes number fields from diverse formats (e.g., "  1,829.66 ", " - ", "-329.03", "₹1,200", etc.)
  */
-export function cleanNumber(val: unknown, defaultVal = 0): number {
+function cleanNumber(val: unknown, defaultVal = 0): number {
   if (val === undefined || val === null) return defaultVal;
   if (typeof val === "number") return isNaN(val) ? defaultVal : val;
   const str = String(val).trim().replace(/[₹$,]/g, "");
@@ -27,7 +23,7 @@ export function cleanNumber(val: unknown, defaultVal = 0): number {
  * Normalizes date to parse year, month, day and timestamp safely.
  * Accepts formats: D/M/YYYY, DD/MM/YYYY, YYYY-MM-DD, M/D/YYYY, etc.
  */
-export function parseDateComponents(
+function parseDateComponents(
   dateStr: string,
   yearHint?: number,
   monthHint?: string,
@@ -96,7 +92,7 @@ export function parseDateComponents(
 /**
  * Normalizes strings by trimming and stripping null / error values.
  */
-export function cleanString(val: unknown, fallback = ""): string {
+function cleanString(val: unknown, fallback = ""): string {
   if (val === null || val === undefined) return fallback;
   const s = String(val).trim();
   if (
@@ -150,10 +146,6 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
       complete: (results) => {
         const records: SaleRecord[] = [];
         const errors: string[] = [];
-        const yearsSet = new Set<number>();
-        const channelsSet = new Set<string>();
-        const categoriesSet = new Set<string>();
-        const zonesSet = new Set<string>();
 
         results.data.forEach((row, idx) => {
           try {
@@ -227,10 +219,6 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
             const mrp = cleanNumber(
               findValue(row, ["MRP", "Mrp", "Price", "Unit Price"]),
               0,
-            );
-            const mrpValue = cleanNumber(
-              findValue(row, ["MRP Value", "MRP_Value", "Total MRP"]),
-              qty * mrp,
             );
 
             const scoobiesMargin = cleanNumber(
@@ -340,7 +328,6 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
               category: category.toUpperCase(),
               qty,
               mrp,
-              mrpValue,
               scoobiesMargin,
               retailersMargin,
               exGstMargin,
@@ -354,10 +341,6 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
             };
 
             records.push(record);
-            if (record.year) yearsSet.add(record.year);
-            if (record.channel) channelsSet.add(record.channel);
-            if (record.category) categoriesSet.add(record.category);
-            if (record.zone) zonesSet.add(record.zone);
           } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
             errors.push(`Row ${idx + 1}: ${msg}`);
@@ -368,10 +351,6 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
           records,
           errors,
           totalRows: records.length,
-          years: Array.from(yearsSet).sort((a, b) => b - a),
-          channels: Array.from(channelsSet).sort(),
-          categories: Array.from(categoriesSet).sort(),
-          zones: Array.from(zonesSet).sort(),
         });
       },
     });

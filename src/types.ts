@@ -14,7 +14,6 @@ export interface SaleRecord {
   category: string;
   qty: number;
   mrp: number;
-  mrpValue: number;
   scoobiesMargin: number;
   retailersMargin: number;
   exGstMargin: number;
@@ -35,7 +34,6 @@ export interface FilterState {
   months: string[]; // multi-select array e.g. ['August', 'September'] (empty = all)
   week: string; // 'ALL' or specific week like 'Week 1'
   weeks: string[]; // multi-select array e.g. ['Week 1', 'Week 2'] (empty = all)
-  dateRangePreset: "ALL" | "7D" | "15D" | "30D" | "MTD" | "YTD" | "CUSTOM";
   startDate: string; // YYYY-MM-DD
   endDate: string; // YYYY-MM-DD
   channels: string[]; // empty = all
@@ -65,19 +63,11 @@ export interface DashboardMetrics {
   retailersMarginTotal: number;
   b2sNetSales: number;
   b2sSalesPct: number;
-  uniqueCustomers: number;
-  uniqueProducts: number;
-  uniqueStates: number;
-  topChannel: { name: string; sales: number; share: number };
-  topCategory: { name: string; sales: number; share: number };
-  topProduct: { name: string; sales: number; units: number };
-  topZone: { name: string; sales: number; share: number };
 }
 
 export interface TimeSeriesPoint {
   date: string;
   label: string;
-  rawDate: string;
   timestamp: number;
   grossSales: number;
   netSales: number;
@@ -145,5 +135,4 @@ export interface ExecutiveInsight {
   title: string;
   description: string;
   metric?: string;
-  iconName?: string;
 }

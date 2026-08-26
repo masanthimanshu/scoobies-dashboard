@@ -192,20 +192,9 @@ export function computeDashboardMetrics(
   let b2sNetSales = 0;
 
   const ordersSet = new Set<string>();
-  const customersSet = new Set<string>();
-  const productsSet = new Set<string>();
-  const statesSet = new Set<string>();
-
-  const channelMap = new Map<string, number>();
-  const categoryMap = new Map<string, number>();
-  const productMap = new Map<string, { sales: number; units: number }>();
-  const zoneMap = new Map<string, number>();
 
   records.forEach((r) => {
     ordersSet.add(r.orderNumber);
-    if (r.customerName) customersSet.add(r.customerName);
-    if (r.productName) productsSet.add(r.productName);
-    if (r.state) statesSet.add(r.state);
 
     const { isReturn, val, qty } = getRecordMetrics(r);
 
@@ -231,28 +220,6 @@ export function computeDashboardMetrics(
     if (isB2S) {
       b2sNetSales += isReturn ? -val : val;
     }
-
-    // Channel Aggregation
-    channelMap.set(
-      r.channel,
-      (channelMap.get(r.channel) || 0) + (isReturn ? -val : val),
-    );
-
-    // Category Aggregation
-    categoryMap.set(
-      r.category,
-      (categoryMap.get(r.category) || 0) + (isReturn ? -val : val),
-    );
-
-    // Product Aggregation
-    const prodCurr = productMap.get(r.productName) || { sales: 0, units: 0 };
-    productMap.set(r.productName, {
-      sales: prodCurr.sales + (isReturn ? -val : val),
-      units: prodCurr.units + (isReturn ? -qty : qty),
-    });
-
-    // Zone Aggregation
-    zoneMap.set(r.zone, (zoneMap.get(r.zone) || 0) + (isReturn ? -val : val));
   });
 
   const totalOrders = ordersSet.size;
@@ -265,37 +232,6 @@ export function computeDashboardMetrics(
     totalNetSales > 0 ? (totalScoobiesMargin / totalNetSales) * 100 : 0;
   const b2sSalesPct =
     totalNetSales > 0 ? (Math.max(0, b2sNetSales) / totalNetSales) * 100 : 0;
-
-  // Find Tops
-  let topChannel = { name: "N/A", sales: 0, share: 0 };
-  channelMap.forEach((sales, name) => {
-    if (sales > topChannel.sales) topChannel = { name, sales, share: 0 };
-  });
-  if (totalNetSales > 0) {
-    topChannel.share = computeSharePct(topChannel.sales, totalNetSales);
-  }
-
-  let topCategory = { name: "N/A", sales: 0, share: 0 };
-  categoryMap.forEach((sales, name) => {
-    if (sales > topCategory.sales) topCategory = { name, sales, share: 0 };
-  });
-  if (totalNetSales > 0) {
-    topCategory.share = computeSharePct(topCategory.sales, totalNetSales);
-  }
-
-  let topProduct = { name: "N/A", sales: 0, units: 0 };
-  productMap.forEach((data, name) => {
-    if (data.sales > topProduct.sales)
-      topProduct = { name, sales: data.sales, units: data.units };
-  });
-
-  let topZone = { name: "N/A", sales: 0, share: 0 };
-  zoneMap.forEach((sales, name) => {
-    if (sales > topZone.sales) topZone = { name, sales, share: 0 };
-  });
-  if (totalNetSales > 0) {
-    topZone.share = computeSharePct(topZone.sales, totalNetSales);
-  }
 
   return {
     totalGrossSales,
@@ -314,13 +250,6 @@ export function computeDashboardMetrics(
     retailersMarginTotal,
     b2sNetSales,
     b2sSalesPct,
-    uniqueCustomers: customersSet.size,
-    uniqueProducts: productsSet.size,
-    uniqueStates: statesSet.size,
-    topChannel,
-    topCategory,
-    topProduct,
-    topZone,
   };
 }
 
@@ -396,7 +325,6 @@ export function computeTimeSeries(
     return {
       date: key,
       label: data.label,
-      rawDate: key,
       timestamp: data.ts,
       grossSales: Math.round(data.gross),
       netSales: Math.round(data.net),
@@ -825,7 +753,6 @@ export function generateExecutiveInsights(
         title: `Most Profitable Month: ${topMonth.label}`,
         description: `Delivered ₹${Math.round(topMonth.profit).toLocaleString()} in profit${marginPctStr} on ₹${Math.round(topMonth.netSales).toLocaleString()} net sales across ${topMonth.orderCount} orders.`,
         metric: `₹${Math.round(topMonth.profit).toLocaleString()} Profit`,
-        iconName: "Calendar",
       });
     }
 
@@ -852,7 +779,6 @@ export function generateExecutiveInsights(
         title: `Most Profitable Week: ${topWeek.label}`,
         description: `Delivered ₹${Math.round(topWeek.profit).toLocaleString()} in profit${marginPctStr} on ₹${Math.round(topWeek.netSales).toLocaleString()} net sales across ${topWeek.orderCount} orders.`,
         metric: `₹${Math.round(topWeek.profit).toLocaleString()} Profit`,
-        iconName: "TrendingUp",
       });
     }
   }
@@ -865,7 +791,6 @@ export function generateExecutiveInsights(
       title: `${topCh.channel} is Leading Sales`,
       description: `Generated ₹${topCh.netSales.toLocaleString()} in net revenue (${topCh.sharePct.toFixed(1)}% of total) across ${topCh.orderCount} orders.`,
       metric: `₹${topCh.netSales.toLocaleString()}`,
-      iconName: "TrendingUp",
     });
   }
 
@@ -877,7 +802,6 @@ export function generateExecutiveInsights(
       title: `Gross Margin at ${marginPct}%`,
       description: `Scoobies total margin generated is ₹${Math.round(metrics.totalScoobiesMargin).toLocaleString()} (Ex-GST: ₹${Math.round(metrics.totalExGstMargin).toLocaleString()}).`,
       metric: `${marginPct}%`,
-      iconName: "Percent",
     });
   }
 
@@ -895,7 +819,6 @@ export function generateExecutiveInsights(
       title: `High Return Item: ${worst.productName}`,
       description: `${worst.returnUnits} units returned (${worst.returnRate}% return rate), resulting in ₹${worst.returns.toLocaleString()} refunded value.`,
       metric: `${worst.returnRate}% Return Rate`,
-      iconName: "AlertTriangle",
     });
   } else if (metrics.returnRateQtyPct > 0) {
     insights.push({
@@ -903,7 +826,6 @@ export function generateExecutiveInsights(
       title: `Overall Return Rate: ${metrics.returnRateQtyPct.toFixed(1)}%`,
       description: `${metrics.totalReturnedUnits} returned units vs ${metrics.totalGrossUnits} dispatched units. Total return value: ₹${Math.round(metrics.totalReturnedSales).toLocaleString()}.`,
       metric: `${metrics.returnRateQtyPct.toFixed(1)}%`,
-      iconName: "RotateCcw",
     });
   }
 
@@ -915,7 +837,6 @@ export function generateExecutiveInsights(
       title: `Top Geographical Zone: ${topZone.name}`,
       description: `Dominating regional demand with ${topZone.sharePct.toFixed(1)}% of sales and ${topZone.orders} orders fulfilled.`,
       metric: `₹${topZone.sales.toLocaleString()}`,
-      iconName: "MapPin",
     });
   }
 
@@ -926,7 +847,6 @@ export function generateExecutiveInsights(
       title: `Back To School Campaign`,
       description: `Contributed ₹${Math.round(metrics.b2sNetSales).toLocaleString()} (${metrics.b2sSalesPct.toFixed(1)}% of total net sales).`,
       metric: `${metrics.b2sSalesPct.toFixed(1)}%`,
-      iconName: "Sparkles",
     });
   }
 

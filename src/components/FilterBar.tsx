@@ -147,7 +147,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       months: [],
       week: "ALL",
       weeks: [],
-      dateRangePreset: "ALL",
       startDate: "",
       endDate: "",
       channels: [],

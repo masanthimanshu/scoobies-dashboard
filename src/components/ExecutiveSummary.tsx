@@ -10,11 +10,13 @@ import { ExecutiveInsight } from "../types";
 interface ExecutiveSummaryProps {
   insights: ExecutiveInsight[];
   totalRecordsCount: number;
+  onOpenAiDeepDive?: (prompt?: string) => void;
 }
 
 export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({
   insights,
   totalRecordsCount,
+  onOpenAiDeepDive,
 }) => {
   if (insights.length === 0) return null;
 
@@ -35,9 +37,26 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({
             </p>
           </div>
         </div>
-        <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-[#E9EFEA] text-[#5F7161] border border-[#C5D5C7] self-start sm:self-auto">
-          Team Focus Items
-        </span>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          {onOpenAiDeepDive && (
+            <button
+              type="button"
+              onClick={() =>
+                onOpenAiDeepDive(
+                  "Review our Executive Highlights and provide a detailed strategic analysis of our key revenue drivers, margin health, and top recommendations for Scoobies.",
+                )
+              }
+              className="inline-flex items-center gap-1.5 px-3 py-1 text-[11px] font-bold rounded-full bg-[#5F7161] hover:bg-[#4E5E50] text-white shadow-xs transition-colors cursor-pointer"
+              title="Run AI Strategic Deep Dive (⌘J)"
+            >
+              <Sparkles className="w-3 h-3 text-amber-200" />
+              <span>AI Deep Dive</span>
+            </button>
+          )}
+          <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-[#E9EFEA] text-[#5F7161] border border-[#C5D5C7]">
+            Team Focus Items
+          </span>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
