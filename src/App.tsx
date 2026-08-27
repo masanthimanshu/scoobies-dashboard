@@ -6,7 +6,7 @@ import {
   lazy,
   Suspense,
 } from "react";
-import { UploadCloud } from "lucide-react";
+import { UploadCloud, Database } from "lucide-react";
 import { Navbar } from "./components/Navbar";
 import { FilterBar } from "./components/FilterBar";
 import { KpiGrid } from "./components/KpiGrid";
@@ -46,6 +46,11 @@ import {
 import { buildDistilledContext } from "./utils/aiContextDistiller";
 import { exportRecordsToCsv } from "./utils/csvParser";
 import {
+  saveSalesDataset,
+  loadSalesDataset,
+  clearSalesDataset,
+} from "./utils/indexedDb";
+import {
   isValidFilterOption,
   sortMonthList,
   sortWeekList,
@@ -78,6 +83,31 @@ export default function App() {
     "daily" | "weekly" | "monthly" | "yearly"
   >("daily");
   const [salesTarget, setSalesTarget] = useState<number>(2500000); // default ₹25 Lakh target
+  const [isLoadingStoredData, setIsLoadingStoredData] = useState<boolean>(true);
+
+  // Restore dataset from IndexedDB on startup
+  useEffect(() => {
+    let isMounted = true;
+    loadSalesDataset()
+      .then((cached) => {
+        if (isMounted && cached && cached.records.length > 0) {
+          setRecords(cached.records);
+          setFileName(cached.fileName);
+        }
+      })
+      .catch((err) => {
+        console.warn("Failed to load cached dataset from IndexedDB:", err);
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoadingStoredData(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Modals & Drawers
   const [isUploadOpen, setIsUploadOpen] = useState<boolean>(false);
@@ -98,18 +128,30 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const handleClearData = useCallback(() => {
+  const handleClearData = useCallback(async () => {
     setRecords([]);
     setFileName("");
     setFilters(DEFAULT_FILTERS);
+    try {
+      localStorage.removeItem("scoobies_ai_chat_history");
+      await clearSalesDataset();
+    } catch (err) {
+      console.error("Failed to clear dataset from IndexedDB:", err);
+    }
   }, []);
 
   const handleNewDataLoaded = useCallback(
-    (newRecords: SaleRecord[], uploadedName: string) => {
+    async (newRecords: SaleRecord[], uploadedName: string) => {
       setRecords(newRecords);
       setFileName(uploadedName);
       setFilters(DEFAULT_FILTERS);
       setGranularity("daily");
+      try {
+        // Overwrites and completely replaces any previous IndexedDB store
+        await saveSalesDataset(newRecords, uploadedName);
+      } catch (err) {
+        console.error("Failed to persist dataset to IndexedDB:", err);
+      }
     },
     [],
   );
@@ -265,8 +307,23 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Loading Cached Dataset Indicator */}
+        {isLoadingStoredData && (
+          <div className="bg-white border border-[#EBE5D9] rounded-[32px] p-8 sm:p-12 mb-8 text-center shadow-xs flex flex-col items-center justify-center animate-pulse">
+            <div className="w-14 h-14 rounded-3xl bg-[#E9EFEA] text-[#5F7161] flex items-center justify-center mb-4 border border-[#C5D5C7]">
+              <Database className="w-7 h-7 animate-bounce" />
+            </div>
+            <h3 className="text-lg font-black text-[#2D2A26] tracking-tight mb-1">
+              Restoring Sales Workspace...
+            </h3>
+            <p className="text-xs text-[#8C8376] font-medium">
+              Loading cached dataset from browser IndexedDB storage
+            </p>
+          </div>
+        )}
+
         {/* Empty State Banner when no dataset is loaded */}
-        {records.length === 0 && (
+        {!isLoadingStoredData && records.length === 0 && (
           <div className="bg-white border-2 border-dashed border-[#5F7161]/30 rounded-[32px] p-8 sm:p-12 mb-8 text-center shadow-xs">
             <div className="max-w-md mx-auto flex flex-col items-center">
               <div className="w-16 h-16 rounded-3xl bg-[#E9EFEA] text-[#5F7161] flex items-center justify-center mb-4 shadow-inner border border-[#C5D5C7]">

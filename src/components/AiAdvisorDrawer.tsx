@@ -4,15 +4,13 @@ import {
   X,
   Send,
   RotateCcw,
+  Share2,
   Copy,
   Check,
   Bot,
   User,
-  Zap,
   TrendingUp,
   AlertTriangle,
-  Target,
-  Layers,
   StopCircle,
   Mic,
   Square,
@@ -38,6 +36,7 @@ import {
   formatNumber,
   formatPercent,
 } from "../utils/formatters";
+import { ShareChatModal } from "./ShareChatModal";
 
 // Configure marked with GitHub Flavored Markdown and line breaks
 marked.setOptions({
@@ -54,6 +53,8 @@ interface AiAdvisorDrawerProps {
   onClearInitialPrompt?: () => void;
 }
 
+const CHAT_STORAGE_KEY = "scoobies_ai_chat_history";
+
 export const AiAdvisorDrawer: React.FC<AiAdvisorDrawerProps> = ({
   isOpen,
   onClose,
@@ -62,11 +63,38 @@ export const AiAdvisorDrawer: React.FC<AiAdvisorDrawerProps> = ({
   initialPrompt,
   onClearInitialPrompt,
 }) => {
-  // Chat state
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  // Chat state initialized from localStorage
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    try {
+      const saved = localStorage.getItem(CHAT_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to load chat history from localStorage:", e);
+    }
+    return [];
+  });
   const [inputQuery, setInputQuery] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
+  // Sync messages to localStorage whenever conversation updates
+  useEffect(() => {
+    try {
+      if (messages.length > 0) {
+        localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
+      } else {
+        localStorage.removeItem(CHAT_STORAGE_KEY);
+      }
+    } catch (e) {
+      console.warn("Failed to persist chat history to localStorage:", e);
+    }
+  }, [messages]);
 
   // Audio Recording & STT state
   const [isRecording, setIsRecording] = useState(false);
@@ -82,7 +110,15 @@ export const AiAdvisorDrawer: React.FC<AiAdvisorDrawerProps> = ({
   // Abort controller ref for cancellation
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize textarea height as content expands
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 160)}px`;
+    }
+  }, [inputQuery]);
 
   // Clean up audio streams and timers on unmount or drawer close
   useEffect(() => {
@@ -133,7 +169,7 @@ Key Metrics: Net Sales ${formatCurrency(distilledContext.kpis.netSales)}, Margin
   // Focus input on open
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 150);
+      setTimeout(() => textareaRef.current?.focus(), 150);
     }
   }, [isOpen]);
 
@@ -169,6 +205,11 @@ Key Metrics: Net Sales ${formatCurrency(distilledContext.kpis.netSales)}, Margin
   const handleClearChat = () => {
     handleStop();
     setMessages([]);
+    try {
+      localStorage.removeItem(CHAT_STORAGE_KEY);
+    } catch (e) {
+      console.warn("Failed to remove chat history from localStorage:", e);
+    }
   };
 
   // Start Speech-to-Text recording
@@ -233,7 +274,7 @@ Key Metrics: Net Sales ${formatCurrency(distilledContext.kpis.netSales)}, Margin
             setInputQuery((prev) =>
               prev.trim() ? `${prev.trim()} ${refinedPrompt}` : refinedPrompt,
             );
-            setTimeout(() => inputRef.current?.focus(), 100);
+            setTimeout(() => textareaRef.current?.focus(), 100);
           }
         } catch (err: unknown) {
           const msg =
@@ -382,33 +423,6 @@ Ensure \`GROQ_API_KEY\` is defined in your \`.env\` file to enable real-time Gro
     }
   };
 
-  // Quick Action Playbook Prompts
-  const quickPlaybooks = [
-    {
-      icon: <Zap className="w-3.5 h-3.5 text-amber-500" />,
-      title: "Executive Strategic Briefing",
-      prompt:
-        "Generate a comprehensive Executive Strategic Briefing for Scoobies leadership. Highlight our revenue drivers, margin health, channel share, and the top 3 highest-priority commercial recommendations to maximize profit.",
-    },
-    {
-      icon: <AlertTriangle className="w-3.5 h-3.5 text-red-500" />,
-      title: "Audit Margin Leaks & Returns",
-      prompt:
-        "Perform a deep-dive audit of all product returns and margin leakage across our channels. Which specific SKUs and marketplaces are suffering from excessive returns, how much margin are we losing, and what immediate operational actions should we take?",
-    },
-    {
-      icon: <Target className="w-3.5 h-3.5 text-[#5F7161]" />,
-      title: `Plan to Hit ₹${(distilledContext.kpis.salesTarget / 100000).toFixed(1)}L Target`,
-      prompt: `Analyze our current margin target quota of ${formatCurrency(distilledContext.kpis.salesTarget)}. What is our remaining quota gap, and what specific run-rate, channel levers, and product mix adjustments do we need to hit or exceed this goal?`,
-    },
-    {
-      icon: <Layers className="w-3.5 h-3.5 text-blue-500" />,
-      title: "Marketplace Channel Economics",
-      prompt:
-        "Compare the commercial economics of our sales channels (Amazon vs Website vs Blinkit vs others). Analyze AOV, return rates, margin profitability per channel, and recommend how we should allocate marketing spend.",
-    },
-  ];
-
   if (!isOpen) return null;
 
   return (
@@ -456,14 +470,25 @@ Ensure \`GROQ_API_KEY\` is defined in your \`.env\` file to enable real-time Gro
           {/* Action Icons */}
           <div className="flex items-center gap-1">
             {messages.length > 0 && (
-              <button
-                type="button"
-                onClick={handleClearChat}
-                className="p-2 rounded-xl text-[#8C8376] hover:text-[#C84B31] hover:bg-[#FFF5F5] transition-colors cursor-pointer"
-                title="Clear Chat History"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIsShareModalOpen(true)}
+                  className="p-2 rounded-xl text-[#8C8376] hover:text-[#5F7161] hover:bg-[#E9EFEA] transition-colors cursor-pointer"
+                  title="Share / Email Conversation"
+                >
+                  <Share2 className="w-4 h-4" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleClearChat}
+                  className="p-2 rounded-xl text-[#8C8376] hover:text-[#C84B31] hover:bg-[#FFF5F5] transition-colors cursor-pointer"
+                  title="Clear Chat History"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </button>
+              </>
             )}
 
             <button
@@ -512,7 +537,7 @@ Ensure \`GROQ_API_KEY\` is defined in your \`.env\` file to enable real-time Gro
                   </div>
                   <div className="bg-[#FAF8F5] rounded-xl p-2 border border-[#EBE5D9]">
                     <div className="text-[10px] text-[#8C8376] font-bold">
-                      Margin Rate
+                      Margin
                     </div>
                     <div className="text-xs font-black text-[#5F7161]">
                       {formatPercent(distilledContext.kpis.scoobiesMarginPct)}
@@ -528,7 +553,7 @@ Ensure \`GROQ_API_KEY\` is defined in your \`.env\` file to enable real-time Gro
                   </div>
                   <div className="bg-[#FAF8F5] rounded-xl p-2 border border-[#EBE5D9]">
                     <div className="text-[10px] text-[#8C8376] font-bold">
-                      Target Quota
+                      Goal Achieved
                     </div>
                     <div className="text-xs font-black text-[#2D2A26]">
                       {formatPercent(
@@ -537,41 +562,6 @@ Ensure \`GROQ_API_KEY\` is defined in your \`.env\` file to enable real-time Gro
                       )}
                     </div>
                   </div>
-                </div>
-              </div>
-
-              {/* Quick Playbooks Section */}
-              <div>
-                <div className="flex items-center justify-between mb-2.5 px-1">
-                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#8C8376]">
-                    Instant Strategic Playbooks
-                  </span>
-                  <span className="text-[10px] font-bold text-[#5F7161]">
-                    1-Click Deep Dive
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {quickPlaybooks.map((pb, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => handleSendMessage(pb.prompt)}
-                      className="flex items-start gap-3 p-3.5 rounded-2xl bg-white hover:bg-[#F9F7F2] border border-[#EBE5D9] hover:border-[#D9CFC1] transition-all text-left shadow-2xs hover:shadow-xs group cursor-pointer"
-                    >
-                      <div className="w-7 h-7 rounded-xl bg-[#FAF8F5] border border-[#EBE5D9] flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                        {pb.icon}
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-xs font-bold text-[#2D2A26] group-hover:text-[#5F7161] transition-colors leading-snug">
-                          {pb.title}
-                        </div>
-                        <div className="text-[10px] text-[#8C8376] line-clamp-1 mt-0.5 font-medium">
-                          {pb.prompt}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
                 </div>
               </div>
             </div>
@@ -679,82 +669,109 @@ Ensure \`GROQ_API_KEY\` is defined in your \`.env\` file to enable real-time Gro
               }
               handleSendMessage();
             }}
-            className="flex items-center gap-2"
+            className="w-full"
           >
-            <div className="relative flex-1">
-              <input
-                ref={inputRef}
-                type="text"
+            <div
+              className={`relative flex flex-col rounded-2xl border transition-all duration-200 shadow-2xs ${
+                isRecording
+                  ? "border-red-400 ring-2 ring-red-400/20 bg-red-50/40 text-red-900"
+                  : "border-[#EBE5D9] bg-[#FAF8F5] focus-within:bg-white focus-within:border-[#5F7161] focus-within:ring-2 focus-within:ring-[#5F7161]/20"
+              }`}
+            >
+              {/* Auto-growing Textarea */}
+              <textarea
+                ref={textareaRef}
                 value={inputQuery}
                 onChange={(e) => setInputQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    if (e.nativeEvent.isComposing) return;
+                    e.preventDefault();
+                    if (isRecording) {
+                      handleStopRecording();
+                      return;
+                    }
+                    handleSendMessage();
+                  }
+                }}
+                rows={1}
                 placeholder={
                   isRecording
-                    ? `🎙️ Recording (${Math.floor(recordingDuration / 60)}:${(recordingDuration % 60).toString().padStart(2, "0")})... Click to finish`
+                    ? `🎙️ Recording (${Math.floor(recordingDuration / 60)}:${(recordingDuration % 60).toString().padStart(2, "0")})... Click stop to finish`
                     : isTranscribing
                       ? "⚡ Transcribing & refining with Groq AI..."
                       : "Ask anything or specify a persona (e.g., 'Act as a performance marketer...')"
                 }
                 disabled={isGenerating || isTranscribing}
-                className={`w-full px-4 py-3 pr-11 text-xs border rounded-2xl bg-[#FAF8F5] focus:bg-white focus:outline-none focus:ring-2 font-medium placeholder-[#A89F91] transition-all disabled:opacity-60 ${
-                  isRecording
-                    ? "border-red-400 ring-2 ring-red-400/20 bg-red-50/40 text-red-900"
-                    : "border-[#EBE5D9] focus:ring-[#5F7161]/30 focus:border-[#5F7161]"
-                }`}
+                className="w-full px-3.5 pt-3 pb-1.5 text-xs bg-transparent border-0 outline-none resize-none font-medium placeholder-[#A89F91] text-[#2D2A26] disabled:opacity-60 max-h-40 overflow-y-auto leading-relaxed focus:ring-0 focus:outline-none"
               />
 
-              {/* Microphone Action Button inside text field */}
-              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center">
-                {isTranscribing ? (
-                  <div
-                    className="p-1 text-[#5F7161] animate-spin"
-                    title="Transcribing audio with Whisper Turbo..."
-                  >
-                    <Loader2 className="w-4 h-4" />
-                  </div>
-                ) : isRecording ? (
-                  <button
-                    type="button"
-                    onClick={handleStopRecording}
-                    className="p-1.5 rounded-xl bg-red-500 hover:bg-red-600 text-white shadow-xs animate-pulse transition-all cursor-pointer"
-                    title="Stop recording and transcribe"
-                  >
-                    <Square className="w-3.5 h-3.5 fill-current" />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleStartRecording}
-                    disabled={isGenerating}
-                    className="p-1.5 rounded-xl text-[#8C8376] hover:text-[#5F7161] hover:bg-[#F1EDE5] transition-all cursor-pointer disabled:opacity-40"
-                    title="Speak question (Groq Whisper Turbo)"
-                  >
-                    <Mic className="w-4 h-4" />
-                  </button>
-                )}
+              {/* Bottom Action Controls inside Text Area */}
+              <div className="flex items-center justify-between px-2.5 pb-2 pt-1">
+                {/* Left side actions (Mic / Audio recording status) */}
+                <div className="flex items-center gap-1.5">
+                  {isTranscribing ? (
+                    <div
+                      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-xl bg-[#E9EFEA] text-[#5F7161] text-[11px] font-semibold animate-pulse"
+                      title="Transcribing audio with Whisper Turbo..."
+                    >
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Transcribing...</span>
+                    </div>
+                  ) : isRecording ? (
+                    <button
+                      type="button"
+                      onClick={handleStopRecording}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[11px] font-bold shadow-xs animate-pulse transition-all cursor-pointer"
+                      title="Stop recording and transcribe"
+                    >
+                      <Square className="w-3 h-3 fill-current" />
+                      <span>
+                        Stop ({Math.floor(recordingDuration / 60)}:
+                        {(recordingDuration % 60).toString().padStart(2, "0")})
+                      </span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleStartRecording}
+                      disabled={isGenerating}
+                      className="p-1.5 rounded-xl text-[#8C8376] hover:text-[#5F7161] hover:bg-[#F1EDE5] transition-all cursor-pointer disabled:opacity-40"
+                      title="Speak question (Groq Whisper Turbo)"
+                    >
+                      <Mic className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Right side actions (Send / Stop button) */}
+                <div className="flex items-center gap-1.5">
+                  {isGenerating ? (
+                    <button
+                      type="button"
+                      onClick={handleStop}
+                      className="px-3.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
+                      title="Stop generation"
+                    >
+                      <StopCircle className="w-3.5 h-3.5" />
+                      <span>Stop</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={
+                        !inputQuery.trim() || isRecording || isTranscribing
+                      }
+                      className="px-3.5 py-1.5 rounded-xl bg-[#5F7161] hover:bg-[#4E5E50] disabled:opacity-30 disabled:hover:bg-[#5F7161] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs shadow-[#5F7161]/25 transition-all cursor-pointer shrink-0"
+                      title="Send query (Enter)"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Ask</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
-
-            {isGenerating ? (
-              <button
-                type="button"
-                onClick={handleStop}
-                className="px-4 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
-                title="Stop generation"
-              >
-                <StopCircle className="w-4 h-4" />
-                <span>Stop</span>
-              </button>
-            ) : (
-              <button
-                type="submit"
-                disabled={!inputQuery.trim() || isRecording || isTranscribing}
-                className="px-4 py-3 rounded-2xl bg-[#5F7161] hover:bg-[#4E5E50] disabled:opacity-40 disabled:hover:bg-[#5F7161] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-[#5F7161]/25 transition-all cursor-pointer shrink-0"
-                title="Send query"
-              >
-                <Send className="w-4 h-4" />
-                <span className="hidden sm:inline">Ask</span>
-              </button>
-            )}
           </form>
 
           {/* Audio Error Alert if any */}
@@ -790,6 +807,14 @@ Ensure \`GROQ_API_KEY\` is defined in your \`.env\` file to enable real-time Gro
           </div>
         </div>
       </div>
+
+      {/* Share / Email Briefing Modal */}
+      <ShareChatModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        messages={messages}
+        distilledContext={distilledContext}
+      />
     </div>
   );
 };

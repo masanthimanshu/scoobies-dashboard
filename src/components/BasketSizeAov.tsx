@@ -54,28 +54,22 @@ export const BasketSizeAov: React.FC<BasketSizeAovProps> = React.memo(
 
     const hasMoreThan8 = validChannels.length > 8;
 
-    // Leaders
-    const maxAovChannel = useMemo(() => {
-      if (validChannels.length === 0) return null;
-      return validChannels.reduce(
-        (max, curr) => (curr.avgOrderValue > max.avgOrderValue ? curr : max),
-        validChannels[0],
-      );
-    }, [validChannels]);
+    // Leaders: validChannels is pre-sorted by avgOrderValue descending, so index 0 is maxAovChannel
+    const maxAovChannel = validChannels.length > 0 ? validChannels[0] : null;
 
     const maxBasketChannel = useMemo(() => {
       if (validChannels.length === 0) return null;
-      return validChannels.reduce((max, curr) => {
-        const currBasket =
-          curr.orderCount > 0 ? curr.units / curr.orderCount : 0;
-        const maxBasket = max.orderCount > 0 ? max.units / max.orderCount : 0;
-        return currBasket > maxBasket ? curr : max;
-      }, validChannels[0]);
-    }, [validChannels]);
-
-    const maxAovValue = useMemo(() => {
-      if (validChannels.length === 0) return 1;
-      return Math.max(...validChannels.map((c) => c.avgOrderValue), 1);
+      let topCh = validChannels[0];
+      let maxDepth = topCh.orderCount > 0 ? topCh.units / topCh.orderCount : 0;
+      for (let i = 1; i < validChannels.length; i++) {
+        const curr = validChannels[i];
+        const depth = curr.orderCount > 0 ? curr.units / curr.orderCount : 0;
+        if (depth > maxDepth) {
+          maxDepth = depth;
+          topCh = curr;
+        }
+      }
+      return topCh;
     }, [validChannels]);
 
     if (!channels || channels.length === 0 || validChannels.length === 0)
@@ -217,7 +211,6 @@ export const BasketSizeAov: React.FC<BasketSizeAovProps> = React.memo(
                   100
                 : 0;
             const isAboveAvg = aovDiffPct >= 0;
-            // Progress bar percentage relative to effective benchmark AOV (100% = meeting target/store AOV)
             const targetComparisonPct =
               effectiveBenchmarkAov > 0
                 ? Math.min(
@@ -227,10 +220,7 @@ export const BasketSizeAov: React.FC<BasketSizeAovProps> = React.memo(
                       (ch.avgOrderValue / effectiveBenchmarkAov) * 100,
                     ),
                   )
-                : Math.min(
-                    100,
-                    Math.max(5, (ch.avgOrderValue / maxAovValue) * 100),
-                  );
+                : 100;
             const achievementRatio =
               effectiveBenchmarkAov > 0
                 ? (ch.avgOrderValue / effectiveBenchmarkAov) * 100

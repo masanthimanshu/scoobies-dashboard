@@ -81,8 +81,9 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = React.memo(
         >();
 
         const targetChannelLower = selectedChannelFilter.toLowerCase();
+        const rLen = records.length;
 
-        for (let i = 0; i < records.length; i++) {
+        for (let i = 0; i < rLen; i++) {
           const r = records[i];
           const channelName = r.channel ? r.channel.trim() : "Direct";
 
@@ -195,9 +196,12 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = React.memo(
       });
     }, [channelScopedReturnedProducts, searchTerm, sortBy]);
 
-    const displayedProducts = showAllReturns
-      ? filteredReturnedProducts
-      : filteredReturnedProducts.slice(0, 10);
+    const displayedProducts = useMemo(() => {
+      return showAllReturns
+        ? filteredReturnedProducts
+        : filteredReturnedProducts.slice(0, 10);
+    }, [showAllReturns, filteredReturnedProducts]);
+
     const hasMoreThan10 = filteredReturnedProducts.length > 10;
 
     // Channel specific totals when a filter is applied
@@ -215,7 +219,8 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = React.memo(
       );
       let totalRef = 0;
       let totalUnits = 0;
-      for (let i = 0; i < channelScopedReturnedProducts.length; i++) {
+      const count = channelScopedReturnedProducts.length;
+      for (let i = 0; i < count; i++) {
         totalRef += channelScopedReturnedProducts[i].returns;
         totalUnits += channelScopedReturnedProducts[i].returnUnits;
       }
@@ -223,7 +228,7 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = React.memo(
         refundedValue: ch ? ch.returns : totalRef,
         returnUnits: ch ? ch.returnUnits : totalUnits,
         returnRate: ch ? ch.returnRate : 0,
-        affectedSkus: channelScopedReturnedProducts.length,
+        affectedSkus: count,
       };
     }, [
       selectedChannelFilter,

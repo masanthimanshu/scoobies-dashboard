@@ -18,7 +18,10 @@ export const ChannelBreakdown: React.FC<ChannelBreakdownProps> = React.memo(
   ({ channels }) => {
     const [showAll, setShowAll] = useState(false);
 
-    const displayedChannels = showAll ? channels : channels.slice(0, 10);
+    const displayedChannels = useMemo(() => {
+      return showAll ? channels : channels.slice(0, 10);
+    }, [showAll, channels]);
+
     const hasMoreThan10 = channels.length > 10;
 
     const pieData = useMemo(() => {

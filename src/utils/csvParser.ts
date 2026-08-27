@@ -87,33 +87,43 @@ function cleanString(val: unknown, fallback = ""): string {
 }
 
 /**
- * Normalizes column header keys regardless of case, extra whitespace, or slight differences
+ * Normalizes week values from the sheet/CSV.
+ * - Converts "Week0" and "Week 1" (case-insensitive, with or without spaces) to "Week1".
+ * - Converts "Week6" and "Week 6" to "Week5".
  */
-function findValue(
-  row: Record<string, unknown>,
-  possibleKeys: string[],
-): unknown {
-  const rowKeys = Object.keys(row);
-  for (let i = 0; i < possibleKeys.length; i++) {
-    const key = possibleKeys[i];
-    const directMatch = row[key];
-    if (
-      directMatch !== undefined &&
-      directMatch !== null &&
-      directMatch !== ""
-    ) {
-      return directMatch;
+export function normalizeWeek(val: unknown, fallbackDay?: number): string {
+  const str = val !== undefined && val !== null ? String(val).trim() : "";
+
+  if (!str) {
+    if (fallbackDay !== undefined && !isNaN(fallbackDay) && fallbackDay > 0) {
+      const calcWeek = Math.ceil(fallbackDay / 7);
+      if (calcWeek === 0) return "Week1";
+      if (calcWeek >= 6) return "Week5";
+      return `Week${calcWeek}`;
     }
-    const cleanTarget = key.toLowerCase().replace(/[^a-z0-9]/g, "");
-    for (let j = 0; j < rowKeys.length; j++) {
-      const k = rowKeys[j];
-      if (k.toLowerCase().replace(/[^a-z0-9]/g, "") === cleanTarget) {
-        const val = row[k];
-        if (val !== undefined && val !== "") return val;
-      }
-    }
+    return "Week1";
   }
-  return "";
+
+  // Convert "Week0", "Week 0", "Week 1", "Week1", "Wk0", "Wk 1", "0", "1" to "Week1"
+  if (/^(week\s*[01]|wk\s*[01]|[01])$/i.test(str)) {
+    return "Week1";
+  }
+
+  // Convert "Week6", "Week 6", "Wk6", "Wk 6", "6" to "Week5"
+  if (/^(week\s*6|wk\s*6|6)$/i.test(str)) {
+    return "Week5";
+  }
+
+  // Standardize other numeric week patterns (e.g. "Week 2", "Wk 3") to "Week2", "Week3"
+  const match = str.match(/^(?:week|wk)\s*(\d+)$/i);
+  if (match) {
+    const num = parseInt(match[1], 10);
+    if (num <= 1) return "Week1";
+    if (num === 6) return "Week5";
+    return `Week${num}`;
+  }
+
+  return str;
 }
 
 /**
@@ -255,37 +265,19 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
         const getVal = (
           row: Record<string, unknown>,
           resolvedKey: string | null,
-          fallbackKeys: string[],
         ): unknown => {
-          if (
-            resolvedKey &&
-            row[resolvedKey] !== undefined &&
-            row[resolvedKey] !== null &&
-            row[resolvedKey] !== ""
-          ) {
-            return row[resolvedKey];
-          }
-          return findValue(row, fallbackKeys);
+          return resolvedKey ? row[resolvedKey] : undefined;
         };
 
         const len = results.data.length;
         for (let idx = 0; idx < len; idx++) {
           const row = results.data[idx];
           try {
-            const rawYear = cleanNumber(
-              getVal(row, kYear, ["Year", "year", "Yr"]),
-            );
-            const rawMonth = String(
-              getVal(row, kMonth, ["Month", "month", "Mo"]) || "",
-            ).trim();
-            const rawWeek = String(
-              getVal(row, kWeek, ["Week", "week", "Wk"]) || "",
-            ).trim();
-            const rawDay = cleanNumber(getVal(row, kDay, ["Day", "day", "D"]));
-            const rawDate = String(
-              getVal(row, kDate, ["Date", "date", "Order Date", "Sale Date"]) ||
-                "",
-            ).trim();
+            const rawYear = cleanNumber(getVal(row, kYear));
+            const rawMonth = String(getVal(row, kMonth) || "").trim();
+            const rawWeekInput = getVal(row, kWeek);
+            const rawDay = cleanNumber(getVal(row, kDay));
+            const rawDate = String(getVal(row, kDate) || "").trim();
 
             const dateInfo = parseDateComponents(
               rawDate,
@@ -294,124 +286,47 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
               rawDay || 1,
             );
 
+            const rawWeek = normalizeWeek(rawWeekInput, dateInfo.day);
+
             const orderNumber = String(
-              getVal(row, kOrderNumber, [
-                "Order Number",
-                "Order No",
-                "Order Id",
-                "Order_Number",
-                "order_id",
-              ]) || `ORD-${idx + 1}`,
+              getVal(row, kOrderNumber) || `ORD-${idx + 1}`,
             ).trim();
 
             const customerName = String(
-              getVal(row, kCustomerName, [
-                "Customer name",
-                "Customer Name",
-                "Customer",
-                "Buyer Name",
-              ]) || "Valued Customer",
+              getVal(row, kCustomerName) || "Valued Customer",
             ).trim();
 
-            const barCode = String(
-              getVal(row, kBarCode, [
-                "Bar Code",
-                "Barcode",
-                "SKU",
-                "Item Code",
-              ]) || "",
-            ).trim();
+            const barCode = String(getVal(row, kBarCode) || "").trim();
             const productName = String(
-              getVal(row, kProductName, [
-                "Product name",
-                "Product Name",
-                "Item Name",
-                "Title",
-                "Product",
-              ]) || "General Item",
+              getVal(row, kProductName) || "General Item",
             ).trim();
 
-            const color = String(
-              getVal(row, kColor, ["Color", "Colour", "Variant"]) || "Standard",
-            ).trim();
-            const category = String(
-              getVal(row, kCategory, [
-                "PRODUCT CATEGORY",
-                "Product Category",
-                "Category",
-                "Item Category",
-              ]) || "General",
-            ).trim();
+            const color = String(getVal(row, kColor) || "Standard").trim();
+            const category = String(getVal(row, kCategory) || "General").trim();
 
-            const qty = cleanNumber(
-              getVal(row, kQty, ["QTY", "Qty", "Quantity", "Units"]),
-              1,
-            );
-            const mrp = cleanNumber(
-              getVal(row, kMrp, ["MRP", "Mrp", "Price", "Unit Price"]),
-              0,
-            );
+            const qty = cleanNumber(getVal(row, kQty), 1);
+            const mrp = cleanNumber(getVal(row, kMrp), 0);
 
-            const scoobiesMargin = cleanNumber(
-              getVal(row, kScoobiesMargin, [
-                "Scoobies Margin",
-                "Margin",
-                "Gross Margin",
-              ]),
-              0,
-            );
+            const scoobiesMargin = cleanNumber(getVal(row, kScoobiesMargin), 0);
             const retailersMargin = cleanNumber(
-              getVal(row, kRetailersMargin, [
-                "Retailers Margin",
-                "Retailer Margin",
-                "Channel Margin",
-              ]),
+              getVal(row, kRetailersMargin),
               0,
             );
             const exGstMargin = cleanNumber(
-              getVal(row, kExGstMargin, [
-                "EX-GST Scoobies Margin",
-                "Ex-GST Margin",
-                "Ex GST Margin",
-                "EX GST",
-              ]),
+              getVal(row, kExGstMargin),
               scoobiesMargin * 0.85,
             );
 
             const deliveryPlace = cleanString(
-              getVal(row, kDeliveryPlace, [
-                "Delivery Place",
-                "City",
-                "Location",
-                "Delivery City",
-              ]),
+              getVal(row, kDeliveryPlace),
               "Unspecified",
             );
 
-            const state = cleanString(
-              getVal(row, kState, ["State", "Province", "Region"]),
-              "Unassigned",
-            );
-            const websiteRaw = cleanString(
-              getVal(row, kWebsite, [
-                "Website",
-                "Channel",
-                "Platform",
-                "Portal",
-                "Source",
-              ]),
-              "Direct",
-            );
+            const state = cleanString(getVal(row, kState), "Unassigned");
+            const websiteRaw = cleanString(getVal(row, kWebsite), "Direct");
             const channel = websiteRaw || "Direct Website";
 
-            const rawStatus = cleanString(
-              getVal(row, kStatus, [
-                "Status",
-                "Order Status",
-                "Delivery Status",
-              ]),
-              "Dispatched",
-            );
+            const rawStatus = cleanString(getVal(row, kStatus), "Dispatched");
             let status: "Dispatched" | "Return" | "Cancelled" | "Other" =
               "Dispatched";
             if (rawStatus.toLowerCase().includes("return") || qty < 0) {
@@ -426,28 +341,14 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
             }
 
             const backToSchool = cleanString(
-              getVal(row, kBackToSchool, [
-                "Back To School",
-                "Back to School",
-                "Campaign",
-                "B2S",
-              ]),
+              getVal(row, kBackToSchool),
               "Standard",
             );
 
-            const zone = cleanString(
-              getVal(row, kZone, ["Zone", "Sales Zone", "Area"]),
-              "Unassigned",
-            );
+            const zone = cleanString(getVal(row, kZone), "Unassigned");
 
             const saleValue = cleanNumber(
-              getVal(row, kSaleValue, [
-                "Sale Value",
-                "Sale_Value",
-                "Net Sales",
-                "Sales",
-                "Total Value",
-              ]),
+              getVal(row, kSaleValue),
               qty < 0 ? -Math.abs(mrp * qty) : mrp * qty,
             );
 
@@ -455,7 +356,7 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
               id: `${orderNumber}-${idx}`,
               year: dateInfo.year,
               month: dateInfo.month,
-              week: rawWeek || `Week ${Math.ceil(dateInfo.day / 7)}`,
+              week: rawWeek,
               day: dateInfo.day,
               dateStr: dateInfo.dateFormatted,
               timestamp: dateInfo.timestamp,

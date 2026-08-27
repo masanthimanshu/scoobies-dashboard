@@ -12,12 +12,21 @@ export default defineConfig(({ mode }) => {
     process.env.VITE_GROQ_API_KEY ||
     "";
 
+  const resendApiKey =
+    env.RESEND_API_KEY ||
+    env.VITE_RESEND_API_KEY ||
+    process.env.RESEND_API_KEY ||
+    process.env.VITE_RESEND_API_KEY ||
+    "";
+
   return {
     plugins: [react(), tailwindcss()],
-    envPrefix: ["VITE_", "GROQ_"],
+    envPrefix: ["VITE_", "GROQ_", "RESEND_"],
     define: {
       "import.meta.env.GROQ_API_KEY": JSON.stringify(apiKey),
       "import.meta.env.VITE_GROQ_API_KEY": JSON.stringify(apiKey),
+      "import.meta.env.RESEND_API_KEY": JSON.stringify(resendApiKey),
+      "import.meta.env.VITE_RESEND_API_KEY": JSON.stringify(resendApiKey),
     },
     resolve: {
       alias: {
@@ -30,6 +39,14 @@ export default defineConfig(({ mode }) => {
       hmr: process.env.DISABLE_HMR !== "true",
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === "true" ? null : {},
+      proxy: {
+        "/api/resend": {
+          target: "https://api.resend.com",
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api\/resend/, ""),
+          secure: true,
+        },
+      },
     },
     build: {
       chunkSizeWarningLimit: 1000,

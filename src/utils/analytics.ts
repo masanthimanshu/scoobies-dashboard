@@ -13,7 +13,7 @@ import { isB2SCampaign, formatCurrency } from "./formatters";
 
 /**
  * High-performance records filter. Pre-compiles filter sets and lowercased lookups
- * outside the loop to achieve O(N) linear filtering with zero per-record allocations.
+ * outside the loop to achieve O(N) linear filtering with zero redundant allocations.
  */
 export function filterRecords(
   records: SaleRecord[],
@@ -73,18 +73,10 @@ export function filterRecords(
   const maxSale = filters.maxSaleValue;
 
   return records.filter((r) => {
-    // 1. Search Query
-    if (searchQuery) {
-      const match =
-        r.productName.toLowerCase().includes(searchQuery) ||
-        r.orderNumber.toLowerCase().includes(searchQuery) ||
-        r.customerName.toLowerCase().includes(searchQuery) ||
-        r.category.toLowerCase().includes(searchQuery) ||
-        r.channel.toLowerCase().includes(searchQuery) ||
-        r.deliveryPlace.toLowerCase().includes(searchQuery) ||
-        r.state.toLowerCase().includes(searchQuery);
-      if (!match) return false;
-    }
+    // 1. Status Filter (Fastest early-exit check)
+    if (statusFilter === "Dispatched" && r.status !== "Dispatched")
+      return false;
+    if (statusFilter === "Return" && r.status !== "Return") return false;
 
     // 2. Year Filter
     if (yearSet) {
@@ -107,36 +99,47 @@ export function filterRecords(
       return false;
     }
 
-    // 5. Custom Date Window
-    if (startDate && r.dateStr < startDate) return false;
-    if (endDate && r.dateStr > endDate) return false;
-
-    // 6. Channel
+    // 5. Channel Filter
     if (channelSet && !channelSet.has(r.channel)) return false;
 
-    // 7. Category
+    // 6. Category Filter
     if (categorySet && !categorySet.has(r.category)) return false;
 
-    // 8. Zone
+    // 7. Zone Filter
     if (zoneSet && !zoneSet.has(r.zone)) return false;
 
-    // 9. State
+    // 8. State Filter
     if (stateSet && !stateSet.has(r.state)) return false;
 
-    // 10. Status
-    if (statusFilter === "Dispatched" && r.status !== "Dispatched")
-      return false;
-    if (statusFilter === "Return" && r.status !== "Return") return false;
-
-    // 11. Campaign
+    // 9. Campaign Filter
     if (campaignFilter === "B2S" && !isB2SCampaign(r.backToSchool))
       return false;
     if (campaignFilter === "NON_B2S" && isB2SCampaign(r.backToSchool))
       return false;
 
-    // 12. Sale Value Range
-    if (minSale !== undefined && Math.abs(r.saleValue) < minSale) return false;
-    if (maxSale !== undefined && Math.abs(r.saleValue) > maxSale) return false;
+    // 10. Custom Date Window
+    if (startDate && r.dateStr < startDate) return false;
+    if (endDate && r.dateStr > endDate) return false;
+
+    // 11. Sale Value Range
+    if (minSale !== undefined || maxSale !== undefined) {
+      const absSale = Math.abs(r.saleValue);
+      if (minSale !== undefined && absSale < minSale) return false;
+      if (maxSale !== undefined && absSale > maxSale) return false;
+    }
+
+    // 12. Search Query (Executed last only for candidates that pass all discrete filters)
+    if (searchQuery) {
+      const match =
+        r.productName.toLowerCase().includes(searchQuery) ||
+        r.orderNumber.toLowerCase().includes(searchQuery) ||
+        r.customerName.toLowerCase().includes(searchQuery) ||
+        r.category.toLowerCase().includes(searchQuery) ||
+        r.channel.toLowerCase().includes(searchQuery) ||
+        r.deliveryPlace.toLowerCase().includes(searchQuery) ||
+        r.state.toLowerCase().includes(searchQuery);
+      if (!match) return false;
+    }
 
     return true;
   });
@@ -156,7 +159,7 @@ export function getRecordMetrics(r: SaleRecord) {
 }
 
 /**
- * Shared helper to calculate percentage safely.
+ * Shared helper to calculate percentage safely with decimal formatting.
  */
 export function computeSharePct(
   val: number,
@@ -275,7 +278,8 @@ export function computeAllAnalytics(
     { sales: number; orders: Set<string>; units: number }
   >();
 
-  for (let i = 0; i < records.length; i++) {
+  const len = records.length;
+  for (let i = 0; i < len; i++) {
     const r = records[i];
     ordersSet.add(r.orderNumber);
 
@@ -632,457 +636,6 @@ export function computeAllAnalytics(
   };
 }
 
-export function computeDashboardMetrics(
-  records: SaleRecord[],
-): DashboardMetrics {
-  let totalGrossSales = 0;
-  let totalNetSales = 0;
-  let totalReturnedSales = 0;
-  let totalUnitsSold = 0; // net units
-  let totalGrossUnits = 0;
-  let totalReturnedUnits = 0;
-  let totalScoobiesMargin = 0;
-  let totalExGstMargin = 0;
-  let retailersMarginTotal = 0;
-  let b2sNetSales = 0;
-
-  const ordersSet = new Set<string>();
-
-  for (let i = 0; i < records.length; i++) {
-    const r = records[i];
-    ordersSet.add(r.orderNumber);
-
-    const { isReturn, val, qty } = getRecordMetrics(r);
-
-    if (isReturn) {
-      totalReturnedSales += val;
-      totalReturnedUnits += qty;
-      totalNetSales -= val;
-      totalUnitsSold -= qty;
-    } else {
-      totalGrossSales += val;
-      totalGrossUnits += qty;
-      totalNetSales += val;
-      totalUnitsSold += qty;
-    }
-
-    totalScoobiesMargin += r.scoobiesMargin;
-    totalExGstMargin += r.exGstMargin;
-    retailersMarginTotal += r.retailersMargin;
-
-    if (isB2SCampaign(r.backToSchool)) {
-      b2sNetSales += isReturn ? -val : val;
-    }
-  }
-
-  const totalOrders = ordersSet.size;
-  const returnRateQtyPct =
-    totalGrossUnits > 0 ? (totalReturnedUnits / totalGrossUnits) * 100 : 0;
-  const returnRateValPct =
-    totalGrossSales > 0 ? (totalReturnedSales / totalGrossSales) * 100 : 0;
-  const averageOrderValue = totalOrders > 0 ? totalNetSales / totalOrders : 0;
-  const marginPercentage =
-    totalNetSales > 0 ? (totalScoobiesMargin / totalNetSales) * 100 : 0;
-  const b2sSalesPct =
-    totalNetSales > 0 ? (Math.max(0, b2sNetSales) / totalNetSales) * 100 : 0;
-
-  return {
-    totalGrossSales,
-    totalNetSales,
-    totalReturnedSales,
-    totalOrders,
-    totalUnitsSold,
-    totalGrossUnits,
-    totalReturnedUnits,
-    returnRateQtyPct,
-    returnRateValPct,
-    averageOrderValue,
-    totalScoobiesMargin,
-    totalExGstMargin,
-    marginPercentage,
-    retailersMarginTotal,
-    b2sNetSales,
-    b2sSalesPct,
-  };
-}
-
-export function computeTimeSeries(
-  records: SaleRecord[],
-  granularity: "daily" | "weekly" | "monthly" | "yearly" = "daily",
-): TimeSeriesPoint[] {
-  const map = new Map<
-    string,
-    {
-      gross: number;
-      net: number;
-      returns: number;
-      qty: number;
-      count: number;
-      margin: number;
-      ts: number;
-      label: string;
-    }
-  >();
-
-  for (let i = 0; i < records.length; i++) {
-    const r = records[i];
-    let key = r.dateStr; // default YYYY-MM-DD
-    let label = r.dateStr;
-
-    if (granularity === "weekly") {
-      key = `${r.year}-${r.month}-${r.week}`;
-      label = `${r.month} ${r.week}`;
-    } else if (granularity === "monthly") {
-      key = `${r.year}-${r.month}`;
-      label = `${r.month} ${r.year}`;
-    } else if (granularity === "yearly") {
-      key = `${r.year}`;
-      label = `${r.year}`;
-    }
-
-    const { isReturn, val, qty } = getRecordMetrics(r);
-
-    let curr = map.get(key);
-    if (!curr) {
-      curr = {
-        gross: 0,
-        net: 0,
-        returns: 0,
-        qty: 0,
-        count: 0,
-        margin: 0,
-        ts: r.timestamp,
-        label,
-      };
-      map.set(key, curr);
-    }
-
-    if (isReturn) {
-      curr.returns += val;
-      curr.net -= val;
-      curr.qty -= qty;
-    } else {
-      curr.gross += val;
-      curr.net += val;
-      curr.qty += qty;
-    }
-    curr.count += 1;
-    curr.margin += r.scoobiesMargin;
-  }
-
-  // Sort directly by timestamp without extra map.get lookups
-  const sortedEntries = Array.from(map.entries()).sort(
-    (a, b) => a[1].ts - b[1].ts,
-  );
-
-  return sortedEntries.map(([key, data]) => ({
-    date: key,
-    label: data.label,
-    timestamp: data.ts,
-    grossSales: Math.round(data.gross),
-    netSales: Math.round(data.net),
-    returns: Math.round(data.returns),
-    netQty: data.qty,
-    orderCount: data.count,
-    margin: Math.round(data.margin),
-  }));
-}
-
-export function computeChannelMetrics(
-  records: SaleRecord[],
-  totalNetSales: number,
-): ChannelMetric[] {
-  const map = new Map<
-    string,
-    {
-      gross: number;
-      net: number;
-      returns: number;
-      orders: Set<string>;
-      units: number;
-      returnUnits: number;
-      margin: number;
-    }
-  >();
-
-  for (let i = 0; i < records.length; i++) {
-    const r = records[i];
-    const ch = r.channel || "Direct";
-    const { isReturn, val, qty } = getRecordMetrics(r);
-
-    let curr = map.get(ch);
-    if (!curr) {
-      curr = {
-        gross: 0,
-        net: 0,
-        returns: 0,
-        orders: new Set<string>(),
-        units: 0,
-        returnUnits: 0,
-        margin: 0,
-      };
-      map.set(ch, curr);
-    }
-
-    curr.orders.add(r.orderNumber);
-
-    if (isReturn) {
-      curr.returns += val;
-      curr.net -= val;
-      curr.returnUnits += qty;
-      curr.units -= qty;
-    } else {
-      curr.gross += val;
-      curr.net += val;
-      curr.units += qty;
-    }
-    curr.margin += r.scoobiesMargin;
-  }
-
-  return Array.from(map.entries())
-    .map(([channel, data]) => {
-      const orderCount = data.orders.size;
-      const avgOrderValue = orderCount > 0 ? data.net / orderCount : 0;
-      const totalAttempted = data.units + data.returnUnits;
-      const returnRate =
-        totalAttempted > 0 ? (data.returnUnits / totalAttempted) * 100 : 0;
-      const sharePct = computeSharePct(data.net, totalNetSales);
-
-      return {
-        channel,
-        grossSales: Math.round(data.gross),
-        netSales: Math.round(data.net),
-        returns: Math.round(data.returns),
-        orderCount,
-        units: data.units,
-        returnUnits: data.returnUnits,
-        returnRate: Math.max(0, Number(returnRate.toFixed(1))),
-        avgOrderValue: Math.round(avgOrderValue),
-        margin: Math.round(data.margin),
-        sharePct,
-      };
-    })
-    .sort((a, b) => b.netSales - a.netSales);
-}
-
-export function computeCategoryMetrics(
-  records: SaleRecord[],
-  totalNetSales: number,
-): CategoryMetric[] {
-  const map = new Map<
-    string,
-    {
-      gross: number;
-      net: number;
-      returns: number;
-      units: number;
-      returnUnits: number;
-      orders: Set<string>;
-      margin: number;
-    }
-  >();
-
-  for (let i = 0; i < records.length; i++) {
-    const r = records[i];
-    const cat = r.category || "OTHER";
-    const { isReturn, val, qty } = getRecordMetrics(r);
-
-    let curr = map.get(cat);
-    if (!curr) {
-      curr = {
-        gross: 0,
-        net: 0,
-        returns: 0,
-        units: 0,
-        returnUnits: 0,
-        orders: new Set<string>(),
-        margin: 0,
-      };
-      map.set(cat, curr);
-    }
-
-    curr.orders.add(r.orderNumber);
-
-    if (isReturn) {
-      curr.returns += val;
-      curr.net -= val;
-      curr.units -= qty;
-      curr.returnUnits += qty;
-    } else {
-      curr.gross += val;
-      curr.net += val;
-      curr.units += qty;
-    }
-    curr.margin += r.scoobiesMargin;
-  }
-
-  return Array.from(map.entries())
-    .map(([category, data]) => {
-      const sharePct = computeSharePct(data.net, totalNetSales);
-      const totalAttempted = data.units + data.returnUnits;
-      const returnRate =
-        totalAttempted > 0 ? (data.returnUnits / totalAttempted) * 100 : 0;
-      return {
-        category,
-        sales: Math.round(data.net),
-        grossSales: Math.round(data.gross),
-        returns: Math.round(data.returns),
-        units: data.units,
-        returnUnits: data.returnUnits,
-        returnRate: Number(returnRate.toFixed(1)),
-        orders: data.orders.size,
-        margin: Math.round(data.margin),
-        sharePct,
-      };
-    })
-    .sort((a, b) => b.sales - a.sales);
-}
-
-export function computeProductMetrics(
-  records: SaleRecord[],
-  totalNetSales: number = 0,
-): ProductMetric[] {
-  const map = new Map<
-    string,
-    {
-      barCode: string;
-      category: string;
-      channels: Set<string>;
-      returnChannels: Set<string>;
-      gross: number;
-      net: number;
-      returns: number;
-      units: number;
-      returnUnits: number;
-      mrp: number;
-      margin: number;
-    }
-  >();
-
-  for (let i = 0; i < records.length; i++) {
-    const r = records[i];
-    const name = r.productName;
-    const { isReturn, val, qty } = getRecordMetrics(r);
-    const ch = r.channel ? r.channel.trim() : "Direct";
-
-    let curr = map.get(name);
-    if (!curr) {
-      curr = {
-        barCode: r.barCode,
-        category: r.category,
-        channels: new Set<string>(),
-        returnChannels: new Set<string>(),
-        gross: 0,
-        net: 0,
-        returns: 0,
-        units: 0,
-        returnUnits: 0,
-        mrp: r.mrp,
-        margin: 0,
-      };
-      map.set(name, curr);
-    }
-
-    if (ch) {
-      curr.channels.add(ch);
-    }
-
-    if (isReturn) {
-      curr.returns += val;
-      curr.net -= val;
-      curr.returnUnits += qty;
-      curr.units -= qty;
-      if (ch) {
-        curr.returnChannels.add(ch);
-      }
-    } else {
-      curr.gross += val;
-      curr.net += val;
-      curr.units += qty;
-    }
-    curr.margin += r.scoobiesMargin;
-  }
-
-  return Array.from(map.entries())
-    .map(([productName, data]) => {
-      const grossUnits = data.units + data.returnUnits;
-      const returnRate =
-        grossUnits > 0 ? (data.returnUnits / grossUnits) * 100 : 0;
-      const sharePct = computeSharePct(data.net, totalNetSales);
-      const channelArray = Array.from(data.channels);
-      const returnChannelArray = Array.from(data.returnChannels);
-      const primaryChannel =
-        returnChannelArray.length > 0
-          ? returnChannelArray.join(", ")
-          : channelArray.length > 0
-            ? channelArray.join(", ")
-            : "Direct";
-
-      return {
-        productName,
-        barCode: data.barCode,
-        category: data.category,
-        channel: primaryChannel,
-        channels: channelArray,
-        returnChannels: returnChannelArray,
-        netSales: Math.round(data.net),
-        grossSales: Math.round(data.gross),
-        returns: Math.round(data.returns),
-        units: data.units,
-        returnUnits: data.returnUnits,
-        returnRate: Math.round(returnRate * 10) / 10,
-        mrp: data.mrp,
-        margin: Math.round(data.margin),
-        sharePct,
-      };
-    })
-    .sort((a, b) => b.netSales - a.netSales);
-}
-
-export function computeGeoMetrics(
-  records: SaleRecord[],
-  type: "zone" | "state" | "city",
-  totalNetSales: number,
-): GeoMetric[] {
-  const map = new Map<
-    string,
-    { sales: number; orders: Set<string>; units: number }
-  >();
-
-  for (let i = 0; i < records.length; i++) {
-    const r = records[i];
-    let key = r.zone;
-    if (type === "state") key = r.state || "Unassigned";
-    if (type === "city") key = r.deliveryPlace || "Unassigned";
-
-    const { isReturn, val, qty } = getRecordMetrics(r);
-
-    let curr = map.get(key);
-    if (!curr) {
-      curr = {
-        sales: 0,
-        orders: new Set<string>(),
-        units: 0,
-      };
-      map.set(key, curr);
-    }
-
-    curr.orders.add(r.orderNumber);
-    curr.sales += isReturn ? -val : val;
-    curr.units += isReturn ? -qty : qty;
-  }
-
-  return Array.from(map.entries())
-    .map(([name, data]) => ({
-      name,
-      sales: Math.round(data.sales),
-      orders: data.orders.size,
-      units: data.units,
-      sharePct: computeSharePct(data.sales, totalNetSales),
-    }))
-    .sort((a, b) => b.sales - a.sales);
-}
-
 interface PeriodAggregate {
   label: string;
   profit: number;
@@ -1155,8 +708,9 @@ export function generateExecutiveInsights(
   if (records && records.length > 0) {
     const monthMap = new Map<string, PeriodAggregate>();
     const weekMap = new Map<string, PeriodAggregate>();
+    const rLen = records.length;
 
-    for (let i = 0; i < records.length; i++) {
+    for (let i = 0; i < rLen; i++) {
       const r = records[i];
       const { isReturn, val } = getRecordMetrics(r);
       const profitVal = r.scoobiesMargin || 0;
@@ -1178,7 +732,8 @@ export function generateExecutiveInsights(
       );
 
       // Week
-      const weekName = r.week || `Week ${Math.ceil(r.day / 7)}`;
+      const weekName =
+        r.week || `Week${Math.min(5, Math.ceil(r.day / 7) || 1)}`;
       const weekLabel = r.month ? `${weekName} (${r.month})` : weekName;
       const weekKey = `${yr}-${r.month || "Aug"}-${weekName}`;
 

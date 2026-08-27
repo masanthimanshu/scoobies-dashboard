@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Compass, ChevronDown, ChevronUp } from "lucide-react";
 import { GeoMetric } from "../types";
 import {
@@ -33,16 +33,18 @@ export const GeoAnalytics: React.FC<GeoAnalyticsProps> = React.memo(
     };
 
     // Full list for the active tab
-    const fullList =
-      geoTab === "zones" ? zones : geoTab === "states" ? states : cities;
+    const fullList = useMemo(() => {
+      return geoTab === "zones" ? zones : geoTab === "states" ? states : cities;
+    }, [geoTab, zones, states, cities]);
 
     // Displayed slice: Zones shows all, States/Cities shows top 12 by default
-    const activeList =
-      geoTab === "zones"
+    const activeList = useMemo(() => {
+      return geoTab === "zones"
         ? zones
         : isExpanded
           ? fullList
           : fullList.slice(0, 12);
+    }, [geoTab, zones, isExpanded, fullList]);
 
     const hasMoreThan12 = geoTab !== "zones" && fullList.length > 12;
 
