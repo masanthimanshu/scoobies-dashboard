@@ -4,7 +4,6 @@ import {
   Mail,
   Send,
   Check,
-  Copy,
   AlertTriangle,
   Loader2,
   Sparkles,
@@ -27,6 +26,14 @@ interface ShareChatModalProps {
 }
 
 const STORAGE_KEY_RECIPIENT = "scoobies_ai_email_recipient";
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function parseEmailList(input: string): string[] {
+  return input
+    .split(/[,;\n]+/)
+    .map((e) => e.trim())
+    .filter((e) => e.length > 0);
+}
 
 export const ShareChatModal: React.FC<ShareChatModalProps> = ({
   isOpen,
@@ -50,7 +57,7 @@ export const ShareChatModal: React.FC<ShareChatModalProps> = ({
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [copiedHtml, setCopiedHtml] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   // API Key management
   const hasEnvApiKey = Boolean(getActiveResendApiKey());
@@ -62,7 +69,7 @@ export const ShareChatModal: React.FC<ShareChatModalProps> = ({
     if (isOpen) {
       setError(null);
       setSuccess(false);
-      setCopiedHtml(false);
+      setSuccessMessage("");
       setShowApiKeyInput(!getActiveResendApiKey());
       setApiKeyInput(getActiveResendApiKey());
       setSubject(defaultSubject);
@@ -72,14 +79,23 @@ export const ShareChatModal: React.FC<ShareChatModalProps> = ({
   if (!isOpen) return null;
 
   const totalUserQuestions = messages.filter((m) => m.role === "user").length;
+  const parsedEmails = parseEmailList(recipientEmail);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    const emailTrimmed = recipientEmail.trim();
-    if (!emailTrimmed || !emailTrimmed.includes("@")) {
-      setError("Please enter a valid recipient email address.");
+    const emailList = parseEmailList(recipientEmail);
+    if (emailList.length === 0) {
+      setError("Please enter at least one recipient email address.");
+      return;
+    }
+
+    const invalidEmails = emailList.filter((e) => !EMAIL_REGEX.test(e));
+    if (invalidEmails.length > 0) {
+      setError(
+        `Invalid email address${invalidEmails.length > 1 ? "es" : ""}: ${invalidEmails.join(", ")}`,
+      );
       return;
     }
 
@@ -101,45 +117,35 @@ export const ShareChatModal: React.FC<ShareChatModalProps> = ({
       const html = buildChatBriefingEmailHtml({
         messages,
         distilledContext,
-        recipientEmail: emailTrimmed,
+        recipientEmail: emailList.join(", "),
         customSubject: subject.trim() || defaultSubject,
       });
 
       await sendEmailWithResend({
-        to: emailTrimmed,
+        to: emailList,
         subject: subject.trim() || defaultSubject,
         html,
       });
 
-      // Save recipient email for convenience
-      localStorage.setItem(STORAGE_KEY_RECIPIENT, emailTrimmed);
+      // Save recipient emails for convenience
+      localStorage.setItem(STORAGE_KEY_RECIPIENT, recipientEmail.trim());
+
+      const sentMsg =
+        emailList.length === 1
+          ? `Email sent successfully to ${emailList[0]}!`
+          : `Email sent successfully to ${emailList.length} recipients (${emailList.join(", ")})!`;
+      setSuccessMessage(sentMsg);
       setSuccess(true);
 
       setTimeout(() => {
         onClose();
-      }, 2200);
+      }, 2500);
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : "Failed to send email briefing.";
       setError(msg);
     } finally {
       setIsSending(false);
-    }
-  };
-
-  const handleCopyHtml = () => {
-    try {
-      const html = buildChatBriefingEmailHtml({
-        messages,
-        distilledContext,
-        recipientEmail,
-        customSubject: subject,
-      });
-      navigator.clipboard.writeText(html);
-      setCopiedHtml(true);
-      setTimeout(() => setCopiedHtml(false), 2500);
-    } catch {
-      setError("Failed to copy HTML to clipboard.");
     }
   };
 
@@ -197,11 +203,17 @@ export const ShareChatModal: React.FC<ShareChatModalProps> = ({
         <form onSubmit={handleSend} className="mt-4 space-y-3.5">
           {/* Recipient Email */}
           <div>
-            <label className="block text-xs font-bold text-[#2D2A26] mb-1">
-              Recipient Email Address <span className="text-red-500">*</span>
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold text-[#2D2A26]">
+                Recipient Email Address(es){" "}
+                <span className="text-red-500">*</span>
+              </label>
+              <span className="text-[10px] text-[#8C8376] font-medium">
+                Separate with commas
+              </span>
+            </div>
             <input
-              type="email"
+              type="text"
               required
               value={recipientEmail}
               onChange={(e) => setRecipientEmail(e.target.value)}
@@ -209,6 +221,29 @@ export const ShareChatModal: React.FC<ShareChatModalProps> = ({
               disabled={isSending || success}
               className="w-full px-3.5 py-2.5 text-xs bg-white border border-[#EBE5D9] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F7161]/30 focus:border-[#5F7161] font-medium placeholder-[#A89F91] transition-all disabled:opacity-60"
             />
+            {/* Visual recipient pill chips preview when multiple are typed */}
+            {parsedEmails.length > 1 && (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 animate-in fade-in duration-150">
+                <span className="text-[10px] font-bold text-[#8C8376] uppercase tracking-wider mr-0.5">
+                  {parsedEmails.length} recipients:
+                </span>
+                {parsedEmails.map((email, idx) => {
+                  const isValid = EMAIL_REGEX.test(email);
+                  return (
+                    <span
+                      key={idx}
+                      className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-semibold border ${
+                        isValid
+                          ? "bg-[#E9EFEA] text-[#425044] border-[#C5D5C7]"
+                          : "bg-red-50 text-red-700 border-red-200"
+                      }`}
+                    >
+                      {email}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Subject Line */}
@@ -262,67 +297,44 @@ export const ShareChatModal: React.FC<ShareChatModalProps> = ({
 
           {/* Success Message */}
           {success && (
-            <div className="p-3 bg-green-50 border border-green-200 rounded-2xl text-xs text-green-800 font-bold flex items-center gap-2 animate-in fade-in duration-200">
-              <Check className="w-4 h-4 text-green-600 shrink-0" />
-              <span>Email sent successfully to {recipientEmail}!</span>
+            <div className="p-3 bg-green-50 border border-green-200 rounded-2xl text-xs text-green-800 font-bold flex items-start gap-2 animate-in fade-in duration-200">
+              <Check className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+              <span className="leading-relaxed">{successMessage}</span>
             </div>
           )}
 
           {/* Actions */}
-          <div className="pt-2 flex items-center justify-between gap-2">
+          <div className="pt-2 flex items-center justify-end">
             <button
-              type="button"
-              onClick={handleCopyHtml}
-              disabled={isSending}
-              className="px-3.5 py-2.5 rounded-xl border border-[#EBE5D9] bg-white hover:bg-[#F9F7F2] text-[#2D2A26] text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-              title="Copy HTML to clipboard"
+              type="submit"
+              disabled={isSending || success || !recipientEmail.trim()}
+              className="px-5 py-2.5 rounded-xl bg-[#5F7161] hover:bg-[#4E5E50] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-[#5F7161]/25 transition-all cursor-pointer disabled:opacity-50 disabled:hover:bg-[#5F7161]"
             >
-              {copiedHtml ? (
+              {isSending ? (
                 <>
-                  <Check className="w-3.5 h-3.5 text-[#5F7161]" />
-                  <span className="text-[#5F7161]">Copied HTML!</span>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>
+                    {parsedEmails.length > 1
+                      ? `Sending to ${parsedEmails.length} recipients...`
+                      : "Sending Briefing..."}
+                  </span>
+                </>
+              ) : success ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  <span>Sent!</span>
                 </>
               ) : (
                 <>
-                  <Copy className="w-3.5 h-3.5 text-[#8C8376]" />
-                  <span>Copy HTML</span>
+                  <Send className="w-3.5 h-3.5" />
+                  <span>
+                    {parsedEmails.length > 1
+                      ? `Send Email (${parsedEmails.length})`
+                      : "Send Email"}
+                  </span>
                 </>
               )}
             </button>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={isSending}
-                className="px-4 py-2.5 rounded-xl text-xs font-bold text-[#8C8376] hover:text-[#2D2A26] transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="submit"
-                disabled={isSending || success || !recipientEmail.trim()}
-                className="px-5 py-2.5 rounded-xl bg-[#5F7161] hover:bg-[#4E5E50] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-[#5F7161]/25 transition-all cursor-pointer disabled:opacity-50 disabled:hover:bg-[#5F7161]"
-              >
-                {isSending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Sending Briefing...</span>
-                  </>
-                ) : success ? (
-                  <>
-                    <Check className="w-4 h-4" />
-                    <span>Sent!</span>
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-3.5 h-3.5" />
-                    <span>Send Email</span>
-                  </>
-                )}
-              </button>
-            </div>
           </div>
         </form>
       </div>

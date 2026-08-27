@@ -220,42 +220,45 @@ export const FilterBar: React.FC<FilterBarProps> = React.memo(
           : [];
     }, [filters.weeks, filters.week]);
 
-    const toggleTimeFilter = (
-      arrKey: "years" | "months" | "weeks",
-      strKey: "year" | "month" | "week",
-      currentList: string[],
-      val: string,
-    ) => {
-      if (val === "ALL") {
-        onFilterChange({ ...filters, [arrKey]: [], [strKey]: "ALL" });
-        return;
-      }
-      const exists = currentList.some(
-        (x) => x.toLowerCase() === val.toLowerCase(),
-      );
-      const next = exists
-        ? currentList.filter((x) => x.toLowerCase() !== val.toLowerCase())
-        : [...currentList, val];
-      onFilterChange({
-        ...filters,
-        [arrKey]: next,
-        [strKey]:
-          next.length === 1 ? next[0] : next.length === 0 ? "ALL" : "CUSTOM",
-      });
-    };
+    const toggleTimeFilter = React.useCallback(
+      (
+        arrKey: "years" | "months" | "weeks",
+        strKey: "year" | "month" | "week",
+        currentList: string[],
+        val: string,
+      ) => {
+        if (val === "ALL") {
+          onFilterChange({ ...filters, [arrKey]: [], [strKey]: "ALL" });
+          return;
+        }
+        const exists = currentList.some(
+          (x) => x.toLowerCase() === val.toLowerCase(),
+        );
+        const next = exists
+          ? currentList.filter((x) => x.toLowerCase() !== val.toLowerCase())
+          : [...currentList, val];
+        onFilterChange({
+          ...filters,
+          [arrKey]: next,
+          [strKey]:
+            next.length === 1 ? next[0] : next.length === 0 ? "ALL" : "CUSTOM",
+        });
+      },
+      [filters, onFilterChange],
+    );
 
-    const toggleArrayFilter = (
-      key: "channels" | "categories" | "zones",
-      item: string,
-    ) => {
-      const list = filters[key];
-      const next = list.includes(item)
-        ? list.filter((i) => i !== item)
-        : [...list, item];
-      onFilterChange({ ...filters, [key]: next });
-    };
+    const toggleArrayFilter = React.useCallback(
+      (key: "channels" | "categories" | "zones", item: string) => {
+        const list = filters[key];
+        const next = list.includes(item)
+          ? list.filter((i) => i !== item)
+          : [...list, item];
+        onFilterChange({ ...filters, [key]: next });
+      },
+      [filters, onFilterChange],
+    );
 
-    const resetAllFilters = () => {
+    const resetAllFilters = React.useCallback(() => {
       onFilterChange({
         search: "",
         year: "ALL",
@@ -273,7 +276,7 @@ export const FilterBar: React.FC<FilterBarProps> = React.memo(
         status: "ALL",
         campaign: "ALL",
       });
-    };
+    }, [onFilterChange]);
 
     const activeFilterCount = useMemo(() => {
       return (

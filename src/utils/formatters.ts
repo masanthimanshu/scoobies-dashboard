@@ -9,13 +9,23 @@ const inrFormatter = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 0,
 });
 
+const MAX_CACHE_SIZE = 2000;
+const currencyCache = new Map<number, string>();
+const numberCache = new Map<number, string>();
+
 /**
  * Formats a numeric value into INR currency format (e.g. ₹1,23,456)
  */
 export function formatCurrency(val: number | undefined | null): string {
   if (val === undefined || val === null || isNaN(val)) return "₹0";
   const rounded = Math.round(val);
-  return `₹${inrFormatter.format(rounded)}`;
+  const cached = currencyCache.get(rounded);
+  if (cached !== undefined) return cached;
+
+  const formatted = `₹${inrFormatter.format(rounded)}`;
+  if (currencyCache.size >= MAX_CACHE_SIZE) currencyCache.clear();
+  currencyCache.set(rounded, formatted);
+  return formatted;
 }
 
 /**
@@ -23,7 +33,14 @@ export function formatCurrency(val: number | undefined | null): string {
  */
 export function formatNumber(val: number | undefined | null): string {
   if (val === undefined || val === null || isNaN(val)) return "0";
-  return inrFormatter.format(Math.round(val));
+  const rounded = Math.round(val);
+  const cached = numberCache.get(rounded);
+  if (cached !== undefined) return cached;
+
+  const formatted = inrFormatter.format(rounded);
+  if (numberCache.size >= MAX_CACHE_SIZE) numberCache.clear();
+  numberCache.set(rounded, formatted);
+  return formatted;
 }
 
 /**
@@ -96,19 +113,23 @@ export const MONTHS_SHORT = [
   "Dec",
 ] as const;
 
+const MONTH_INDEX_MAP = new Map<string, number>(
+  MONTHS_SHORT.flatMap((m, idx) => [
+    [m.toLowerCase(), idx],
+    [m.toLowerCase().slice(0, 3), idx],
+  ]),
+);
+
 /**
  * Sorts month names chronologically (Jan -> Dec)
  */
 export function sortMonthList(months: string[]): string[] {
+  if (months.length <= 1) return [...months];
   return [...months].sort((a, b) => {
-    const aLower = a.toLowerCase();
-    const bLower = b.toLowerCase();
-    const idxA = MONTHS_SHORT.findIndex(
-      (m) => m.toLowerCase() === aLower || aLower.startsWith(m.toLowerCase()),
-    );
-    const idxB = MONTHS_SHORT.findIndex(
-      (m) => m.toLowerCase() === bLower || bLower.startsWith(m.toLowerCase()),
-    );
+    const aLower = a.toLowerCase().slice(0, 3);
+    const bLower = b.toLowerCase().slice(0, 3);
+    const idxA = MONTH_INDEX_MAP.get(aLower) ?? -1;
+    const idxB = MONTH_INDEX_MAP.get(bLower) ?? -1;
     if (idxA !== -1 && idxB !== -1) return idxA - idxB;
     return a.localeCompare(b);
   });
@@ -118,6 +139,7 @@ export function sortMonthList(months: string[]): string[] {
  * Sorts week identifiers numerically (Week 1 -> Week 52)
  */
 export function sortWeekList(weeks: string[]): string[] {
+  if (weeks.length <= 1) return [...weeks];
   return [...weeks].sort((a, b) => {
     const numA = parseInt(a.replace(/\D/g, ""), 10);
     const numB = parseInt(b.replace(/\D/g, ""), 10);

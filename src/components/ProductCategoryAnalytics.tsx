@@ -133,6 +133,7 @@ export const ProductCategoryAnalytics: React.FC<ProductCategoryAnalyticsProps> =
                     dataKey="netSales"
                     fill="#5F7161"
                     radius={[0, 6, 6, 0]}
+                    isAnimationActive={false}
                   />
                 </BarChart>
               </ResponsiveContainer>

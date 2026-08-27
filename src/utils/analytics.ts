@@ -19,6 +19,36 @@ export function filterRecords(
   records: SaleRecord[],
   filters: FilterState,
 ): SaleRecord[] {
+  // Fast path: if no filters are active, return records immediately
+  const hasActiveFilters =
+    (filters.years &&
+      filters.years.length > 0 &&
+      !filters.years.includes("ALL")) ||
+    (filters.year && filters.year !== "ALL") ||
+    (filters.months &&
+      filters.months.length > 0 &&
+      !filters.months.includes("ALL")) ||
+    (filters.month && filters.month !== "ALL") ||
+    (filters.weeks &&
+      filters.weeks.length > 0 &&
+      !filters.weeks.includes("ALL")) ||
+    (filters.week && filters.week !== "ALL") ||
+    (filters.channels && filters.channels.length > 0) ||
+    (filters.categories && filters.categories.length > 0) ||
+    (filters.zones && filters.zones.length > 0) ||
+    (filters.states && filters.states.length > 0) ||
+    Boolean(filters.status && filters.status !== "ALL") ||
+    Boolean(filters.campaign && filters.campaign !== "ALL") ||
+    Boolean(filters.startDate) ||
+    Boolean(filters.endDate) ||
+    filters.minSaleValue !== undefined ||
+    filters.maxSaleValue !== undefined ||
+    Boolean(filters.search && filters.search.trim());
+
+  if (!hasActiveFilters) {
+    return records;
+  }
+
   // Pre-compile multi-select lookup sets (O(1) lookups)
   const yearSet =
     filters.years && filters.years.length > 0 && !filters.years.includes("ALL")

@@ -38,18 +38,21 @@ export const OrdersTable: React.FC<OrdersTableProps> = React.memo(
     const [sortField, setSortField] = useState<keyof SaleRecord>("dateStr");
     const [sortAsc, setSortAsc] = useState(false);
 
-    const handleSort = (field: keyof SaleRecord) => {
-      if (sortField === field) {
-        setSortAsc(!sortAsc);
-      } else {
-        setSortField(field);
-        setSortAsc(false);
-      }
-    };
+    const handleSort = React.useCallback(
+      (field: keyof SaleRecord) => {
+        if (sortField === field) {
+          setSortAsc((prev) => !prev);
+        } else {
+          setSortField(field);
+          setSortAsc(false);
+        }
+      },
+      [sortField],
+    );
 
     const sortedRecords = useMemo(() => {
-      const list = [...records];
-      return list.sort((a, b) => {
+      if (records.length <= 1) return records;
+      return [...records].sort((a, b) => {
         const valA = a[sortField];
         const valB = b[sortField];
 
@@ -153,65 +156,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = React.memo(
                 </tr>
               ) : (
                 paginatedRecords.map((r) => (
-                  <tr
-                    key={r.id}
-                    className="hover:bg-[#FAF8F5] transition-colors"
-                  >
-                    <td className="py-2.5 px-3 text-[#433E37] font-medium whitespace-nowrap">
-                      {r.dateStr}
-                    </td>
-                    <td className="py-2.5 px-3 text-[#433E37] whitespace-nowrap">
-                      <span className="inline-block px-2 py-0.5 bg-[#F1EDE5] border border-[#EBE5D9] rounded-md text-[11px] font-bold text-[#2D2A26]">
-                        {r.channel}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3 max-w-[200px]">
-                      <div
-                        className="font-bold text-[#2D2A26] truncate"
-                        title={r.productName}
-                      >
-                        {r.productName}
-                      </div>
-                      <div className="text-[10px] text-[#8C8376] flex items-center gap-1 font-medium">
-                        <span>{r.category}</span>
-                        {r.color && <span>• {r.color}</span>}
-                      </div>
-                    </td>
-                    <td
-                      className={`py-2.5 px-3 text-right font-bold whitespace-nowrap ${
-                        r.qty < 0 ? "text-[#AF8260]" : "text-[#2D2A26]"
-                      }`}
-                    >
-                      {r.qty}
-                    </td>
-                    <td
-                      className={`py-2.5 px-3 text-right font-black whitespace-nowrap ${
-                        r.saleValue < 0 ? "text-[#AF8260]" : "text-[#5F7161]"
-                      }`}
-                    >
-                      {formatCurrency(r.saleValue)}
-                    </td>
-                    <td className="py-2.5 px-3 text-right font-semibold text-[#433E37] whitespace-nowrap">
-                      {formatCurrency(r.scoobiesMargin)}
-                    </td>
-                    <td className="py-2.5 px-3 text-[#433E37] whitespace-nowrap">
-                      <div className="font-medium">{r.deliveryPlace}</div>
-                      <div className="text-[10px] text-[#8C8376] font-medium">
-                        {r.state} ({r.zone})
-                      </div>
-                    </td>
-                    <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                      {r.status === "Return" ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#FAF0E6] text-[#AF8260] border border-[#E8D2C2]">
-                          <RotateCcw className="w-2.5 h-2.5" /> Return
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#E9EFEA] text-[#5F7161] border border-[#C5D5C7]">
-                          <CheckCircle2 className="w-2.5 h-2.5" /> Dispatched
-                        </span>
-                      )}
-                    </td>
-                  </tr>
+                  <MemoizedOrderTableRow key={r.id} record={r} />
                 ))
               )}
             </tbody>
@@ -255,6 +200,69 @@ export const OrdersTable: React.FC<OrdersTableProps> = React.memo(
           </div>
         </div>
       </div>
+    );
+  },
+);
+
+const MemoizedOrderTableRow: React.FC<{ record: SaleRecord }> = React.memo(
+  ({ record: r }) => {
+    return (
+      <tr className="hover:bg-[#FAF8F5] transition-colors">
+        <td className="py-2.5 px-3 text-[#433E37] font-medium whitespace-nowrap">
+          {r.dateStr}
+        </td>
+        <td className="py-2.5 px-3 text-[#433E37] whitespace-nowrap">
+          <span className="inline-block px-2 py-0.5 bg-[#F1EDE5] border border-[#EBE5D9] rounded-md text-[11px] font-bold text-[#2D2A26]">
+            {r.channel}
+          </span>
+        </td>
+        <td className="py-2.5 px-3 max-w-[200px]">
+          <div
+            className="font-bold text-[#2D2A26] truncate"
+            title={r.productName}
+          >
+            {r.productName}
+          </div>
+          <div className="text-[10px] text-[#8C8376] flex items-center gap-1 font-medium">
+            <span>{r.category}</span>
+            {r.color && <span>• {r.color}</span>}
+          </div>
+        </td>
+        <td
+          className={`py-2.5 px-3 text-right font-bold whitespace-nowrap ${
+            r.qty < 0 ? "text-[#AF8260]" : "text-[#2D2A26]"
+          }`}
+        >
+          {r.qty}
+        </td>
+        <td
+          className={`py-2.5 px-3 text-right font-black whitespace-nowrap ${
+            r.saleValue < 0 ? "text-[#AF8260]" : "text-[#5F7161]"
+          }`}
+        >
+          {formatCurrency(r.saleValue)}
+        </td>
+        <td className="py-2.5 px-3 text-right font-semibold text-[#433E37] whitespace-nowrap">
+          {formatCurrency(r.scoobiesMargin)}
+        </td>
+        <td className="py-2.5 px-3 text-[#433E37] whitespace-nowrap">
+          <div className="font-medium">{r.deliveryPlace}</div>
+          <div className="text-[10px] text-[#8C8376] font-medium">
+            {r.state} ({r.zone})
+          </div>
+        </td>
+        <td className="py-2.5 px-3 text-center whitespace-nowrap">
+          {r.status === "Return" ? (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#FAF0E6] text-[#AF8260] border border-[#E8D2C2]">
+              <RotateCcw className="w-2.5 h-2.5" /> Return
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#E9EFEA] text-[#5F7161] border border-[#C5D5C7]">
+              <CheckCircle2 className="w-2.5 h-2.5" /> Dispatched
+            </span>
+          )}
+        </td>
+      </tr>
     );
   },
 );

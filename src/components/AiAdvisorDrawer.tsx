@@ -568,74 +568,15 @@ Ensure \`GROQ_API_KEY\` is defined in your \`.env\` file to enable real-time Gro
           )}
 
           {/* Chat Messages */}
-          {messages.map((msg, index) => {
-            const isUser = msg.role === "user";
-
-            return (
-              <div
-                key={index}
-                className={`flex gap-3 w-full min-w-0 ${isUser ? "justify-end" : "justify-start"} animate-in fade-in duration-200`}
-              >
-                {!isUser && (
-                  <div className="w-8 h-8 rounded-xl bg-[#5F7161] border border-[#4A594C] flex items-center justify-center text-white shrink-0 mt-1 shadow-2xs">
-                    <Bot className="w-4 h-4 text-amber-200" />
-                  </div>
-                )}
-
-                <div
-                  className={`max-w-[94%] sm:max-w-[88%] min-w-0 overflow-hidden break-words rounded-3xl p-4 text-xs leading-relaxed shadow-2xs ${
-                    isUser
-                      ? "bg-[#5F7161] text-white font-medium rounded-tr-xs"
-                      : "bg-white text-[#2D2A26] border border-[#EBE5D9] rounded-tl-xs"
-                  }`}
-                >
-                  {!isUser ? (
-                    <div className="w-full min-w-0 overflow-hidden">
-                      {/* Formatted Markdown Content */}
-                      {renderFormattedMarkdown(msg.content)}
-
-                      {/* Message Footer Controls */}
-                      {msg.content && (
-                        <div className="mt-3 pt-2.5 border-t border-[#F1EDE5] flex items-center justify-between text-[10px] text-[#8C8376]">
-                          <span className="font-bold flex items-center gap-1">
-                            <Sparkles className="w-3 h-3 text-[#5F7161]" />
-                            <span>Groq • GPT OSS 120B</span>
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleCopyMessage(msg.content, index)
-                            }
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md hover:bg-[#F9F7F2] text-[#8C8376] hover:text-[#2D2A26] transition-colors cursor-pointer"
-                            title="Copy response"
-                          >
-                            {copiedIndex === index ? (
-                              <>
-                                <Check className="w-3 h-3 text-[#5F7161]" />
-                                <span className="text-[#5F7161] font-bold">
-                                  Copied
-                                </span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="w-3 h-3" />
-                                <span>Copy</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <User className="w-3.5 h-3.5 opacity-70 shrink-0" />
-                      <span>{msg.content}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+          {messages.map((msg, index) => (
+            <MemoizedChatMessageItem
+              key={index}
+              message={msg}
+              index={index}
+              isCopied={copiedIndex === index}
+              onCopy={handleCopyMessage}
+            />
+          ))}
 
           {/* Typing / Streaming indicator */}
           {isGenerating && messages[messages.length - 1]?.content === "" && (
@@ -818,6 +759,78 @@ Ensure \`GROQ_API_KEY\` is defined in your \`.env\` file to enable real-time Gro
     </div>
   );
 };
+
+/**
+ * Memoized single chat message item to prevent redundant markdown re-parsing on keystrokes.
+ */
+const MemoizedChatMessageItem: React.FC<{
+  message: ChatMessage;
+  index: number;
+  isCopied: boolean;
+  onCopy: (text: string, index: number) => void;
+}> = React.memo(({ message, index, isCopied, onCopy }) => {
+  const isUser = message.role === "user";
+
+  return (
+    <div
+      className={`flex gap-3 w-full min-w-0 ${isUser ? "justify-end" : "justify-start"} animate-in fade-in duration-200`}
+    >
+      {!isUser && (
+        <div className="w-8 h-8 rounded-xl bg-[#5F7161] border border-[#4A594C] flex items-center justify-center text-white shrink-0 mt-1 shadow-2xs">
+          <Bot className="w-4 h-4 text-amber-200" />
+        </div>
+      )}
+
+      <div
+        className={`max-w-[94%] sm:max-w-[88%] min-w-0 overflow-hidden break-words rounded-3xl p-4 text-xs leading-relaxed shadow-2xs ${
+          isUser
+            ? "bg-[#5F7161] text-white font-medium rounded-tr-xs"
+            : "bg-white text-[#2D2A26] border border-[#EBE5D9] rounded-tl-xs"
+        }`}
+      >
+        {!isUser ? (
+          <div className="w-full min-w-0 overflow-hidden">
+            {/* Formatted Markdown Content */}
+            {renderFormattedMarkdown(message.content)}
+
+            {/* Message Footer Controls */}
+            {message.content && (
+              <div className="mt-3 pt-2.5 border-t border-[#F1EDE5] flex items-center justify-between text-[10px] text-[#8C8376]">
+                <span className="font-bold flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-[#5F7161]" />
+                  <span>Groq • GPT OSS 120B</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onCopy(message.content, index)}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md hover:bg-[#F9F7F2] text-[#8C8376] hover:text-[#2D2A26] transition-colors cursor-pointer"
+                  title="Copy response"
+                >
+                  {isCopied ? (
+                    <>
+                      <Check className="w-3 h-3 text-[#5F7161]" />
+                      <span className="text-[#5F7161] font-bold">Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3 h-3" />
+                      <span>Copy</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <User className="w-3.5 h-3.5 opacity-70 shrink-0" />
+            <span>{message.content}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
 
 /**
  * Renders full GitHub Flavored Markdown (headings, tables, lists, code, bold, links)

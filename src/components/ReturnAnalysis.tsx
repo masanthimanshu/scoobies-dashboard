@@ -70,8 +70,6 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = React.memo(
             productName: string;
             barCode: string;
             category: string;
-            returnChannels: Set<string>;
-            channels: Set<string>;
             grossSales: number;
             netSales: number;
             returns: number;
@@ -101,8 +99,6 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = React.memo(
               productName: name,
               barCode: r.barCode || "",
               category: r.category || "General",
-              returnChannels: new Set<string>(),
-              channels: new Set<string>(),
               grossSales: 0,
               netSales: 0,
               returns: 0,
@@ -112,13 +108,10 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = React.memo(
             prodMap.set(name, curr);
           }
 
-          curr.channels.add(channelName);
-
           if (isReturn) {
             curr.returns += val;
             curr.netSales -= val;
             curr.returnUnits += qty;
-            curr.returnChannels.add(channelName);
           } else {
             curr.grossSales += val;
             curr.netSales += val;
@@ -128,6 +121,8 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = React.memo(
 
         // Filter strictly to products that have returnUnits > 0 or returns > 0 in this channel scope
         const list: ProductMetric[] = [];
+        const chArray = [selectedChannelFilter];
+
         prodMap.forEach((data) => {
           if (data.returnUnits > 0 || data.returns > 0) {
             const totalUnitsOrdered = data.units + data.returnUnits;
@@ -135,16 +130,14 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = React.memo(
               totalUnitsOrdered > 0
                 ? (data.returnUnits / totalUnitsOrdered) * 100
                 : 100;
-            const retChannelsList = Array.from(data.returnChannels);
-            const allChannelsList = Array.from(data.channels);
 
             list.push({
               productName: data.productName,
               barCode: data.barCode,
               category: data.category,
               channel: selectedChannelFilter,
-              channels: allChannelsList,
-              returnChannels: retChannelsList,
+              channels: chArray,
+              returnChannels: chArray,
               netSales: Math.round(data.netSales),
               grossSales: Math.round(data.grossSales),
               returns: Math.round(data.returns),

@@ -20,6 +20,13 @@ function cleanNumber(val: unknown, defaultVal = 0): number {
   return isNaN(num) ? defaultVal : num;
 }
 
+const MONTH_MAP = new Map<string, number>(
+  MONTHS_SHORT.flatMap((m, idx) => [
+    [m.toLowerCase(), idx],
+    [m.toLowerCase().slice(0, 3), idx],
+  ]),
+);
+
 /**
  * Normalizes date to parse year, month, day and timestamp safely.
  * Accepts formats: D/M/YYYY, DD/MM/YYYY, YYYY-MM-DD, M/D/YYYY, etc.
@@ -38,10 +45,7 @@ function parseDateComponents(
 } {
   let y = yearHint || 2026;
   let mName = monthHint || "Aug";
-  let mIndex = MONTHS_SHORT.findIndex(
-    (m) => m.toLowerCase() === mName.toLowerCase(),
-  );
-  if (mIndex === -1) mIndex = 7; // default Aug
+  let mIndex = MONTH_MAP.get(mName.toLowerCase().slice(0, 3)) ?? 7;
   let d = dayHint || 1;
 
   if (dateStr && typeof dateStr === "string") {

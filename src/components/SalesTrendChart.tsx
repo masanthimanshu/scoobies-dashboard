@@ -299,6 +299,7 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = React.memo(
                         strokeWidth={3}
                         fillOpacity={1}
                         fill="url(#netSalesGrad)"
+                        isAnimationActive={false}
                       />
                       <Area
                         type="monotone"
@@ -308,6 +309,7 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = React.memo(
                         strokeWidth={2}
                         fill="#FAF0E6"
                         fillOpacity={0.35}
+                        isAnimationActive={false}
                       />
                     </>
                   )}
@@ -321,6 +323,7 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = React.memo(
                       strokeWidth={3}
                       fillOpacity={1}
                       fill="url(#unitsGrad)"
+                      isAnimationActive={false}
                     />
                   )}
 
@@ -333,6 +336,7 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = React.memo(
                       strokeWidth={3}
                       fillOpacity={1}
                       fill="url(#marginGrad)"
+                      isAnimationActive={false}
                     />
                   )}
                 </AreaChart>
@@ -370,12 +374,14 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = React.memo(
                         name="Net Revenue"
                         fill="#5F7161"
                         radius={[6, 6, 0, 0]}
+                        isAnimationActive={false}
                       />
                       <Bar
                         dataKey="returns"
                         name="Returns"
                         fill="#AF8260"
                         radius={[6, 6, 0, 0]}
+                        isAnimationActive={false}
                       />
                     </>
                   )}
@@ -386,6 +392,7 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = React.memo(
                       name="Net Units Sold"
                       fill="#AF8260"
                       radius={[6, 6, 0, 0]}
+                      isAnimationActive={false}
                     />
                   )}
 
@@ -395,6 +402,7 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = React.memo(
                       name="Scoobies Margin"
                       fill="#5F7161"
                       radius={[6, 6, 0, 0]}
+                      isAnimationActive={false}
                     />
                   )}
                 </BarChart>

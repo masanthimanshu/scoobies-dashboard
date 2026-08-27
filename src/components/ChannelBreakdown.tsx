@@ -68,6 +68,7 @@ export const ChannelBreakdown: React.FC<ChannelBreakdownProps> = React.memo(
                     outerRadius={88}
                     paddingAngle={3}
                     dataKey="value"
+                    isAnimationActive={false}
                   >
                     {pieData.map((_, index) => (
                       <Cell

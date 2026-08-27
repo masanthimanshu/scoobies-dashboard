@@ -100,9 +100,14 @@ export async function sendEmailWithResend(
       });
     }
 
-    let data: any = null;
+    interface ResendApiResponse {
+      id?: string;
+      message?: string;
+      error?: string | { message?: string };
+    }
+    let data: ResendApiResponse | null = null;
     try {
-      data = await response.json();
+      data = (await response.json()) as ResendApiResponse;
     } catch {
       data = null;
     }
@@ -110,8 +115,9 @@ export async function sendEmailWithResend(
     if (!response.ok) {
       const errorMsg =
         data?.message ||
-        data?.error?.message ||
-        data?.error ||
+        (typeof data?.error === "object"
+          ? data?.error?.message
+          : data?.error) ||
         response.statusText;
 
       if (response.status === 401 || response.status === 403) {
