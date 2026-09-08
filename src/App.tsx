@@ -96,8 +96,8 @@ export default function App() {
             mrpValue: Number.isFinite(r.mrpValue)
               ? r.mrpValue
               : r.qty < 0 || r.status === "Return"
-              ? -Math.abs(r.mrp * r.qty)
-              : r.mrp * r.qty,
+                ? -Math.abs(r.mrp * r.qty)
+                : r.mrp * r.qty,
           }));
           setRecords(enrichedRecords);
           setFileName(cached.fileName);

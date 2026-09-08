@@ -4,13 +4,13 @@ const DB_NAME = "ScoobiesSalesDB";
 const DB_VERSION = 1;
 const STORE_NAME = "sales_store";
 
-export interface CachedDatasetMeta {
+interface CachedDatasetMeta {
   fileName: string;
   timestamp: number;
   totalRows: number;
 }
 
-export interface CachedSalesDataset {
+interface CachedSalesDataset {
   records: SaleRecord[];
   fileName: string;
   timestamp: number;

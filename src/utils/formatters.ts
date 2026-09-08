@@ -113,7 +113,7 @@ export const MONTHS_SHORT = [
   "Dec",
 ] as const;
 
-const MONTH_INDEX_MAP = new Map<string, number>(
+export const MONTH_INDEX_MAP = new Map<string, number>(
   MONTHS_SHORT.flatMap((m, idx) => [
     [m.toLowerCase(), idx],
     [m.toLowerCase().slice(0, 3), idx],

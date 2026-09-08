@@ -24,7 +24,7 @@ export function getActiveGroqApiKey(): string {
   return "";
 }
 
-export function getActiveGroqModel(): string {
+function getActiveGroqModel(): string {
   return DEFAULT_MODEL;
 }
 
@@ -117,7 +117,7 @@ async function groqApiFetch({
   return response;
 }
 
-export interface StreamGroqOptions {
+interface StreamGroqOptions {
   messages: ChatMessage[];
   contextMarkdown: string;
   targetedSlice?: string;
@@ -217,7 +217,7 @@ export async function streamGroqChat({
   }
 }
 
-export interface TranscribeAudioOptions {
+interface TranscribeAudioOptions {
   audioBlob: Blob;
   prompt?: string;
   language?: string;
@@ -269,7 +269,7 @@ export async function transcribeGroqAudio({
   return (result.text || "").trim();
 }
 
-export interface RefinePromptOptions {
+interface RefinePromptOptions {
   rawTranscript: string;
   contextSummary?: string;
   model?: string;

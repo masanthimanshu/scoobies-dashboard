@@ -117,8 +117,6 @@ export const ShareChatModal: React.FC<ShareChatModalProps> = ({
       const html = buildChatBriefingEmailHtml({
         messages,
         distilledContext,
-        recipientEmail: emailList.join(", "),
-        customSubject: subject.trim() || defaultSubject,
       });
 
       await sendEmailWithResend({

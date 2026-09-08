@@ -29,7 +29,7 @@ export function setActiveResendApiKey(key: string) {
   }
 }
 
-export interface SendEmailOptions {
+interface SendEmailOptions {
   to: string | string[];
   subject: string;
   html: string;
@@ -37,7 +37,7 @@ export interface SendEmailOptions {
   replyTo?: string;
 }
 
-export interface SendEmailResponse {
+interface SendEmailResponse {
   id: string;
   success: boolean;
   message?: string;

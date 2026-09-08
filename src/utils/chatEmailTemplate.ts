@@ -3,11 +3,9 @@ import { ChatMessage } from "../services/groqService";
 import { DistilledSalesContext } from "./aiContextDistiller";
 import { formatCurrency, formatNumber, formatPercent } from "./formatters";
 
-export interface GenerateEmailOptions {
+interface GenerateEmailOptions {
   messages: ChatMessage[];
   distilledContext: DistilledSalesContext;
-  recipientEmail?: string;
-  customSubject?: string;
 }
 
 /**

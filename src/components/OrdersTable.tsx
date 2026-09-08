@@ -237,7 +237,9 @@ const MemoizedOrderTableRow: React.FC<{ record: SaleRecord }> = React.memo(
         </td>
         <td
           className={`py-2.5 px-3 text-right font-black whitespace-nowrap ${
-            (r.mrpValue ?? r.saleValue) < 0 ? "text-[#AF8260]" : "text-[#5F7161]"
+            (r.mrpValue ?? r.saleValue) < 0
+              ? "text-[#AF8260]"
+              : "text-[#5F7161]"
           }`}
         >
           {formatCurrency(r.mrpValue ?? r.saleValue)}

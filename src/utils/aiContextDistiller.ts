@@ -470,7 +470,7 @@ export function extractTargetedMicroSlice(
           item.units += r.qty;
           item.sales += Number.isFinite(r.mrpValue)
             ? r.mrpValue
-            : (r.saleValue || (r.mrp * r.qty));
+            : r.saleValue || r.mrp * r.qty;
         }
       }
 

@@ -1,8 +1,12 @@
 import Papa from "papaparse";
 import { SaleRecord } from "../types";
-import { isValidFilterOption, MONTHS_SHORT } from "./formatters";
+import {
+  isValidFilterOption,
+  MONTHS_SHORT,
+  MONTH_INDEX_MAP,
+} from "./formatters";
 
-export interface ParseResult {
+interface ParseResult {
   records: SaleRecord[];
   errors: string[];
   totalRows: number;
@@ -19,13 +23,6 @@ function cleanNumber(val: unknown, defaultVal = 0): number {
   const num = parseFloat(str);
   return isNaN(num) ? defaultVal : num;
 }
-
-const MONTH_MAP = new Map<string, number>(
-  MONTHS_SHORT.flatMap((m, idx) => [
-    [m.toLowerCase(), idx],
-    [m.toLowerCase().slice(0, 3), idx],
-  ]),
-);
 
 /**
  * Normalizes date to parse year, month, day and timestamp safely.
@@ -45,7 +42,7 @@ function parseDateComponents(
 } {
   let y = yearHint || 2026;
   let mName = monthHint || "Aug";
-  let mIndex = MONTH_MAP.get(mName.toLowerCase().slice(0, 3)) ?? 7;
+  let mIndex = MONTH_INDEX_MAP.get(mName.toLowerCase().slice(0, 3)) ?? 7;
   let d = dayHint || 1;
 
   if (dateStr && typeof dateStr === "string") {
@@ -78,9 +75,9 @@ function parseDateComponents(
         let namedMonthIdx = -1;
         for (let i = 0; i < rawParts.length; i++) {
           const lower = rawParts[i].toLowerCase().slice(0, 3);
-          if (MONTH_MAP.has(lower)) {
+          if (MONTH_INDEX_MAP.has(lower)) {
             namedMonthIdx = i;
-            mIndex = MONTH_MAP.get(lower)!;
+            mIndex = MONTH_INDEX_MAP.get(lower)!;
             mName = MONTHS_SHORT[mIndex] || mName;
             break;
           }
@@ -192,7 +189,7 @@ function cleanString(val: unknown, fallback = ""): string {
  * - Converts "Week6", "Week 6", "6", and any week >= 5 to "Week5".
  * - Converts empty or placeholder values ("-", "N/A") to computed week based on day.
  */
-export function normalizeWeek(val: unknown, fallbackDay?: number): string {
+function normalizeWeek(val: unknown, fallbackDay?: number): string {
   const getFallback = (): string => {
     if (fallbackDay !== undefined && !isNaN(fallbackDay) && fallbackDay > 0) {
       const calcWeek = Math.ceil(fallbackDay / 7);
@@ -336,9 +333,7 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
 
         // Pre-resolve all column keys once from parsed fields or first row keys
         const headerKeys =
-          results.meta &&
-          results.meta.fields &&
-          results.meta.fields.length > 0
+          results.meta && results.meta.fields && results.meta.fields.length > 0
             ? results.meta.fields
             : Object.keys(results.data[0] || {});
         const resolveKey = createHeaderKeyResolver(headerKeys);

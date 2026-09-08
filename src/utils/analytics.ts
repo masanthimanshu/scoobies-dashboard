@@ -195,10 +195,10 @@ export function getRecordMetrics(r: SaleRecord) {
     Number.isFinite(r.mrpValue)
       ? r.mrpValue
       : Number.isFinite(r.mrp) && Number.isFinite(r.qty)
-      ? r.mrp * r.qty
-      : Number.isFinite(r.saleValue)
-      ? r.saleValue
-      : 0,
+        ? r.mrp * r.qty
+        : Number.isFinite(r.saleValue)
+          ? r.saleValue
+          : 0,
   );
   const qty = Math.abs(Number.isFinite(r.qty) ? r.qty : 1);
   const margin = Number.isFinite(r.scoobiesMargin) ? r.scoobiesMargin : 0;
@@ -209,16 +209,12 @@ export function getRecordMetrics(r: SaleRecord) {
 /**
  * Shared helper to calculate percentage safely with decimal formatting.
  */
-export function computeSharePct(
-  val: number,
-  total: number,
-  decimals = 1,
-): number {
+function computeSharePct(val: number, total: number, decimals = 1): number {
   if (!total || total <= 0) return 0;
   return Number(((Math.max(0, val) / total) * 100).toFixed(decimals));
 }
 
-export interface AllAnalyticsResult {
+interface AllAnalyticsResult {
   metrics: DashboardMetrics;
   timeSeriesData: TimeSeriesPoint[];
   channelMetrics: ChannelMetric[];
