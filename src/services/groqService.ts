@@ -158,9 +158,10 @@ export async function streamGroqChat({
       body: {
         model: selectedModel,
         messages: apiMessages,
-        temperature: 0.5,
-        max_completion_tokens: 8096,
+
         stream: true,
+        temperature: 0.5,
+        max_completion_tokens: 7500,
       },
       signal,
     });
@@ -326,7 +327,8 @@ ${contextSummary || "Scoobies multi-channel analytics: Amazon, D2C Website, Quic
           { role: "system", content: systemPrompt },
           { role: "user", content: rawTranscript.trim() },
         ],
-        temperature: 0.25,
+
+        temperature: 0.5,
         max_completion_tokens: 2500,
       },
     });

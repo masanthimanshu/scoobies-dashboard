@@ -62,9 +62,11 @@ export function filterRecords(
       ? new Set(filters.months.map((m) => m.toLowerCase()))
       : null;
 
+  const cleanWeekKey = (w: string) => w.toLowerCase().replace(/[^a-z0-9]/g, "");
+
   const weekSet =
     filters.weeks && filters.weeks.length > 0 && !filters.weeks.includes("ALL")
-      ? new Set(filters.weeks.map((w) => w.toLowerCase()))
+      ? new Set(filters.weeks.map(cleanWeekKey))
       : null;
 
   const channelSet =
@@ -92,8 +94,8 @@ export function filterRecords(
     filters.month && filters.month !== "ALL"
       ? filters.month.toLowerCase()
       : null;
-  const singleWeekLower =
-    filters.week && filters.week !== "ALL" ? filters.week.toLowerCase() : null;
+  const singleWeekClean =
+    filters.week && filters.week !== "ALL" ? cleanWeekKey(filters.week) : null;
   const searchQuery = filters.search ? filters.search.trim().toLowerCase() : "";
   const startDate = filters.startDate || "";
   const endDate = filters.endDate || "";
@@ -122,11 +124,14 @@ export function filterRecords(
       return false;
     }
 
-    // 4. Week Filter
-    if (weekSet) {
-      if (!weekSet.has(r.week.toLowerCase())) return false;
-    } else if (singleWeekLower && r.week.toLowerCase() !== singleWeekLower) {
-      return false;
+    // 4. Week Filter (resilient to spacing and formatting e.g. "Week 1" vs "Week1")
+    if (weekSet || singleWeekClean) {
+      const rWeekClean = cleanWeekKey(r.week);
+      if (weekSet) {
+        if (!weekSet.has(rWeekClean)) return false;
+      } else if (singleWeekClean && rWeekClean !== singleWeekClean) {
+        return false;
+      }
     }
 
     // 5. Channel Filter
@@ -153,9 +158,9 @@ export function filterRecords(
 
     // 11. Sale Value Range
     if (minSale !== undefined || maxSale !== undefined) {
-      const absSale = Math.abs(r.saleValue);
-      if (minSale !== undefined && absSale < minSale) return false;
-      if (maxSale !== undefined && absSale > maxSale) return false;
+      const { val } = getRecordMetrics(r);
+      if (minSale !== undefined && val < minSale) return false;
+      if (maxSale !== undefined && val > maxSale) return false;
     }
 
     // 12. Search Query (Executed last only for candidates that pass all discrete filters)
@@ -178,13 +183,26 @@ export function filterRecords(
 /**
  * Shared helper to extract normalized transaction values and return status from a SaleRecord.
  * Consolidates duplicated calculations across metrics, aggregation, and UI views.
+ * Prioritizes MRP Value from the sheet (fallback to mrp * qty) as requested.
  */
 export function getRecordMetrics(r: SaleRecord) {
-  const isReturn = r.status === "Return" || r.qty < 0 || r.saleValue < 0;
-  const val = Math.abs(r.saleValue || r.mrp * r.qty || 0);
-  const qty = Math.abs(r.qty || 1);
-  const margin = r.scoobiesMargin || 0;
-  const exGstMargin = r.exGstMargin || 0;
+  const isReturn =
+    r.status === "Return" ||
+    r.qty < 0 ||
+    (Number.isFinite(r.mrpValue) && r.mrpValue < 0) ||
+    (Number.isFinite(r.saleValue) && r.saleValue < 0);
+  const val = Math.abs(
+    Number.isFinite(r.mrpValue)
+      ? r.mrpValue
+      : Number.isFinite(r.mrp) && Number.isFinite(r.qty)
+      ? r.mrp * r.qty
+      : Number.isFinite(r.saleValue)
+      ? r.saleValue
+      : 0,
+  );
+  const qty = Math.abs(Number.isFinite(r.qty) ? r.qty : 1);
+  const margin = Number.isFinite(r.scoobiesMargin) ? r.scoobiesMargin : 0;
+  const exGstMargin = Number.isFinite(r.exGstMargin) ? r.exGstMargin : 0;
   return { isReturn, val, qty, margin, exGstMargin };
 }
 

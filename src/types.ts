@@ -14,6 +14,7 @@ export interface SaleRecord {
   category: string;
   qty: number;
   mrp: number;
+  mrpValue: number;
   scoobiesMargin: number;
   retailersMargin: number;
   exGstMargin: number;

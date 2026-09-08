@@ -29,7 +29,7 @@ const MONTH_MAP = new Map<string, number>(
 
 /**
  * Normalizes date to parse year, month, day and timestamp safely.
- * Accepts formats: D/M/YYYY, DD/MM/YYYY, YYYY-MM-DD, M/D/YYYY, etc.
+ * Accepts formats: D/M/YYYY, DD/MM/YYYY, YYYY-MM-DD, M/D/YYYY, Excel serial dates, named months.
  */
 function parseDateComponents(
   dateStr: string,
@@ -50,26 +50,122 @@ function parseDateComponents(
 
   if (dateStr && typeof dateStr === "string") {
     const trimmed = dateStr.trim();
-    if (trimmed.includes("/") || trimmed.includes("-")) {
-      const sep = trimmed.includes("/") ? "/" : "-";
-      const parts = trimmed.split(sep).map((p) => parseInt(p.trim(), 10));
-      if (parts.length === 3) {
-        if (parts[0] > 1000) {
-          // YYYY-MM-DD
-          y = parts[0];
-          mIndex = Math.max(0, Math.min(11, parts[1] - 1));
-          d = parts[2] || 1;
-        } else if (parts[2] > 1000) {
-          // D/M/YYYY or M/D/YYYY
-          d = parts[0];
-          mIndex = Math.max(0, Math.min(11, parts[1] - 1));
-          y = parts[2];
+
+    // Check for Excel serial date number (e.g. 45505)
+    if (/^\d{5}(?:\.\d+)?$/.test(trimmed)) {
+      const serial = parseFloat(trimmed);
+      if (serial >= 20000 && serial <= 70000) {
+        // Excel 1900 leap year bug offset: 25569 days between 1899-12-30 and 1970-01-01
+        const dateObj = new Date(Math.round((serial - 25569) * 86400 * 1000));
+        if (!isNaN(dateObj.getTime())) {
+          y = dateObj.getFullYear();
+          mIndex = dateObj.getMonth();
+          mName = MONTHS_SHORT[mIndex] || mName;
+          d = dateObj.getDate();
         }
-        mName = MONTHS_SHORT[mIndex] || mName;
+      }
+    } else if (
+      trimmed.includes("/") ||
+      trimmed.includes("-") ||
+      trimmed.includes(".") ||
+      trimmed.includes(" ")
+    ) {
+      // Split on separators: /, -, ., or spaces
+      const rawParts = trimmed.split(/[/.\s-]+/).filter(Boolean);
+
+      if (rawParts.length >= 3) {
+        // Check if any part is a named month (e.g. 01-Aug-2026)
+        let namedMonthIdx = -1;
+        for (let i = 0; i < rawParts.length; i++) {
+          const lower = rawParts[i].toLowerCase().slice(0, 3);
+          if (MONTH_MAP.has(lower)) {
+            namedMonthIdx = i;
+            mIndex = MONTH_MAP.get(lower)!;
+            mName = MONTHS_SHORT[mIndex] || mName;
+            break;
+          }
+        }
+
+        if (namedMonthIdx !== -1) {
+          // One part was a month name
+          const otherNums = rawParts
+            .filter((_, idx) => idx !== namedMonthIdx)
+            .map((p) => parseInt(p.trim(), 10))
+            .filter((n) => !isNaN(n));
+          if (otherNums.length >= 2) {
+            if (otherNums[0] > 1000) {
+              y = otherNums[0];
+              d = otherNums[1] || 1;
+            } else if (otherNums[1] > 1000) {
+              d = otherNums[0] || 1;
+              y = otherNums[1];
+            } else if (otherNums[1] < 100 && otherNums[1] >= 20) {
+              d = otherNums[0] || 1;
+              y = 2000 + otherNums[1];
+            } else {
+              d = otherNums[0] || 1;
+            }
+          }
+        } else {
+          // All parts are numbers
+          const parts = rawParts.map((p) => parseInt(p.trim(), 10));
+          if (parts.length >= 3 && !parts.some(isNaN)) {
+            if (parts[0] > 1000) {
+              // YYYY-MM-DD
+              y = parts[0];
+              mIndex = Math.max(0, Math.min(11, parts[1] - 1));
+              d = parts[2] || 1;
+              mName = MONTHS_SHORT[mIndex] || mName;
+            } else {
+              // Could be D/M/YYYY or M/D/YYYY or D/M/YY or M/D/YY
+              if (parts[2] > 1000) {
+                y = parts[2];
+              } else if (parts[2] < 100 && parts[2] >= 0) {
+                y = 2000 + parts[2];
+              }
+
+              // Disambiguate D/M vs M/D
+              const p0 = parts[0];
+              const p1 = parts[1];
+
+              // Expected 1-based month from monthHint if provided
+              const expectedMonth = mIndex + 1;
+
+              if (p0 > 12) {
+                // p0 can only be day (e.g. 15/08/2026) -> D/M/YYYY
+                d = p0;
+                mIndex = Math.max(0, Math.min(11, p1 - 1));
+                mName = MONTHS_SHORT[mIndex] || mName;
+              } else if (p1 > 12) {
+                // p1 can only be day (e.g. 08/15/2026) -> M/D/YYYY
+                mIndex = Math.max(0, Math.min(11, p0 - 1));
+                d = p1;
+                mName = MONTHS_SHORT[mIndex] || mName;
+              } else if (p0 === expectedMonth && p1 !== expectedMonth) {
+                // p0 matches monthHint -> M/D/YYYY (e.g. 8/1/2026 with month=Aug)
+                mIndex = Math.max(0, Math.min(11, p0 - 1));
+                d = p1;
+                mName = MONTHS_SHORT[mIndex] || mName;
+              } else if (p1 === expectedMonth && p0 !== expectedMonth) {
+                // p1 matches monthHint -> D/M/YYYY (e.g. 1/8/2026 with month=Aug)
+                d = p0;
+                mIndex = Math.max(0, Math.min(11, p1 - 1));
+                mName = MONTHS_SHORT[mIndex] || mName;
+              } else {
+                // Fallback default for Indian/UK standard: D/M/YYYY
+                d = p0;
+                mIndex = Math.max(0, Math.min(11, p1 - 1));
+                mName = MONTHS_SHORT[mIndex] || mName;
+              }
+            }
+          }
+        }
       }
     }
   }
 
+  // Ensure day is valid for the month
+  d = Math.max(1, Math.min(31, d));
   const dateObj = new Date(y, mIndex, d);
   const isoFormatted = `${y}-${String(mIndex + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
@@ -78,7 +174,7 @@ function parseDateComponents(
     month: mName,
     day: d,
     dateFormatted: isoFormatted,
-    timestamp: dateObj.getTime(),
+    timestamp: isNaN(dateObj.getTime()) ? Date.now() : dateObj.getTime(),
   };
 }
 
@@ -91,40 +187,90 @@ function cleanString(val: unknown, fallback = ""): string {
 }
 
 /**
- * Normalizes week values from the sheet/CSV.
- * - Converts "Week0" and "Week 1" (case-insensitive, with or without spaces) to "Week1".
- * - Converts "Week6" and "Week 6" to "Week5".
+ * Normalizes week values from diverse formats in CSV/Excel sheets.
+ * - Converts "Week0", "Week 0", "Week 1", "Week1", "Week-1", "W1", "01", "1", etc. to "Week1".
+ * - Converts "Week6", "Week 6", "6", and any week >= 5 to "Week5".
+ * - Converts empty or placeholder values ("-", "N/A") to computed week based on day.
  */
 export function normalizeWeek(val: unknown, fallbackDay?: number): string {
-  const str = val !== undefined && val !== null ? String(val).trim() : "";
-
-  if (!str) {
+  const getFallback = (): string => {
     if (fallbackDay !== undefined && !isNaN(fallbackDay) && fallbackDay > 0) {
       const calcWeek = Math.ceil(fallbackDay / 7);
-      if (calcWeek === 0) return "Week1";
-      if (calcWeek >= 6) return "Week5";
+      if (calcWeek <= 1) return "Week1";
+      if (calcWeek >= 5) return "Week5";
       return `Week${calcWeek}`;
     }
     return "Week1";
+  };
+
+  if (val === undefined || val === null) {
+    return getFallback();
   }
 
-  // Convert "Week0", "Week 0", "Week 1", "Week1", "Wk0", "Wk 1", "0", "1" to "Week1"
-  if (/^(week\s*[01]|wk\s*[01]|[01])$/i.test(str)) {
-    return "Week1";
+  // Strip zero-width spaces, BOM, and trailing/leading whitespace
+  const str = String(val)
+    .trim()
+    .replace(/[\u200B-\u200D\uFEFF]/g, "");
+
+  // If empty or Excel error / placeholder value
+  if (
+    !str ||
+    str === "-" ||
+    str === "--" ||
+    str.toLowerCase() === "n/a" ||
+    str.toLowerCase() === "#n/a" ||
+    str.toLowerCase() === "null" ||
+    str.toLowerCase() === "undefined" ||
+    str.toLowerCase() === "none" ||
+    str.toLowerCase() === "nil"
+  ) {
+    return getFallback();
   }
 
-  // Convert "Week6", "Week 6", "Wk6", "Wk 6", "6" to "Week5"
-  if (/^(week\s*6|wk\s*6|6)$/i.test(str)) {
-    return "Week5";
+  // Handle word forms: "first week", "1st week", etc.
+  if (/first\s*week/i.test(str)) return "Week1";
+  if (/second\s*week/i.test(str)) return "Week2";
+  if (/third\s*week/i.test(str)) return "Week3";
+  if (/fourth\s*week/i.test(str)) return "Week4";
+  if (/fifth\s*week/i.test(str) || /sixth\s*week/i.test(str)) return "Week5";
+
+  // Check for "week", "wk", or "w" followed by optional non-digit chars and digits
+  // Matches: "Week 1", "Week1", "Week-1", "Week_1", "Week.1", "Wk 1", "Wk1", "W1", "W 1", "W01", "W-1", "Week 01", "Week 1 (Aug)"
+  const weekMatch = /(?:week|wk|w)[^0-9]*(\d+)/i.exec(str);
+  if (weekMatch) {
+    const num = parseInt(weekMatch[1], 10);
+    if (!isNaN(num)) {
+      if (num <= 1) return "Week1";
+      if (num >= 5) return "Week5";
+      return `Week${num}`;
+    }
   }
 
-  // Standardize other numeric week patterns (e.g. "Week 2", "Wk 3") to "Week2", "Week3"
-  const match = str.match(/^(?:week|wk)\s*(\d+)$/i);
-  if (match) {
-    const num = parseInt(match[1], 10);
-    if (num <= 1) return "Week1";
-    if (num === 6) return "Week5";
-    return `Week${num}`;
+  // Check for ordinal week pattern: "1st Week", "2nd Week", "1st", "2nd"
+  const ordinalMatch = /^(\d+)(?:st|nd|rd|th)?\s*week/i.exec(str);
+  if (ordinalMatch) {
+    const num = parseInt(ordinalMatch[1], 10);
+    if (!isNaN(num)) {
+      if (num <= 1) return "Week1";
+      if (num >= 5) return "Week5";
+      return `Week${num}`;
+    }
+  }
+
+  // Check for plain number or decimal from Excel: "1", "01", "1.0", "0", "00", "0.0", "2", "3", "4", "5", "6"
+  const numMatch = /^(\d+)(?:\.0+)?$/.exec(str);
+  if (numMatch) {
+    const num = parseInt(numMatch[1], 10);
+    if (!isNaN(num)) {
+      if (num <= 1) return "Week1";
+      if (num >= 5) return "Week5";
+      return `Week${num}`;
+    }
+  }
+
+  // If unknown text pattern but fallbackDay is provided
+  if (fallbackDay !== undefined && !isNaN(fallbackDay) && fallbackDay > 0) {
+    return getFallback();
   }
 
   return str;
@@ -143,12 +289,28 @@ function createHeaderKeyResolver(rowKeys: string[]) {
   }
 
   return (possibleKeys: string[]): string | null => {
+    // 1. Direct or clean key match
     for (let i = 0; i < possibleKeys.length; i++) {
       const key = possibleKeys[i];
       if (cleanMap.has(key)) return cleanMap.get(key)!;
       const clean = key.toLowerCase().replace(/[^a-z0-9]/g, "");
       if (cleanMap.has(clean)) return cleanMap.get(clean)!;
     }
+
+    // 2. Fuzzy prefix / substring match fallback for week/date/order columns
+    for (let i = 0; i < possibleKeys.length; i++) {
+      const pClean = possibleKeys[i].toLowerCase().replace(/[^a-z0-9]/g, "");
+      for (const [cKey, originalKey] of cleanMap.entries()) {
+        if (
+          cKey === pClean ||
+          cKey.startsWith(pClean) ||
+          pClean.startsWith(cKey)
+        ) {
+          return originalKey;
+        }
+      }
+    }
+
     return null;
   };
 }
@@ -172,15 +334,72 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
           return;
         }
 
-        // Pre-resolve all column keys once from the first available row keys
-        const firstRow = results.data[0] || {};
-        const resolveKey = createHeaderKeyResolver(Object.keys(firstRow));
+        // Pre-resolve all column keys once from parsed fields or first row keys
+        const headerKeys =
+          results.meta &&
+          results.meta.fields &&
+          results.meta.fields.length > 0
+            ? results.meta.fields
+            : Object.keys(results.data[0] || {});
+        const resolveKey = createHeaderKeyResolver(headerKeys);
 
-        const kYear = resolveKey(["Year", "year", "Yr"]);
-        const kMonth = resolveKey(["Month", "month", "Mo"]);
-        const kWeek = resolveKey(["Week", "week", "Wk"]);
-        const kDay = resolveKey(["Day", "day", "D"]);
-        const kDate = resolveKey(["Date", "date", "Order Date", "Sale Date"]);
+        const kYear = resolveKey([
+          "Year",
+          "year",
+          "Yr",
+          "Order Year",
+          "Sale Year",
+        ]);
+        const kMonth = resolveKey([
+          "Month",
+          "month",
+          "Mo",
+          "Order Month",
+          "Sale Month",
+        ]);
+        const kWeek = resolveKey([
+          "Week",
+          "week",
+          "Wk",
+          "Week No",
+          "Week No.",
+          "Week Number",
+          "Week_Number",
+          "Week_No",
+          "Week#",
+          "Weeks",
+          "Wk No",
+          "Wk#",
+          "Wk_No",
+          "WeekNum",
+          "Weeknum",
+          "Fiscal Week",
+          "Calendar Week",
+          "Sales Week",
+        ]);
+        const kDay = resolveKey([
+          "Day",
+          "day",
+          "D",
+          "Day No",
+          "Day Number",
+          "Day_No",
+          "Day_Number",
+          "Day of Month",
+          "Date of Month",
+        ]);
+        const kDate = resolveKey([
+          "Date",
+          "date",
+          "Order Date",
+          "Sale Date",
+          "Invoice Date",
+          "Transaction Date",
+          "Dispatch Date",
+          "Order_Date",
+          "Sale_Date",
+          "Bill Date",
+        ]);
         const kOrderNumber = resolveKey([
           "Order Number",
           "Order No",
@@ -216,6 +435,15 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
         ]);
         const kQty = resolveKey(["QTY", "Qty", "Quantity", "Units"]);
         const kMrp = resolveKey(["MRP", "Mrp", "Price", "Unit Price"]);
+        const kMrpValue = resolveKey([
+          "MRP Value",
+          "MRP_Value",
+          "Mrp Value",
+          "MRP Total",
+          "Total MRP",
+          "Mrp_Value",
+          "MRP_Val",
+        ]);
         const kScoobiesMargin = resolveKey([
           "Scoobies Margin",
           "Margin",
@@ -356,6 +584,14 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
               qty < 0 ? -Math.abs(mrp * qty) : mrp * qty,
             );
 
+            let mrpValue = cleanNumber(
+              getVal(row, kMrpValue),
+              qty < 0 ? -Math.abs(mrp * qty) : mrp * qty,
+            );
+            if (status === "Return" || qty < 0) {
+              mrpValue = -Math.abs(mrpValue);
+            }
+
             const record: SaleRecord = {
               id: `${orderNumber}-${idx}`,
               year: dateInfo.year,
@@ -372,6 +608,7 @@ export function parseSalesCsv(csvText: string): Promise<ParseResult> {
               category: category.toUpperCase(),
               qty,
               mrp,
+              mrpValue,
               scoobiesMargin,
               retailersMargin,
               exGstMargin,
@@ -441,6 +678,7 @@ export function exportRecordsToCsv(
     Category: r.category,
     QTY: r.qty,
     MRP: r.mrp,
+    "MRP Value": r.mrpValue,
     "Sale Value": r.saleValue,
     "Scoobies Margin": r.scoobiesMargin,
     "EX-GST Margin": r.exGstMargin,

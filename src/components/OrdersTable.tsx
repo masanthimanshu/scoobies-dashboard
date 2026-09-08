@@ -25,7 +25,7 @@ const TABLE_COLUMNS: {
   { key: "channel", label: "Channel", align: "left" },
   { key: "productName", label: "Product & Category", align: "left" },
   { key: "qty", label: "QTY", align: "right" },
-  { key: "saleValue", label: "Sale Value", align: "right" },
+  { key: "mrpValue", label: "MRP Value", align: "right" },
   { key: "scoobiesMargin", label: "Margin", align: "right" },
   { key: "deliveryPlace", label: "Location", align: "left" },
   { key: "status", label: "Status", align: "center" },
@@ -237,10 +237,10 @@ const MemoizedOrderTableRow: React.FC<{ record: SaleRecord }> = React.memo(
         </td>
         <td
           className={`py-2.5 px-3 text-right font-black whitespace-nowrap ${
-            r.saleValue < 0 ? "text-[#AF8260]" : "text-[#5F7161]"
+            (r.mrpValue ?? r.saleValue) < 0 ? "text-[#AF8260]" : "text-[#5F7161]"
           }`}
         >
-          {formatCurrency(r.saleValue)}
+          {formatCurrency(r.mrpValue ?? r.saleValue)}
         </td>
         <td className="py-2.5 px-3 text-right font-semibold text-[#433E37] whitespace-nowrap">
           {formatCurrency(r.scoobiesMargin)}

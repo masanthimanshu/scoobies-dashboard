@@ -91,7 +91,15 @@ export default function App() {
     loadSalesDataset()
       .then((cached) => {
         if (isMounted && cached && cached.records.length > 0) {
-          setRecords(cached.records);
+          const enrichedRecords = cached.records.map((r) => ({
+            ...r,
+            mrpValue: Number.isFinite(r.mrpValue)
+              ? r.mrpValue
+              : r.qty < 0 || r.status === "Return"
+              ? -Math.abs(r.mrp * r.qty)
+              : r.mrp * r.qty,
+          }));
+          setRecords(enrichedRecords);
           setFileName(cached.fileName);
         }
       })

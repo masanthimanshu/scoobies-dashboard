@@ -468,7 +468,9 @@ export function extractTargetedMicroSlice(
           item.returns += r.qty;
         } else {
           item.units += r.qty;
-          item.sales += r.saleValue;
+          item.sales += Number.isFinite(r.mrpValue)
+            ? r.mrpValue
+            : (r.saleValue || (r.mrp * r.qty));
         }
       }
 
