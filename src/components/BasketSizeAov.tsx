@@ -14,7 +14,11 @@ import {
   Pencil,
 } from "lucide-react";
 import { ChannelMetric, DashboardMetrics } from "../types";
-import { formatCurrency, isValidFilterOption } from "../utils/formatters";
+import {
+  formatCurrency,
+  formatPercent,
+  parseNumericInput,
+} from "../utils/formatters";
 
 interface BasketSizeAovProps {
   channels: ChannelMetric[];
@@ -31,7 +35,7 @@ export const BasketSizeAov: React.FC<BasketSizeAovProps> = React.memo(
     // Memoize filtered and sorted channels
     const validChannels = useMemo(() => {
       return (channels || [])
-        .filter((ch) => isValidFilterOption(ch.channel) && ch.orderCount > 0)
+        .filter((ch) => ch.orderCount > 0)
         .sort((a, b) => b.avgOrderValue - a.avgOrderValue);
     }, [channels]);
 
@@ -56,6 +60,7 @@ export const BasketSizeAov: React.FC<BasketSizeAovProps> = React.memo(
 
     // Leaders: validChannels is pre-sorted by avgOrderValue descending, so index 0 is maxAovChannel
     const maxAovChannel = validChannels.length > 0 ? validChannels[0] : null;
+    const hasMultipleChannels = validChannels.length > 1;
 
     const maxBasketChannel = useMemo(() => {
       if (validChannels.length === 0) return null;
@@ -76,8 +81,8 @@ export const BasketSizeAov: React.FC<BasketSizeAovProps> = React.memo(
       return null;
 
     const handleSaveCustomAov = () => {
-      const num = parseFloat(tempAovInput.replace(/[^0-9.]/g, ""));
-      if (!isNaN(num) && num > 0) {
+      const num = parseNumericInput(tempAovInput);
+      if (num > 0) {
         setCustomAov(num);
       }
       setIsEditingAov(false);
@@ -129,7 +134,7 @@ export const BasketSizeAov: React.FC<BasketSizeAovProps> = React.memo(
                   {formatCurrency(effectiveBenchmarkAov)}
                 </span>
                 {customAov ? (
-                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-[#E9EFEA] text-[#5F7161] border border-[#C5D5C7]">
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#E9EFEA] text-[#5F7161] border border-[#C5D5C7]">
                     Custom
                   </span>
                 ) : null}
@@ -241,7 +246,7 @@ export const BasketSizeAov: React.FC<BasketSizeAovProps> = React.memo(
                       <span className="text-[10px] text-[#8C8376] font-medium">
                         {ch.orderCount.toLocaleString()}{" "}
                         {ch.orderCount === 1 ? "order" : "orders"} •{" "}
-                        {ch.sharePct.toFixed(1)}% rev share
+                        {formatPercent(ch.sharePct)} rev share
                       </span>
                     </div>
 
@@ -260,7 +265,7 @@ export const BasketSizeAov: React.FC<BasketSizeAovProps> = React.memo(
                           <ArrowDownRight className="w-3 h-3" />
                         )}
                         <span>
-                          {Math.abs(aovDiffPct).toFixed(0)}%{" "}
+                          {formatPercent(Math.abs(aovDiffPct), 0)}{" "}
                           {isAboveAvg ? "above" : "below"}
                         </span>
                       </span>
@@ -281,7 +286,7 @@ export const BasketSizeAov: React.FC<BasketSizeAovProps> = React.memo(
                     {/* Benchmark / Custom AOV Progress Track */}
                     <div
                       className="w-full bg-[#EBE5D9]/60 h-2 rounded-full overflow-hidden"
-                      title={`${achievementRatio.toFixed(1)}% of benchmark AOV (${formatCurrency(effectiveBenchmarkAov)})`}
+                      title={`${formatPercent(achievementRatio)} of benchmark AOV (${formatCurrency(effectiveBenchmarkAov)})`}
                     >
                       <div
                         className={`h-full rounded-full transition-all duration-300 ${
@@ -291,7 +296,9 @@ export const BasketSizeAov: React.FC<BasketSizeAovProps> = React.memo(
                       />
                     </div>
                     <div className="flex justify-between items-center mt-1 text-[10px] text-[#8C8376] font-medium">
-                      <span>{achievementRatio.toFixed(0)}% of target</span>
+                      <span>
+                        {formatPercent(achievementRatio, 0)} of target
+                      </span>
                       <span>
                         Target: {formatCurrency(effectiveBenchmarkAov)}
                       </span>
@@ -326,9 +333,9 @@ export const BasketSizeAov: React.FC<BasketSizeAovProps> = React.memo(
                 </div>
 
                 {/* Bottom Channel Tag */}
-                {maxAovChannel &&
-                  ch.channel === maxAovChannel.channel &&
-                  validChannels.length > 1 && (
+                {hasMultipleChannels &&
+                  maxAovChannel &&
+                  ch.channel === maxAovChannel.channel && (
                     <div className="mt-3 pt-2.5 border-t border-[#EBE5D9] flex items-center gap-1.5 text-[10px] font-bold text-[#5F7161]">
                       <Sparkles className="w-3 h-3 text-[#5F7161]" />
                       <span>
@@ -336,11 +343,11 @@ export const BasketSizeAov: React.FC<BasketSizeAovProps> = React.memo(
                       </span>
                     </div>
                   )}
-                {maxBasketChannel &&
+                {hasMultipleChannels &&
+                  maxBasketChannel &&
                   maxAovChannel &&
                   ch.channel === maxBasketChannel.channel &&
-                  ch.channel !== maxAovChannel.channel &&
-                  validChannels.length > 1 && (
+                  ch.channel !== maxAovChannel.channel && (
                     <div className="mt-3 pt-2.5 border-t border-[#EBE5D9] flex items-center gap-1.5 text-[10px] font-bold text-[#AF8260]">
                       <CheckCircle2 className="w-3 h-3 text-[#AF8260]" />
                       <span>Highest multi-item basket depth leader</span>

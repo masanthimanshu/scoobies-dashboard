@@ -8,7 +8,13 @@ import {
   TimeSeriesPoint,
   FilterState,
 } from "../types";
-import { formatCurrency, formatNumber, formatPercent } from "./formatters";
+import {
+  computeSharePct,
+  formatCurrency,
+  formatNumber,
+  formatPercent,
+} from "./formatters";
+import { getRecordMetrics } from "./analytics";
 
 export interface DistilledSalesContext {
   datasetInfo: {
@@ -178,17 +184,19 @@ export function buildDistilledContext(
 
   // Target metrics
   const targetGap = Math.max(0, salesTarget - metrics.totalScoobiesMargin);
-  const targetProgressPct =
-    salesTarget > 0 ? (metrics.totalScoobiesMargin / salesTarget) * 100 : 0;
+  const targetProgressPct = computeSharePct(
+    metrics.totalScoobiesMargin,
+    salesTarget,
+  );
 
   // Channel metrics
   const channels = channelMetrics.map((c) => ({
     name: c.channel,
     netSales: Math.round(c.netSales),
-    sharePct: Number(c.sharePct.toFixed(1)),
+    sharePct: c.sharePct,
     orderCount: c.orderCount,
     aov: Math.round(c.avgOrderValue),
-    returnRatePct: Number(c.returnRate.toFixed(1)),
+    returnRatePct: c.returnRate,
     margin: Math.round(c.margin),
   }));
 
@@ -196,15 +204,11 @@ export function buildDistilledContext(
   const categories = categoryMetrics.slice(0, 8).map((cat) => ({
     name: cat.category,
     sales: Math.round(cat.sales),
-    sharePct: Number(cat.sharePct.toFixed(1)),
+    sharePct: cat.sharePct,
     units: cat.units,
     margin: Math.round(cat.margin),
-    marginPct:
-      cat.sales > 0 ? Number(((cat.margin / cat.sales) * 100).toFixed(1)) : 0,
-    returnRatePct:
-      cat.returnRate !== undefined
-        ? Number(cat.returnRate.toFixed(1))
-        : undefined,
+    marginPct: computeSharePct(cat.margin, cat.sales),
+    returnRatePct: cat.returnRate,
   }));
 
   // Top volume products (Pareto top 6)
@@ -214,7 +218,7 @@ export function buildDistilledContext(
     sales: Math.round(p.netSales),
     units: p.units,
     margin: Math.round(p.margin),
-    returnRatePct: Number(p.returnRate.toFixed(1)),
+    returnRatePct: p.returnRate,
   }));
 
   // Top margin drivers
@@ -238,7 +242,7 @@ export function buildDistilledContext(
       name: p.productName,
       category: p.category,
       returnUnits: p.returnUnits,
-      returnRatePct: Number(p.returnRate.toFixed(1)),
+      returnRatePct: p.returnRate,
       returnedValue: Math.round(p.returns),
       channels: p.returnChannels || (p.channel ? [p.channel] : undefined),
     }));
@@ -247,14 +251,14 @@ export function buildDistilledContext(
   const topZones = zoneMetrics.slice(0, 5).map((z) => ({
     name: z.name,
     sales: Math.round(z.sales),
-    sharePct: Number(z.sharePct.toFixed(1)),
+    sharePct: z.sharePct,
     orders: z.orders,
   }));
 
   const topStates = stateMetrics.slice(0, 5).map((s) => ({
     name: s.name,
     sales: Math.round(s.sales),
-    sharePct: Number(s.sharePct.toFixed(1)),
+    sharePct: s.sharePct,
     orders: s.orders,
   }));
 
@@ -306,21 +310,21 @@ export function buildDistilledContext(
       netSales: Math.round(metrics.totalNetSales),
       grossSales: Math.round(metrics.totalGrossSales),
       returnsValue: Math.round(metrics.totalReturnedSales),
-      returnRateValPct: Number(metrics.returnRateValPct.toFixed(1)),
-      returnRateQtyPct: Number(metrics.returnRateQtyPct.toFixed(1)),
+      returnRateValPct: metrics.returnRateValPct,
+      returnRateQtyPct: metrics.returnRateQtyPct,
       totalOrders: metrics.totalOrders,
       totalUnits: metrics.totalUnitsSold,
       totalGrossUnits: metrics.totalGrossUnits,
       totalReturnedUnits: metrics.totalReturnedUnits,
       averageOrderValue: Math.round(metrics.averageOrderValue),
       scoobiesMargin: Math.round(metrics.totalScoobiesMargin),
-      scoobiesMarginPct: Number(metrics.marginPercentage.toFixed(1)),
+      scoobiesMarginPct: metrics.marginPercentage,
       exGstMargin: Math.round(metrics.totalExGstMargin),
       retailersMargin: Math.round(metrics.retailersMarginTotal),
       salesTarget,
-      targetProgressPct: Number(targetProgressPct.toFixed(1)),
+      targetProgressPct,
       targetGap: Math.round(targetGap),
-      b2sContributionPct: Number(metrics.b2sSalesPct.toFixed(1)),
+      b2sContributionPct: metrics.b2sSalesPct,
       b2sNetSales: Math.round(metrics.b2sNetSales),
     },
     channels,
@@ -464,13 +468,12 @@ export function extractTargetedMicroSlice(
           item = { units: 0, sales: 0, returns: 0 };
           topItems.set(r.productName, item);
         }
-        if (r.status === "Return") {
-          item.returns += r.qty;
+        const { isReturn, val, qty } = getRecordMetrics(r);
+        if (isReturn) {
+          item.returns += qty;
         } else {
-          item.units += r.qty;
-          item.sales += Number.isFinite(r.mrpValue)
-            ? r.mrpValue
-            : r.saleValue || r.mrp * r.qty;
+          item.units += qty;
+          item.sales += val;
         }
       }
 

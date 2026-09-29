@@ -10,8 +10,7 @@ import {
   Calendar,
   ChevronDown,
 } from "lucide-react";
-import { FilterState } from "../types";
-import { isValidFilterOption } from "../utils/formatters";
+import { FilterState, DEFAULT_FILTERS } from "../types";
 
 interface FilterBarProps {
   filters: FilterState;
@@ -34,15 +33,10 @@ interface TimeFilterGroupProps {
 
 const TimeFilterGroup: React.FC<TimeFilterGroupProps> = React.memo(
   ({ label, allLabel, items, selectedItems, onToggle }) => {
-    const validItems = useMemo(
-      () => items.filter(isValidFilterOption),
-      [items],
-    );
+    if (items.length === 0) return null;
 
-    if (validItems.length === 0) return null;
-
-    const showCompact = validItems.length <= 4;
-    const recentItems = showCompact ? validItems : validItems.slice(0, 3);
+    const showCompact = items.length <= 4;
+    const recentItems = showCompact ? items : items.slice(0, 3);
     const isOlderSelected =
       !showCompact &&
       selectedItems.some(
@@ -118,7 +112,7 @@ const TimeFilterGroup: React.FC<TimeFilterGroupProps> = React.memo(
                         .join(", ")}`
                     : "More ▾"}
                 </option>
-                {validItems.map((item) => {
+                {items.map((item) => {
                   const str = String(item);
                   const isSelected = selectedItems.some(
                     (s) => s.toLowerCase() === str.toLowerCase(),
@@ -259,23 +253,7 @@ export const FilterBar: React.FC<FilterBarProps> = React.memo(
     );
 
     const resetAllFilters = React.useCallback(() => {
-      onFilterChange({
-        search: "",
-        year: "ALL",
-        years: [],
-        month: "ALL",
-        months: [],
-        week: "ALL",
-        weeks: [],
-        startDate: "",
-        endDate: "",
-        channels: [],
-        categories: [],
-        zones: [],
-        states: [],
-        status: "ALL",
-        campaign: "ALL",
-      });
+      onFilterChange({ ...DEFAULT_FILTERS });
     }, [onFilterChange]);
 
     const activeFilterCount = useMemo(() => {
@@ -304,20 +282,6 @@ export const FilterBar: React.FC<FilterBarProps> = React.memo(
       filters.status,
       filters.campaign,
     ]);
-
-    // Memoize valid filter option lists
-    const validZones = useMemo(
-      () => availableZones.filter(isValidFilterOption),
-      [availableZones],
-    );
-    const validChannels = useMemo(
-      () => availableChannels.filter(isValidFilterOption),
-      [availableChannels],
-    );
-    const validCategories = useMemo(
-      () => availableCategories.filter(isValidFilterOption),
-      [availableCategories],
-    );
 
     return (
       <div className="bg-white border border-[#EBE5D9] rounded-[24px] shadow-sm p-4 sm:p-5 mb-6">
@@ -445,10 +409,10 @@ export const FilterBar: React.FC<FilterBarProps> = React.memo(
             <div>
               <label className="flex items-center gap-1.5 font-bold text-[#2D2A26] uppercase tracking-wider text-[11px] mb-2.5">
                 <Store className="w-3.5 h-3.5 text-[#5F7161]" />
-                Marketplaces ({validChannels.length})
+                Marketplaces ({availableChannels.length})
               </label>
               <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
-                {validChannels.map((ch) => {
+                {availableChannels.map((ch) => {
                   const isSelected = filters.channels.includes(ch);
                   return (
                     <button
@@ -472,10 +436,10 @@ export const FilterBar: React.FC<FilterBarProps> = React.memo(
             <div>
               <label className="flex items-center gap-1.5 font-bold text-[#2D2A26] uppercase tracking-wider text-[11px] mb-2.5">
                 <ShoppingBag className="w-3.5 h-3.5 text-[#AF8260]" />
-                Categories ({validCategories.length})
+                Categories ({availableCategories.length})
               </label>
               <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
-                {validCategories.map((cat) => {
+                {availableCategories.map((cat) => {
                   const isSelected = filters.categories.includes(cat);
                   return (
                     <button
@@ -502,7 +466,7 @@ export const FilterBar: React.FC<FilterBarProps> = React.memo(
                 Regional Zones
               </label>
               <div className="flex flex-wrap gap-1.5">
-                {validZones.map((z) => {
+                {availableZones.map((z) => {
                   const isSelected = filters.zones.includes(z);
                   return (
                     <button

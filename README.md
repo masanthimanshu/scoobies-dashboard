@@ -1,94 +1,109 @@
-# Scoobies Sales — Commercial Intelligence & Analytics Dashboard
+# Scoobies Sales & Commercial Intelligence Dashboard
 
-[![React](https://img.shields.io/badge/React-19.2-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-7.0-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Vite](https://img.shields.io/badge/Vite-8.2-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.3-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](#license)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![React](https://img.shields.io/badge/React-19.3-blue.svg)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-7.0-blue.svg)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-8.3-646CFF.svg)](https://vitejs.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.3-38B2AC.svg)](https://tailwindcss.com/)
+[![Groq AI](https://img.shields.io/badge/AI-Groq_Cloud-f55036.svg)](https://groq.com/)
+[![Resend](https://img.shields.io/badge/Email-Resend-black.svg)](https://resend.com/)
 
-A high-performance, client-side executive sales analytics platform and AI-powered commercial advisory engine built for **Scoobies** (lifestyle, stationery, and kids accessories brand). 
+An executive-grade, real-time sales analytics and commercial intelligence platform built for **Scoobies**—a high-growth lifestyle, stationery, and kids accessories brand.
 
-It ingests raw multi-channel sales transaction CSVs, cleans and normalizes messy data client-side, computes complex margin and return metrics in real time, and provides leadership with actionable commercial intelligence through interactive visualizations and an integrated AI advisor.
+Scoobies Dashboard provides commercial teams, e-commerce leads, and C-suite leadership with end-to-end visibility into gross vs. net revenue, marketplace channel economics, product margins, return rate leakage, and an integrated **Groq-powered AI Strategic Advisor** with voice query capabilities and automated executive email distribution.
 
 ---
 
 ## Table of Contents
 
 - [What the Project Does](#what-the-project-does)
-- [Key Features & Benefits](#key-features--benefits)
+- [Why It Matters (Key Features)](#why-it-matters-key-features)
 - [Architecture & Tech Stack](#architecture--tech-stack)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
   - [Environment Configuration](#environment-configuration)
-  - [Development Server](#development-server)
-  - [Production Build](#production-build)
-- [CSV Data Ingestion & Schema](#csv-data-ingestion--schema)
-  - [Expected Columns](#expected-columns)
-  - [Data Cleaning & Resilient Parsing](#data-cleaning--resilient-parsing)
-- [Project Structure](#project-structure)
-- [AI Strategic Advisor & Resend Integration](#ai-strategic-advisor--resend-integration)
+  - [Running the Development Server](#running-the-development-server)
+  - [Building for Production](#building-for-production)
+- [Data Ingestion & CSV Schema](#data-ingestion--csv-schema)
+  - [Auto-Detected Columns](#auto-detected-columns)
+  - [Sample Data Format](#sample-data-format)
+- [AI Strategic Advisor & Voice Intelligence](#ai-strategic-advisor--voice-intelligence)
+- [Email Sharing & Cloudflare Edge Functions](#email-sharing--cloudflare-edge-functions)
+- [Project Directory Structure](#project-directory-structure)
+- [Where Users Can Get Help](#where-users-can-get-help)
 - [Contributing](#contributing)
-- [Support](#support)
 - [License](#license)
+- [Maintainer](#maintainer)
 
 ---
 
 ## What the Project Does
 
-Modern omnichannel retail generates fragmented sales data across D2C websites, marketplaces (e.g., Amazon), quick commerce platforms (e.g., Blinkit), and distributor networks. **Scoobies Sales Dashboard** turns disjointed transaction exports into unified, real-time executive intelligence without requiring expensive cloud data warehouses.
+Scoobies Dashboard turns fragmented sales spreadsheets into an interactive commercial command center without requiring a backend database. All data parsing, aggregation, and analytics computation are executed client-side with single-pass $O(N)$ efficiency and persisted locally in the browser via IndexedDB.
 
-The application:
-1. **Parses & Enriches Data Client-Side**: Accepts raw transaction CSVs, normalizes date variations, handles missing columns, and reconciles return records.
-2. **Aggregates Complex Commercial Metrics**: Calculates Gross Sales, Net Sales, Scoobies Margin, Retailers Margin, Ex-GST Margin, Return Rates (value and unit-based), and quota run-rate progress on the fly.
-3. **Surfaces Deep Drilldowns**: Visualizes multi-metric sales trends across daily, weekly, monthly, and yearly intervals, channel breakdowns, category/SKU margins, return offender detection, and geographic heatmaps.
-4. **Delivers AI Commercial Advisory**: Distills filtered dataset metrics into structured prompts sent to high-speed LLMs via Groq (with offline fallback), enabling executives to ask strategic questions and email briefings directly to stakeholders.
+### Key Capabilities
+
+1. **Instant Multi-Channel Analytics**: Compare revenue, unit volumes, and margins across D2C Website, Amazon, Quick Commerce (Blinkit, Zepto, Instamart), and Offline Retail.
+2. **Margin & Profitability Tracking**: Real-time tracking of Gross Sales, Net Sales, Scoobies Margin, Retailer Margin, and Ex-GST Net Margins.
+3. **Return Rate & Refund Leakage Detection**: Pinpoints high-return SKUs and channels leaking profit to returns and customer cancellations.
+4. **AI Commercial Advisor**: Interactive assistant streaming answers via Groq Cloud (`openai/gpt-oss-120b`), supporting voice prompts via Whisper (`whisper-large-v3-turbo`) and executive personas.
+5. **Deterministic Offline Fallback**: Generates instant quantitative diagnostic briefs even without an internet connection or API keys.
+6. **Executive Reporting & Distribution**: Printable executive summary view (`window.print()`) and one-click HTML email delivery using the Resend API.
 
 ---
 
-## Key Features & Benefits
+## Why It Matters (Key Features)
 
-### 📊 Real-Time Omnichannel KPI Engine
-- **Gross vs. Net Realization**: Separate tracking of gross dispatch values against returned and canceled transactions.
-- **Multi-Tier Margin Tracking**: Granular tracking for Scoobies Gross Margin, Retailer/Channel Margin, and Ex-GST Margin.
-- **Quota & Run-Rate Bridge**: Dynamic target progress tracking with deficit/surplus run-rate calculations.
-- **Basket Size & AOV Dynamics**: Order value distribution, unit basket clustering, and cross-channel average order value comparisons.
+### 📈 Executive KPI Command Center
 
-### 🔍 Multi-Dimensional Filtering & Presets
-- **Temporal Slicing**: Single or multi-select filtering across years, calendar months, and fiscal weeks (Week 1–5), plus date-range pickers.
-- **Channel & Category Filters**: Multi-select filtering for sales channels (Website, Amazon, Blinkit, Offline, etc.), product categories, zones, and states.
-- **Status & Campaign Toggles**: Isolate dispatched vs. returned orders or Back-to-School (B2S) campaigns.
-- **Global Search**: Search across order IDs, customer names, SKUs/barcodes, product titles, and delivery cities.
+- **Gross vs. Net Revenue**: Tracks fulfilled net sales alongside gross orders and return adjustments.
+- **Unit Economics & AOV**: Monitors total units dispatched, net units, and Average Order Value across all channels.
+- **Margin Health**: Visualizes gross and Ex-GST Scoobies margin percentage against company benchmarks.
+- **Quota Progress**: Set and track sales goals (e.g., ₹25 Lakh targets) with live progress bars and gap computations.
+- **Campaign Insights**: Filter specifically for seasonal campaigns such as Back-to-School (B2S) vs. regular sales.
 
-### 🧠 AI Commercial Advisor (Groq + Offline Fallback)
-- **High-Speed Inference**: Powered by Groq Cloud (`openai/gpt-oss-120b` or custom models) with streaming responses.
-- **Adaptive Executive Personas**: Tailor advice to specific executive roles (COO, CFO, Performance Marketer, Merchandising Director, E-Commerce Manager, Supply Chain Lead).
-- **Automated Context Distillation**: Filtered data is automatically summarized into compact statistical digests before being sent to the LLM.
-- **Built-in Heuristic Offline Engine**: Fallback rule-based diagnostic engine generates executive findings even when offline or without an API key.
-- **Email Briefings**: Send formatted HTML briefing summaries to stakeholders via Resend API directly from the dashboard.
+### 🔍 Deep-Dive Multi-Dimensional Filtering
 
-### 📑 Executive Reporting & Export Capabilities
-- **One-Click Print/PDF View**: Printable executive summary layout with charts and tables rendered via `html2canvas` and `jspdf`.
-- **Filtered CSV Export**: Export any filtered subset of cleaned records for external auditing.
-- **Persistent Local Storage**: Uploaded datasets are automatically cached in browser IndexedDB so users don't need to re-upload files on page refresh.
-- **Zero-Backend Privacy**: Transaction data remains inside the user's browser, eliminating data privacy risks.
+- **Time Controls**: Filter by Year, Month, Week, or custom Date Ranges with multi-select support.
+- **Marketplace & Channel**: Isolate performance for Amazon, Blinkit, Brand Website, and Retail.
+- **Geographic Segmentation**: Explore performance by Zone (North, South, East, West), State, and Delivery City.
+- **Product & Category Slicing**: Drill down into specific product categories (e.g., Bags, Stationery, Lunchboxes, Craft Kits) and individual SKU barcodes.
+
+### 🔄 Dedicated Return & Refund Analysis
+
+- Quantitative visibility into return rates by volume (%) and value (%).
+- **Return Watchlist**: Ranked table of high-return items with refund loss metrics.
+- Channel-level return comparison to detect packaging, delivery, or marketplace sizing mismatches.
+
+### 🎙️ AI Strategic Advisor (`⌘J` / `Ctrl+J`)
+
+- **High-Speed Groq Inference**: Real-time Server-Sent Events (SSE) streaming with sub-second response times.
+- **Context Distiller**: Compresses active filters, top SKUs, channel trends, and margin leaks into focused prompt context.
+- **Voice-to-Text Input**: Record audio directly in the browser; transcribed and domain-enriched using Groq Whisper.
+- **Adaptive Personas**: Switch perspectives on demand (CFO, Performance Marketer, E-Commerce Lead, Merchandising Director, Supply Chain Lead).
+- **Offline Mode**: Client-side heuristic calculation produces a structured performance brief when offline.
+
+### 📤 Executive Sharing & Data Portability
+
+- **Filtered CSV Export**: Download filtered subsets of transactions for further external analysis.
+- **Print / PDF Briefing**: Formatted print preview for board meetings and executive reviews.
+- **Direct Email Dispatch**: Send structured HTML executive briefings to stakeholders directly from the app.
 
 ---
 
 ## Architecture & Tech Stack
 
-| Layer | Technology | Purpose |
-| :--- | :--- | :--- |
-| **Framework** | [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) | Type-safe UI components and reactive state |
-| **Bundler** | [Vite 8](https://vitejs.dev/) | Fast development server and optimized rollup bundling |
-| **Styling** | [Tailwind CSS v4](https://tailwindcss.com/) | Modern utility-first responsive layout and design tokens |
-| **Charts** | [Recharts](https://recharts.org/) | Composable SVG time series, bar charts, and pie breakdowns |
-| **CSV Parsing** | [PapaParse](https://www.papaparse.com/) | Streaming CSV parsing with auto-delimiting |
-| **Storage** | [IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) | Client-side database for dataset caching |
-| **AI Advisory** | [Groq API](https://groq.com/) | Low-latency LLM streaming over Server-Sent Events |
-| **Email Dispatch** | [Resend](https://resend.com/) | Transactional email delivery for executive briefings |
-| **Edge Functions** | [Cloudflare Pages Functions](https://developers.cloudflare.com/pages/functions/) | Edge proxy (`functions/api/resend/emails.ts`) avoiding CORS |
-| **PDF Generation** | [jsPDF](https://github.com/parallax/jsPDF) + [html2canvas](https://html2canvas.hertzen.com/) | Vector & raster PDF generation for executive printouts |
+| Layer                       | Technologies                                                                                                               |
+| :-------------------------- | :------------------------------------------------------------------------------------------------------------------------- |
+| **Framework & UI**          | [React 19](https://react.dev/), [TypeScript](https://www.typescriptlang.org/), [Vite 8](https://vitejs.dev/)               |
+| **Styling & Design System** | [Tailwind CSS v4](https://tailwindcss.com/) (`@tailwindcss/vite`), Custom Earthy Palette (`#5F7161`, `#F9F7F2`, `#433E37`) |
+| **Data Visualizations**     | [Recharts](https://recharts.org/) (Area, Bar, Composed, and Donut charts)                                                  |
+| **Icons & Typography**      | [Lucide React](https://lucide.dev/), Google Fonts (_Outfit_ and _Plus Jakarta Sans_)                                       |
+| **File & Data Parsing**     | [PapaParse](https://www.papaparse.com/) (streaming CSV parser)                                                             |
+| **Client Storage**          | Browser IndexedDB (via [src/utils/indexedDb.ts](src/utils/indexedDb.ts))                                                   |
+| **AI & Voice Services**     | [Groq Cloud API](https://console.groq.com/) (`openai/gpt-oss-120b`, `whisper-large-v3-turbo`)                              |
+| **Email Service**           | [Resend REST API](https://resend.com/) with [Cloudflare Pages Functions](functions/api/resend/emails.ts) edge proxy        |
 
 ---
 
@@ -97,43 +112,46 @@ The application:
 ### Prerequisites
 
 Ensure you have the following installed on your machine:
+
 - **Node.js**: `v18.0.0` or higher (Node 20+ recommended)
 - **npm**: `v9.0.0` or higher (or `pnpm` / `yarn`)
 
 ### Installation
 
-1. **Clone the repository**:
+1. Clone the repository:
+
    ```bash
    git clone https://github.com/masanthimanshu/scoobies-dashboard.git
    cd scoobies-dashboard
    ```
 
-2. **Install dependencies**:
+2. Install dependencies:
    ```bash
    npm install
    ```
 
 ### Environment Configuration
 
-The dashboard works out-of-the-box for analytics using its built-in offline engine. To enable live Groq AI streaming and email dispatching, set up your API keys:
+Copy the example environment file to `.env`:
 
-1. Copy the example environment file:
-   ```bash
-   cp .env.example .env
-   ```
+```bash
+cp .env.example .env
+```
 
-2. Open `.env` and fill in your keys:
-   ```env
-   # Groq Cloud API Key (https://console.groq.com)
-   GROQ_API_KEY=gsk_your_groq_api_key
+Configure your API keys in `.env`:
 
-   # Resend API Key for Email Dispatch (https://resend.com)
-   RESEND_API_KEY=re_your_resend_api_key
-   ```
+```env
+# Groq Cloud API Key for AI Strategic Advisor (https://console.groq.com)
+GROQ_API_KEY=gsk_your_groq_api_key_here
 
-> **Note**: API keys can also be entered or updated directly within the dashboard settings modal without editing `.env`.
+# Resend API Key for Email Briefing Sharing (https://resend.com)
+RESEND_API_KEY=re_your_resend_api_key_here
+```
 
-### Development Server
+> [!NOTE]
+> API keys can also be configured directly in the app UI via the AI Advisor settings panel and email share dialog. If no Groq API key is present, the dashboard seamlessly switches to its built-in **Deterministic Offline Engine**.
+
+### Running the Development Server
 
 Start the local Vite development server:
 
@@ -141,168 +159,190 @@ Start the local Vite development server:
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser. The Vite development server automatically proxies `/api/resend` requests to avoid CORS issues.
+The application will be available at `http://localhost:5173` (or the next available port). Vite automatically proxies `/api/resend` requests to avoid browser CORS restrictions.
 
-### Production Build
+### Building for Production
 
-To compile a production bundle with optimized code-splitting and minification:
+Compile the TypeScript code and generate optimized production assets:
 
 ```bash
 npm run build
 ```
 
-Built assets will be emitted to the `dist/` directory, ready for deployment to Cloudflare Pages, Vercel, Netlify, or any static host.
+The compiled output will be written to the `dist/` directory, ready to be deployed on static hosting platforms such as Cloudflare Pages, Vercel, or Netlify.
 
 ---
 
-## CSV Data Ingestion & Schema
+## Data Ingestion & CSV Schema
 
-### Expected Columns
+Scoobies Dashboard includes an adaptive CSV parser ([src/utils/csvParser.ts](src/utils/csvParser.ts)) that automatically normalizes varying column names, currency symbols (`₹`, `$`), Excel serial dates, negative refund quantities, and status strings.
 
-The parser includes a fuzzy header resolver that automatically recognizes common naming variants (case-insensitive, ignoring special characters):
+### Auto-Detected Columns
 
-| Field | Description | Accepted Header Aliases |
-| :--- | :--- | :--- |
-| `Year` | Transaction fiscal/calendar year | `Year`, `Yr`, `Order Year`, `Sale Year` |
-| `Month` | Month name or number | `Month`, `Mo`, `Order Month`, `Sale Month` |
-| `Week` | Fiscal or calendar week label | `Week`, `Wk`, `Week No`, `Week Number`, `Wk#` |
-| `Day` | Day of month (1–31) | `Day`, `Day No`, `Day Number`, `Date of Month` |
-| `Date` | Full transaction timestamp | `Date`, `Order Date`, `Sale Date`, `Invoice Date` |
-| `Order Number` | Unique order or invoice ID | `Order Number`, `Order No`, `Order Id`, `order_id` |
-| `Customer Name`| Buyer or store name | `Customer name`, `Customer`, `Buyer Name` |
-| `Bar Code` | Product SKU or barcode | `Bar Code`, `Barcode`, `SKU`, `Item Code` |
-| `Product Name` | Full product title | `Product name`, `Item Name`, `Title`, `Product` |
-| `Category` | High-level product category | `PRODUCT CATEGORY`, `Category`, `Item Category` |
-| `QTY` | Units ordered / returned | `QTY`, `Qty`, `Quantity`, `Units` |
-| `MRP` | Maximum retail price per unit | `MRP`, `Mrp`, `Price`, `Unit Price` |
-| `MRP Value` | Total gross MRP | `MRP Value`, `Mrp Value`, `Total MRP`, `MRP Total` |
-| `Scoobies Margin`| Brand gross margin amount | `Scoobies Margin`, `Margin`, `Gross Margin` |
-| `Retailers Margin`| Retailer or marketplace margin | `Retailers Margin`, `Retailer Margin`, `Channel Margin` |
-| `EX-GST Margin`| Margin amount net of GST | `EX-GST Scoobies Margin`, `Ex-GST Margin`, `EX GST` |
-| `Delivery Place`| Delivery city or town | `Delivery Place`, `City`, `Location`, `Delivery City` |
-| `State` | Delivery state or region | `State`, `Province`, `Region` |
-| `Channel` | Sales channel / platform | `Website`, `Channel`, `Platform`, `Portal`, `Source` |
-| `Status` | Order fulfillment status | `Status`, `Order Status`, `Delivery Status` |
-| `Back To School`| B2S campaign flag | `Back To School`, `Campaign`, `B2S` |
-| `Zone` | Geographic sales territory | `Zone`, `Sales Zone`, `Area` |
-| `Sale Value` | Net realized sales value | `Sale Value`, `Net Sales`, `Sales`, `Total Value` |
+| Data Field              | Supported Column Aliases                               | Description                                                          |
+| :---------------------- | :----------------------------------------------------- | :------------------------------------------------------------------- |
+| **Date**                | `Date`, `Order Date`                                   | Order date (supports `DD/MM/YYYY`, `YYYY-MM-DD`, Excel serial dates) |
+| **Year / Month / Week** | `Year`, `Month`, `Week`                                | Temporal grouping dimensions                                         |
+| **Order Number**        | `Order Number`, `OrderNo`, `OrderId`                   | Unique transaction identifier                                        |
+| **Customer Name**       | `Customer Name`, `Customer`, `Buyer`                   | Buyer identity                                                       |
+| **Bar Code / SKU**      | `Bar Code`, `Barcode`, `SKU`, `Item Code`              | Product identifier                                                   |
+| **Product Name**        | `Product Name`, `Item Name`, `Product`, `Title`        | SKU title                                                            |
+| **Category**            | `PRODUCT CATEGORY`, `Category`                         | Category grouping (e.g., Stationery, Bags, Art)                      |
+| **Quantity**            | `QTY`, `Quantity`, `Units`                             | Dispatched count (negative indicates return)                         |
+| **MRP / Unit Price**    | `MRP`, `Price`, `Unit Price`                           | Maximum retail price per unit                                        |
+| **Margins**             | `Scoobies Margin`, `Retailers Margin`, `EX-GST Margin` | Brand margin and channel margin values                               |
+| **Channel / Website**   | `Website`, `Channel`, `Platform`, `Portal`             | Channel (e.g., `Amazon`, `Blinkit`, `Office Website`)                |
+| **Status**              | `Status`                                               | `Dispatched`, `Return`, `Cancelled`                                  |
+| **Campaign**            | `Back To School`, `B2S`, `Campaign`                    | Identifies promotional campaign cohorts                              |
+| **Location / Region**   | `Delivery Place`, `State`, `Zone`                      | Delivery city, state, and geographic zone                            |
 
-### Data Cleaning & Resilient Parsing
+### Sample Data Format
 
-- **Robust Date Disambiguation**: Supports `DD/MM/YYYY`, `MM/DD/YYYY`, `YYYY-MM-DD`, Excel serial numeric timestamps (e.g. `45505`), and text dates (e.g. `01-Aug-2026`).
-- **Currency & String Sanitization**: Cleans currency symbols (`₹`, `$`), comma separators, and placeholder strings (`"-"`, `"N/A"`, `"--"`).
-- **Automatic Return Inversion**: Automatically treats negative quantity items or records flagged with `Return` status as returns, adjusting net sales and unit metrics accordingly.
-- **Zero-Data Fallback**: Calculates missing calendar weeks automatically from the transaction day when not explicitly provided.
+A downloadable CSV template is provided within the import modal. A standard row format appears as follows:
+
+```csv
+Year,Month,Week,Day,Date,Order Number,Customer name,Bar Code,Product name,Color,PRODUCT CATEGORY,QTY,MRP,MRP Value,Scoobies Margin,Retailers Margin,EX-GST Scoobies Margin,Delivery Place,State,Website,Status,Received Payment,Back To School,Zone,Sale Value
+2026,Aug,Week1,1,1/8/2026,16542,Ekta Gupta,SC0000190,Wrapping Sheets (Assorted),Multi,Wrapping Sheets,1,89,89,20,0,16.95,North Delhi,Delhi,Office Website,Dispatched,,With out B2S,North,20
+```
 
 ---
 
-## Project Structure
+## AI Strategic Advisor & Voice Intelligence
+
+The AI Advisor ([src/components/AiAdvisorDrawer.tsx](src/components/AiAdvisorDrawer.tsx)) acts as a dedicated commercial analyst:
 
 ```
+┌────────────────────────────────┐
+│      User Prompt / Voice       │
+└───────────────┬────────────────┘
+                │
+                ▼
+┌────────────────────────────────┐      ┌─────────────────────────────┐
+│  Groq Whisper Transcription    │ ───► │ Prompt Refinement Engine    │
+│  (whisper-large-v3-turbo)      │      │ (Domain-specific polishing) │
+└────────────────────────────────┘      └──────────────┬──────────────┘
+                                                       │
+                                                       ▼
+┌────────────────────────────────┐      ┌─────────────────────────────┐
+│  Client Analytics State        │ ───► │ AI Context Distiller        │
+│  (Filtered Sales, KPIs, Trends)│      │ (Markdown context payload)  │
+└────────────────────────────────┘      └──────────────┬──────────────┘
+                                                       │
+                                                       ▼
+                                        ┌─────────────────────────────┐
+                                        │ Groq Streaming LLM          │
+                                        │ (openai/gpt-oss-120b)       │
+                                        └──────────────┬──────────────┘
+                                                       │
+                                                       ▼
+                                        ┌─────────────────────────────┐
+                                        │ Real-Time SSE Response      │
+                                        │ (Diagnosis, Cause, Action)  │
+                                        └─────────────────────────────┘
+```
+
+### Hotkey Shortcut
+
+Press <kbd>⌘</kbd> + <kbd>J</kbd> (macOS) or <kbd>Ctrl</kbd> + <kbd>J</kbd> (Windows/Linux) from anywhere in the app to toggle the AI Advisor drawer.
+
+---
+
+## Email Sharing & Cloudflare Edge Functions
+
+The application includes an end-to-end briefing delivery flow powered by [Resend](https://resend.com):
+
+1. **Development Mode**: Vite proxies requests from `/api/resend/emails` directly to `https://api.resend.com/emails` via `vite.config.ts`.
+2. **Production Mode (Cloudflare Pages)**: The serverless function located at [functions/api/resend/emails.ts](functions/api/resend/emails.ts) handles incoming requests, injects credentials from environment variables, and forwards payloads to the Resend API with full CORS support.
+
+---
+
+## Project Directory Structure
+
+```text
 scoobies-dashboard/
-├── functions/                     # Cloudflare Pages Functions
+├── .env.example                   # Template environment variables
+├── functions/                     # Cloudflare Pages serverless edge functions
 │   └── api/
 │       └── resend/
-│           └── emails.ts          # Edge proxy for CORS-safe Resend email dispatch
+│           └── emails.ts          # Edge proxy for Resend email dispatch
+├── index.html                     # HTML root entry with Google Fonts
+├── package.json                   # Project dependencies and npm scripts
 ├── src/
-│   ├── components/                # Modular React UI components
-│   │   ├── AiAdvisorDrawer.tsx    # Slide-over Groq AI Strategic Advisor chat
-│   │   ├── AiFloatingButton.tsx   # Floating action button for AI drawer
+│   ├── App.tsx                    # Main dashboard layout and view controller
+│   ├── components/
+│   │   ├── AiAdvisorDrawer.tsx    # Slide-over AI advisor with chat & voice input
+│   │   ├── AiFloatingButton.tsx   # Floating action button (⌘J trigger)
 │   │   ├── BasketSizeAov.tsx      # AOV and basket size distribution analytics
-│   │   ├── ChannelBreakdown.tsx   # Channel economics and share comparison
-│   │   ├── ExecutiveSummary.tsx   # Algorithmic business insights cards
-│   │   ├── FilterBar.tsx          # Multi-dimensional filter toolbar and chips
-│   │   ├── GeoAnalytics.tsx       # State and zone geographic performance
-│   │   ├── GoalModal.tsx          # Margin quota and sales target editor
-│   │   ├── KpiGrid.tsx            # Executive KPI metrics cards
-│   │   ├── Navbar.tsx             # Main header, dataset info, and action menu
-│   │   ├── OrdersTable.tsx        # Paginated, sortable transaction data grid
-│   │   ├── PrintReportView.tsx    # Clean executive printable/PDF layout
-│   │   ├── ProductCategoryAnalytics.tsx # Category & SKU performance drilldowns
-│   │   ├── ReturnAnalysis.tsx     # Return rate & offender SKU tracking
-│   │   ├── SalesTrendChart.tsx    # Multi-granularity time series chart
-│   │   ├── ShareChatModal.tsx     # Email briefing sharing modal
-│   │   └── UploadModal.tsx        # Drag-and-drop CSV upload and validator
-│   ├── services/                  # External service integrations
-│   │   ├── emailService.ts        # Resend email API integration
-│   │   └── groqService.ts         # Groq LLM SSE streaming client
-│   ├── utils/                     # Analytics computation and data helpers
-│   │   ├── aiContextDistiller.ts  # Summarizes active dataset for LLM prompt context
-│   │   ├── analytics.ts           # Core KPI aggregation and calculations
-│   │   ├── chatEmailTemplate.ts   # HTML email template for executive briefings
-│   │   ├── csvParser.ts           # PapaParse CSV parser and schema normalizer
-│   │   ├── formatters.ts          # Currency, date, and percentage formatters
-│   │   ├── indexedDb.ts           # Client-side IndexedDB persistence layer
-│   │   └── offlineAiEngine.ts     # Offline heuristic business insight generator
-│   ├── types.ts                   # TypeScript interfaces and data models
-│   ├── index.css                  # Global styles and Tailwind CSS v4 imports
-│   ├── App.tsx                    # Main application container and layout
-│   └── main.tsx                   # React root entrypoint
-├── index.html                     # HTML template with custom Google typography
-├── package.json                   # Project dependencies and build scripts
-├── tsconfig.json                  # TypeScript compiler settings
-├── vite.config.ts                 # Vite bundler, proxy, and manual code chunks
-└── README.md                      # Project documentation
+│   │   ├── ChannelBreakdown.tsx   # Marketplace revenue & margin performance
+│   │   ├── ExecutiveSummary.tsx   # Actionable insight cards and alerts
+│   │   ├── FilterBar.tsx          # Multi-dimensional filter toolbar
+│   │   ├── GeoAnalytics.tsx       # Regional leaderboard (Zones, States, Cities)
+│   │   ├── GoalModal.tsx          # Target quota configuration modal
+│   │   ├── KpiGrid.tsx            # Executive KPI metrics grid
+│   │   ├── Navbar.tsx             # Main header with file status & actions
+│   │   ├── OrdersTable.tsx        # Searchable and sortable transaction table
+│   │   ├── PrintReportView.tsx    # Print-optimized executive briefing modal
+│   │   ├── ProductCategoryAnalytics.tsx # Category & top SKU performance
+│   │   ├── ReturnAnalysis.tsx     # Return rate & refund leak analysis
+│   │   ├── ShareChatModal.tsx     # Email sharing dialog via Resend API
+│   │   └── UploadModal.tsx        # Drag-and-drop CSV upload modal
+│   ├── services/
+│   │   ├── emailService.ts        # Client service for Resend email integration
+│   │   └── groqService.ts         # Groq LLM streaming, Whisper audio & prompt refiner
+│   ├── types.ts                   # Core TypeScript domain models & interfaces
+│   └── utils/
+│       ├── aiContextDistiller.ts  # Compiles dashboard metrics into LLM prompt context
+│       ├── analytics.ts           # Single-pass analytics computation engine
+│       ├── chatEmailTemplate.ts   # Responsive HTML email layout generator
+│       ├── csvParser.ts           # Streaming CSV parser & column normalizer
+│       ├── formatters.ts          # Currency, percentage, and date utilities
+│       ├── indexedDb.ts           # Browser IndexedDB storage driver
+│       └── offlineAiEngine.ts     # Deterministic offline strategic brief generator
+├── tsconfig.json                  # TypeScript compiler configuration
+└── vite.config.ts                 # Vite bundler, Tailwind v4 plugin & proxy setup
 ```
 
 ---
 
-## AI Strategic Advisor & Resend Integration
+## Where Users Can Get Help
 
-### Context Distillation
-Sending full transactional datasets to an LLM is slow, expensive, and exceeds token context limits. The dashboard uses `aiContextDistiller.ts` to compress millions of data points into a high-density, structured summary containing:
-- High-level KPIs (Net Sales, Returns %, Margins, Quota run-rate deficit)
-- Channel contribution and margin efficiency
-- Category and top-volume SKU performance
-- Top return-offender SKUs and return-rate anomalies
-- Active filter conditions and dataset scope
-
-### Persona Adaptation
-The AI advisor can switch strategic perspectives depending on user intent:
-- **Default / COO**: Holistic operational and commercial performance.
-- **CFO**: Net realization, gross margin health, and channel economics.
-- **Performance Marketer**: B2S campaign performance and revenue drivers.
-- **E-Commerce Manager**: Conversion health, AOV dynamics, and channel share.
-- **Merchandising / Supply Chain**: Return rates, SKU volume velocity, and category trends.
+- **Documentation & Questions**: Open an issue on the [GitHub Issues](https://github.com/masanthimanshu/scoobies-dashboard/issues) page.
+- **Feature Requests & Ideas**: Start a thread under [GitHub Discussions](https://github.com/masanthimanshu/scoobies-dashboard/discussions).
+- **API Keys & Setup**:
+  - Groq Cloud Console: [console.groq.com](https://console.groq.com)
+  - Resend Email Console: [resend.com](https://resend.com)
 
 ---
 
 ## Contributing
 
-Contributions are welcome! To contribute:
+Contributions from the community are warmly welcomed! To contribute:
 
-1. **Fork the Repository**:
-   Click the "Fork" button at the top right of this page.
+1. **Fork the Repository**: Click the **Fork** button on GitHub.
 2. **Create a Feature Branch**:
    ```bash
    git checkout -b feature/your-feature-name
    ```
-3. **Make Your Changes**:
-   Ensure code is properly formatted and adheres to project TypeScript conventions.
-4. **Validate Your Build**:
+3. **Commit Your Changes**: Follow clear, conventional commit messages:
    ```bash
-   npm run build
+   git commit -m "feat: add channel return comparison chart"
    ```
-5. **Commit Your Changes**:
-   ```bash
-   git commit -m "feat: describe your change concisely"
-   ```
-6. **Push to Your Fork & Open a Pull Request**:
+4. **Push to Your Fork**:
    ```bash
    git push origin feature/your-feature-name
    ```
+5. **Open a Pull Request**: Submit a PR to `main` with a clear explanation of changes and test steps.
 
-Please provide a clear description of your changes and any relevant screenshots in your Pull Request.
-
----
-
-## Support
-
-- **Issue Tracker**: If you encounter bugs or want to request a feature, please file an issue in the [GitHub Issues](https://github.com/masanthimanshu/scoobies-dashboard/issues) section.
-- **Discussions**: For general questions, ideas, or feedback, join the [GitHub Discussions](https://github.com/masanthimanshu/scoobies-dashboard/discussions).
+Please ensure the project builds cleanly (`npm run build`) before opening a pull request.
 
 ---
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the terms of the [MIT License](LICENSE).
+
+---
+
+## Maintainer
+
+Maintained with ❤️ by **[Himanshu Masanth](https://github.com/masanthimanshu)**.

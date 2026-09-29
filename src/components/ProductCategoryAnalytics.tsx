@@ -12,6 +12,7 @@ import { ShoppingBag, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
 import { CategoryMetric, ProductMetric } from "../types";
 import {
   CHART_TOOLTIP_STYLE,
+  formatCompactCurrency,
   formatCurrency,
   formatNumber,
   formatPercent,
@@ -97,9 +98,7 @@ export const ProductCategoryAnalytics: React.FC<ProductCategoryAnalyticsProps> =
                     type="number"
                     tick={{ fontSize: 11, fill: "#8C8376" }}
                     axisLine={{ stroke: "#EBE5D9" }}
-                    tickFormatter={(v) =>
-                      `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`
-                    }
+                    tickFormatter={formatCompactCurrency}
                   />
                   <YAxis
                     type="category"

@@ -12,20 +12,12 @@ const DEFAULT_MODEL = "openai/gpt-oss-120b";
 const STORAGE_KEY_API_KEY = "scoobies_groq_api_key";
 
 export function getActiveGroqApiKey(): string {
-  const localKey = localStorage.getItem(STORAGE_KEY_API_KEY);
-  if (localKey && localKey.trim()) {
-    return localKey.trim();
-  }
-  const envKey =
-    import.meta.env.GROQ_API_KEY || import.meta.env.VITE_GROQ_API_KEY;
-  if (envKey && typeof envKey === "string" && envKey.trim()) {
-    return envKey.trim();
-  }
-  return "";
-}
-
-function getActiveGroqModel(): string {
-  return DEFAULT_MODEL;
+  return (
+    localStorage.getItem(STORAGE_KEY_API_KEY)?.trim() ||
+    import.meta.env.VITE_GROQ_API_KEY ||
+    import.meta.env.GROQ_API_KEY ||
+    ""
+  );
 }
 
 const SYSTEM_PROMPT = `You are the Executive AI Strategic Advisor and Commercial Intelligence Engine for **Scoobies**, a high-growth lifestyle, stationery, and kids accessories brand.
@@ -139,7 +131,7 @@ export async function streamGroqChat({
   onChunk,
   onError,
 }: StreamGroqOptions): Promise<string> {
-  const selectedModel = model || getActiveGroqModel();
+  const selectedModel = model || DEFAULT_MODEL;
 
   // Construct payload with system instructions + full distilled context
   let fullSystemPrompt = `${SYSTEM_PROMPT}\n\n---\n${contextMarkdown}`;
@@ -158,7 +150,6 @@ export async function streamGroqChat({
       body: {
         model: selectedModel,
         messages: apiMessages,
-
         stream: true,
         temperature: 0.5,
         max_completion_tokens: 7500,
@@ -288,7 +279,7 @@ export async function refineSpokenPromptWithGroq({
     return rawTranscript.trim();
   }
 
-  const selectedModel = model || getActiveGroqModel();
+  const selectedModel = model || DEFAULT_MODEL;
 
   const systemPrompt = `You are the executive prompt strategist and attentive AI assistant for **Scoobies** (a high-growth lifestyle, stationery, and kids accessories brand).
 Your mission is to transform a raw spoken voice query from the user into a sharp, articulate, and context-aware analytical prompt for our Strategic AI Advisor.

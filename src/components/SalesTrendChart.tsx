@@ -12,7 +12,11 @@ import {
   Bar,
 } from "recharts";
 import { TimeSeriesPoint } from "../types";
-import { formatCurrency, formatNumber } from "../utils/formatters";
+import {
+  formatCompactCurrency,
+  formatCurrency,
+  formatNumber,
+} from "../utils/formatters";
 
 interface SalesTrendChartProps {
   data: TimeSeriesPoint[];
@@ -281,7 +285,7 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = React.memo(
                     tickFormatter={(v) =>
                       metricView === "units"
                         ? String(v)
-                        : `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`
+                        : formatCompactCurrency(v)
                     }
                   />
                   <Tooltip content={<CustomTooltip />} />
@@ -359,7 +363,7 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = React.memo(
                     tickFormatter={(v) =>
                       metricView === "units"
                         ? String(v)
-                        : `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`
+                        : formatCompactCurrency(v)
                     }
                   />
                   <Tooltip content={<CustomTooltip />} />

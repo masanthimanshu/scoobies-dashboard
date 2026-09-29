@@ -9,23 +9,22 @@ const inrFormatter = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 0,
 });
 
-const MAX_CACHE_SIZE = 2000;
-const currencyCache = new Map<number, string>();
-const numberCache = new Map<number, string>();
-
 /**
  * Formats a numeric value into INR currency format (e.g. ₹1,23,456)
  */
 export function formatCurrency(val: number | undefined | null): string {
   if (val === undefined || val === null || isNaN(val)) return "₹0";
-  const rounded = Math.round(val);
-  const cached = currencyCache.get(rounded);
-  if (cached !== undefined) return cached;
+  return `₹${inrFormatter.format(Math.round(val))}`;
+}
 
-  const formatted = `₹${inrFormatter.format(rounded)}`;
-  if (currencyCache.size >= MAX_CACHE_SIZE) currencyCache.clear();
-  currencyCache.set(rounded, formatted);
-  return formatted;
+/**
+ * Formats a currency value compactly for chart axes (e.g. ₹15k, ₹500)
+ */
+export function formatCompactCurrency(val: number): string {
+  if (Math.abs(val) >= 1000) {
+    return `₹${(val / 1000).toFixed(0)}k`;
+  }
+  return `₹${val}`;
 }
 
 /**
@@ -33,14 +32,7 @@ export function formatCurrency(val: number | undefined | null): string {
  */
 export function formatNumber(val: number | undefined | null): string {
   if (val === undefined || val === null || isNaN(val)) return "0";
-  const rounded = Math.round(val);
-  const cached = numberCache.get(rounded);
-  if (cached !== undefined) return cached;
-
-  const formatted = inrFormatter.format(rounded);
-  if (numberCache.size >= MAX_CACHE_SIZE) numberCache.clear();
-  numberCache.set(rounded, formatted);
-  return formatted;
+  return inrFormatter.format(Math.round(val));
 }
 
 /**
@@ -50,9 +42,55 @@ export function formatPercent(
   val: number | undefined | null,
   decimals = 1,
 ): string {
-  if (val === undefined || val === null || isNaN(val))
-    return `0.${"0".repeat(decimals)}%`;
+  if (val === undefined || val === null || isNaN(val)) {
+    return decimals > 0 ? `0.${"0".repeat(decimals)}%` : "0%";
+  }
   return `${val.toFixed(decimals)}%`;
+}
+
+/**
+ * Computes a percentage ratio safely without NaN or Infinity, clamped to 0 minimum.
+ */
+export function computeSharePct(
+  val: number,
+  total: number,
+  decimals = 1,
+): number {
+  if (!total || total <= 0) return 0;
+  return Number(((Math.max(0, val) / total) * 100).toFixed(decimals));
+}
+
+/**
+ * Computes return rate percentage from returned items vs total gross items.
+ */
+export function calculateReturnRate(
+  returnUnits: number,
+  totalUnits: number,
+  decimals = 1,
+): number {
+  if (!totalUnits || totalUnits <= 0) return 0;
+  return Number(
+    ((Math.max(0, returnUnits) / totalUnits) * 100).toFixed(decimals),
+  );
+}
+
+/**
+ * Safely parses any number/currency string (e.g. "₹1,200", "  500.5 ", "500000") into a clean number.
+ */
+export function parseNumericInput(val: unknown, defaultVal = 0): number {
+  if (val == null) return defaultVal;
+  if (typeof val === "number") return isNaN(val) ? defaultVal : val;
+  const num = parseFloat(String(val).replace(/[₹$,\s]/g, ""));
+  return isNaN(num) ? defaultVal : num;
+}
+
+/**
+ * Normalizes a week string (e.g. "Week 1", "Week1", "week-1") to a lowercase alphanumeric key.
+ */
+export function cleanWeekKey(val: string): string {
+  return String(val || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
 }
 
 /**
@@ -63,10 +101,8 @@ export function isValidFilterOption(val: unknown): boolean {
   const str = String(val).trim();
   return (
     str.length > 0 &&
-    str !== "#N/A" &&
+    !str.startsWith("#") &&
     str !== "N/A" &&
-    str !== "#VALUE!" &&
-    str !== "#REF!" &&
     str !== "null" &&
     str !== "undefined"
   );

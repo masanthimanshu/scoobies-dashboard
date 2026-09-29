@@ -9,16 +9,12 @@ const PROXY_ENDPOINT = "/api/resend/emails";
 const DIRECT_ENDPOINT = "https://api.resend.com/emails";
 
 export function getActiveResendApiKey(): string {
-  const localKey = localStorage.getItem(STORAGE_KEY_RESEND_KEY);
-  if (localKey && localKey.trim()) {
-    return localKey.trim();
-  }
-  const envKey =
-    import.meta.env.RESEND_API_KEY || import.meta.env.VITE_RESEND_API_KEY;
-  if (envKey && typeof envKey === "string" && envKey.trim()) {
-    return envKey.trim();
-  }
-  return "";
+  return (
+    localStorage.getItem(STORAGE_KEY_RESEND_KEY)?.trim() ||
+    import.meta.env.VITE_RESEND_API_KEY ||
+    import.meta.env.RESEND_API_KEY ||
+    ""
+  );
 }
 
 export function setActiveResendApiKey(key: string) {
@@ -43,6 +39,12 @@ interface SendEmailResponse {
   message?: string;
 }
 
+interface ResendApiResponse {
+  id?: string;
+  message?: string;
+  error?: string | { message?: string };
+}
+
 /**
  * Sends a rich HTML email via the Resend API (using Vite dev proxy /api/resend to avoid browser CORS issues).
  */
@@ -60,11 +62,8 @@ export async function sendEmailWithResend(
     ? options.to
     : [options.to.trim()];
 
-  // Validate recipient email
-  for (const email of recipients) {
-    if (!email || !email.includes("@")) {
-      throw new Error(`Invalid recipient email address: "${email}"`);
-    }
+  if (!recipients.length || !recipients[0]) {
+    throw new Error("Recipient email address is required.");
   }
 
   const payload = {
@@ -100,11 +99,6 @@ export async function sendEmailWithResend(
       });
     }
 
-    interface ResendApiResponse {
-      id?: string;
-      message?: string;
-      error?: string | { message?: string };
-    }
     let data: ResendApiResponse | null = null;
     try {
       data = (await response.json()) as ResendApiResponse;

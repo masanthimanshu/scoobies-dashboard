@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Target, X, Check } from "lucide-react";
-import { formatCurrency } from "../utils/formatters";
+import { formatCurrency, parseNumericInput } from "../utils/formatters";
 
 interface GoalModalProps {
   isOpen: boolean;
@@ -23,8 +23,8 @@ export const GoalModal: React.FC<GoalModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const val = parseFloat(goalInput);
-    if (!isNaN(val) && val > 0) {
+    const val = parseNumericInput(goalInput);
+    if (val > 0) {
       onSaveGoal(val);
       onClose();
     }

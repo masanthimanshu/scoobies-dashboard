@@ -18,6 +18,8 @@ import {
 } from "../types";
 import { getRecordMetrics } from "../utils/analytics";
 import {
+  calculateReturnRate,
+  computeSharePct,
   formatCurrency,
   formatNumber,
   formatPercent,
@@ -45,14 +47,10 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = React.memo(
       const totalReturnsVal = metrics?.totalReturnedSales || 1;
       return (channels || [])
         .filter((ch) => ch.returns > 0 || ch.returnUnits > 0)
-        .map((ch) => {
-          const returnSharePct =
-            totalReturnsVal > 0 ? (ch.returns / totalReturnsVal) * 100 : 0;
-          return {
-            ...ch,
-            returnSharePct: Math.min(100, Math.max(0, returnSharePct)),
-          };
-        })
+        .map((ch) => ({
+          ...ch,
+          returnSharePct: computeSharePct(ch.returns, totalReturnsVal),
+        }))
         .sort((a, b) => b.returns - a.returns);
     }, [channels, metrics?.totalReturnedSales]);
 
@@ -126,10 +124,10 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = React.memo(
         prodMap.forEach((data) => {
           if (data.returnUnits > 0 || data.returns > 0) {
             const totalUnitsOrdered = data.units + data.returnUnits;
-            const returnRate =
-              totalUnitsOrdered > 0
-                ? (data.returnUnits / totalUnitsOrdered) * 100
-                : 100;
+            const returnRate = calculateReturnRate(
+              data.returnUnits,
+              totalUnitsOrdered,
+            );
 
             list.push({
               productName: data.productName,
@@ -143,7 +141,7 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = React.memo(
               returns: Math.round(data.returns),
               units: data.units,
               returnUnits: data.returnUnits,
-              returnRate: Number(returnRate.toFixed(1)),
+              returnRate,
               sharePct: 0,
               margin: 0,
               mrp: 0,
@@ -156,13 +154,10 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = React.memo(
 
       return products.filter((p) => {
         if (p.returnUnits <= 0 && p.returns <= 0) return false;
-        if (p.returnChannels && p.returnChannels.length > 0) {
-          return p.returnChannels.includes(selectedChannelFilter);
-        }
-        if (p.channels && p.channels.length > 0) {
-          return p.channels.includes(selectedChannelFilter);
-        }
-        return (p.channel || "Direct") === selectedChannelFilter;
+        return (
+          p.returnChannels?.includes(selectedChannelFilter) ||
+          p.channel === selectedChannelFilter
+        );
       });
     }, [records, products, selectedChannelFilter]);
 
@@ -199,44 +194,38 @@ export const ReturnAnalysis: React.FC<ReturnAnalysisProps> = React.memo(
 
     // Channel specific totals when a filter is applied
     const activeScopeSummary = useMemo(() => {
+      const affectedSkus = channelScopedReturnedProducts.length;
       if (selectedChannelFilter === "ALL") {
         return {
           refundedValue: metrics?.totalReturnedSales ?? 0,
           returnUnits: metrics?.totalReturnedUnits ?? 0,
           returnRate: metrics?.returnRateValPct ?? 0,
-          affectedSkus: channelScopedReturnedProducts.length,
+          affectedSkus,
         };
       }
       const ch = channels.find(
         (c) => c.channel.toLowerCase() === selectedChannelFilter.toLowerCase(),
       );
-      let totalRef = 0;
-      let totalUnits = 0;
-      const count = channelScopedReturnedProducts.length;
-      for (let i = 0; i < count; i++) {
-        totalRef += channelScopedReturnedProducts[i].returns;
-        totalUnits += channelScopedReturnedProducts[i].returnUnits;
-      }
       return {
-        refundedValue: ch ? ch.returns : totalRef,
-        returnUnits: ch ? ch.returnUnits : totalUnits,
-        returnRate: ch ? ch.returnRate : 0,
-        affectedSkus: count,
+        refundedValue: ch?.returns ?? 0,
+        returnUnits: ch?.returnUnits ?? 0,
+        returnRate: ch?.returnRate ?? 0,
+        affectedSkus,
       };
     }, [
       selectedChannelFilter,
       metrics,
       channels,
-      channelScopedReturnedProducts,
+      channelScopedReturnedProducts.length,
     ]);
 
-    // Key return insights
+    // Key return insights - derived directly from channelsWithReturns
     const highestReturnChannel = useMemo(() => {
-      const sorted = [...channels]
-        .filter((c) => c.returns > 0)
-        .sort((a, b) => b.returns - a.returns);
-      return sorted.length > 0 ? sorted[0] : null;
-    }, [channels]);
+      return channelsWithReturns.length > 0 &&
+        channelsWithReturns[0].returns > 0
+        ? channelsWithReturns[0]
+        : null;
+    }, [channelsWithReturns]);
 
     return (
       <section

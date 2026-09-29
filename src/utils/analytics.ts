@@ -9,7 +9,44 @@ import {
   GeoMetric,
   ExecutiveInsight,
 } from "../types";
-import { isB2SCampaign, formatCurrency } from "./formatters";
+import {
+  isB2SCampaign,
+  formatCurrency,
+  computeSharePct,
+  calculateReturnRate,
+  cleanWeekKey,
+} from "./formatters";
+
+/**
+ * Evaluates whether any filter criteria are currently active on the dataset.
+ */
+export function hasActiveFilters(filters: FilterState): boolean {
+  return Boolean(
+    (filters.years &&
+      filters.years.length > 0 &&
+      !filters.years.includes("ALL")) ||
+    (filters.year && filters.year !== "ALL" && filters.year !== "CUSTOM") ||
+    (filters.months &&
+      filters.months.length > 0 &&
+      !filters.months.includes("ALL")) ||
+    (filters.month && filters.month !== "ALL" && filters.month !== "CUSTOM") ||
+    (filters.weeks &&
+      filters.weeks.length > 0 &&
+      !filters.weeks.includes("ALL")) ||
+    (filters.week && filters.week !== "ALL" && filters.week !== "CUSTOM") ||
+    (filters.channels && filters.channels.length > 0) ||
+    (filters.categories && filters.categories.length > 0) ||
+    (filters.zones && filters.zones.length > 0) ||
+    (filters.states && filters.states.length > 0) ||
+    (filters.status && filters.status !== "ALL") ||
+    (filters.campaign && filters.campaign !== "ALL") ||
+    filters.startDate ||
+    filters.endDate ||
+    filters.minSaleValue !== undefined ||
+    filters.maxSaleValue !== undefined ||
+    (filters.search && filters.search.trim()),
+  );
+}
 
 /**
  * High-performance records filter. Pre-compiles filter sets and lowercased lookups
@@ -19,33 +56,7 @@ export function filterRecords(
   records: SaleRecord[],
   filters: FilterState,
 ): SaleRecord[] {
-  // Fast path: if no filters are active, return records immediately
-  const hasActiveFilters =
-    (filters.years &&
-      filters.years.length > 0 &&
-      !filters.years.includes("ALL")) ||
-    (filters.year && filters.year !== "ALL") ||
-    (filters.months &&
-      filters.months.length > 0 &&
-      !filters.months.includes("ALL")) ||
-    (filters.month && filters.month !== "ALL") ||
-    (filters.weeks &&
-      filters.weeks.length > 0 &&
-      !filters.weeks.includes("ALL")) ||
-    (filters.week && filters.week !== "ALL") ||
-    (filters.channels && filters.channels.length > 0) ||
-    (filters.categories && filters.categories.length > 0) ||
-    (filters.zones && filters.zones.length > 0) ||
-    (filters.states && filters.states.length > 0) ||
-    Boolean(filters.status && filters.status !== "ALL") ||
-    Boolean(filters.campaign && filters.campaign !== "ALL") ||
-    Boolean(filters.startDate) ||
-    Boolean(filters.endDate) ||
-    filters.minSaleValue !== undefined ||
-    filters.maxSaleValue !== undefined ||
-    Boolean(filters.search && filters.search.trim());
-
-  if (!hasActiveFilters) {
+  if (!hasActiveFilters(filters)) {
     return records;
   }
 
@@ -61,8 +72,6 @@ export function filterRecords(
     !filters.months.includes("ALL")
       ? new Set(filters.months.map((m) => m.toLowerCase()))
       : null;
-
-  const cleanWeekKey = (w: string) => w.toLowerCase().replace(/[^a-z0-9]/g, "");
 
   const weekSet =
     filters.weeks && filters.weeks.length > 0 && !filters.weeks.includes("ALL")
@@ -89,13 +98,17 @@ export function filterRecords(
 
   // Pre-calculate single-value filter constants
   const singleYearStr =
-    filters.year && filters.year !== "ALL" ? String(filters.year) : null;
+    filters.year && filters.year !== "ALL" && filters.year !== "CUSTOM"
+      ? String(filters.year)
+      : null;
   const singleMonthLower =
-    filters.month && filters.month !== "ALL"
+    filters.month && filters.month !== "ALL" && filters.month !== "CUSTOM"
       ? filters.month.toLowerCase()
       : null;
   const singleWeekClean =
-    filters.week && filters.week !== "ALL" ? cleanWeekKey(filters.week) : null;
+    filters.week && filters.week !== "ALL" && filters.week !== "CUSTOM"
+      ? cleanWeekKey(filters.week)
+      : null;
   const searchQuery = filters.search ? filters.search.trim().toLowerCase() : "";
   const startDate = filters.startDate || "";
   const endDate = filters.endDate || "";
@@ -187,31 +200,10 @@ export function filterRecords(
  */
 export function getRecordMetrics(r: SaleRecord) {
   const isReturn =
-    r.status === "Return" ||
-    r.qty < 0 ||
-    (Number.isFinite(r.mrpValue) && r.mrpValue < 0) ||
-    (Number.isFinite(r.saleValue) && r.saleValue < 0);
-  const val = Math.abs(
-    Number.isFinite(r.mrpValue)
-      ? r.mrpValue
-      : Number.isFinite(r.mrp) && Number.isFinite(r.qty)
-        ? r.mrp * r.qty
-        : Number.isFinite(r.saleValue)
-          ? r.saleValue
-          : 0,
-  );
-  const qty = Math.abs(Number.isFinite(r.qty) ? r.qty : 1);
-  const margin = Number.isFinite(r.scoobiesMargin) ? r.scoobiesMargin : 0;
-  const exGstMargin = Number.isFinite(r.exGstMargin) ? r.exGstMargin : 0;
-  return { isReturn, val, qty, margin, exGstMargin };
-}
-
-/**
- * Shared helper to calculate percentage safely with decimal formatting.
- */
-function computeSharePct(val: number, total: number, decimals = 1): number {
-  if (!total || total <= 0) return 0;
-  return Number(((Math.max(0, val) / total) * 100).toFixed(decimals));
+    r.status === "Return" || r.qty < 0 || r.mrpValue < 0 || r.saleValue < 0;
+  const val = Math.abs(r.mrpValue || r.saleValue || r.mrp * r.qty || 0);
+  const qty = Math.abs(r.qty || 1);
+  return { isReturn, val, qty };
 }
 
 interface AllAnalyticsResult {
@@ -342,9 +334,9 @@ export function computeAllAnalytics(
       totalUnitsSold += qty;
     }
 
-    totalScoobiesMargin += r.scoobiesMargin;
-    totalExGstMargin += r.exGstMargin;
-    retailersMarginTotal += r.retailersMargin;
+    totalScoobiesMargin += r.scoobiesMargin || 0;
+    totalExGstMargin += r.exGstMargin || 0;
+    retailersMarginTotal += r.retailersMargin || 0;
 
     if (isB2SCampaign(r.backToSchool)) {
       b2sNetSales += isReturn ? -val : val;
@@ -514,15 +506,17 @@ export function computeAllAnalytics(
   }
 
   const totalOrders = ordersSet.size;
-  const returnRateQtyPct =
-    totalGrossUnits > 0 ? (totalReturnedUnits / totalGrossUnits) * 100 : 0;
-  const returnRateValPct =
-    totalGrossSales > 0 ? (totalReturnedSales / totalGrossSales) * 100 : 0;
+  const returnRateQtyPct = calculateReturnRate(
+    totalReturnedUnits,
+    totalGrossUnits,
+  );
+  const returnRateValPct = calculateReturnRate(
+    totalReturnedSales,
+    totalGrossSales,
+  );
   const averageOrderValue = totalOrders > 0 ? totalNetSales / totalOrders : 0;
-  const marginPercentage =
-    totalNetSales > 0 ? (totalScoobiesMargin / totalNetSales) * 100 : 0;
-  const b2sSalesPct =
-    totalNetSales > 0 ? (Math.max(0, b2sNetSales) / totalNetSales) * 100 : 0;
+  const marginPercentage = computeSharePct(totalScoobiesMargin, totalNetSales);
+  const b2sSalesPct = computeSharePct(b2sNetSales, totalNetSales);
 
   const metrics: DashboardMetrics = {
     totalGrossSales,
@@ -562,8 +556,7 @@ export function computeAllAnalytics(
       const orderCount = data.orders.size;
       const avgOrderValue = orderCount > 0 ? data.net / orderCount : 0;
       const totalAttempted = data.units + data.returnUnits;
-      const returnRate =
-        totalAttempted > 0 ? (data.returnUnits / totalAttempted) * 100 : 0;
+      const returnRate = calculateReturnRate(data.returnUnits, totalAttempted);
       const sharePct = computeSharePct(data.net, totalNetSales);
 
       return {
@@ -574,7 +567,7 @@ export function computeAllAnalytics(
         orderCount,
         units: data.units,
         returnUnits: data.returnUnits,
-        returnRate: Math.max(0, Number(returnRate.toFixed(1))),
+        returnRate,
         avgOrderValue: Math.round(avgOrderValue),
         margin: Math.round(data.margin),
         sharePct,
@@ -586,8 +579,7 @@ export function computeAllAnalytics(
     .map(([category, data]) => {
       const sharePct = computeSharePct(data.net, totalNetSales);
       const totalAttempted = data.units + data.returnUnits;
-      const returnRate =
-        totalAttempted > 0 ? (data.returnUnits / totalAttempted) * 100 : 0;
+      const returnRate = calculateReturnRate(data.returnUnits, totalAttempted);
       return {
         category,
         sales: Math.round(data.net),
@@ -595,7 +587,7 @@ export function computeAllAnalytics(
         returns: Math.round(data.returns),
         units: data.units,
         returnUnits: data.returnUnits,
-        returnRate: Number(returnRate.toFixed(1)),
+        returnRate,
         orders: data.orders.size,
         margin: Math.round(data.margin),
         sharePct,
@@ -606,8 +598,7 @@ export function computeAllAnalytics(
   const productMetrics: ProductMetric[] = Array.from(productMap.entries())
     .map(([productName, data]) => {
       const grossUnits = data.units + data.returnUnits;
-      const returnRate =
-        grossUnits > 0 ? (data.returnUnits / grossUnits) * 100 : 0;
+      const returnRate = calculateReturnRate(data.returnUnits, grossUnits);
       const sharePct = computeSharePct(data.net, totalNetSales);
       const channelArray = Array.from(data.channels);
       const returnChannelArray = Array.from(data.returnChannels);
@@ -630,7 +621,7 @@ export function computeAllAnalytics(
         returns: Math.round(data.returns),
         units: data.units,
         returnUnits: data.returnUnits,
-        returnRate: Math.round(returnRate * 10) / 10,
+        returnRate,
         mrp: data.mrp,
         margin: Math.round(data.margin),
         sharePct,

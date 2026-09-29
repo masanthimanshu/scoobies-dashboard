@@ -55,25 +55,7 @@ import {
   sortMonthList,
   sortWeekList,
 } from "./utils/formatters";
-import { SaleRecord, FilterState } from "./types";
-
-const DEFAULT_FILTERS: FilterState = {
-  search: "",
-  year: "ALL",
-  years: [],
-  month: "ALL",
-  months: [],
-  week: "ALL",
-  weeks: [],
-  startDate: "",
-  endDate: "",
-  channels: [],
-  categories: [],
-  zones: [],
-  states: [],
-  status: "ALL",
-  campaign: "ALL",
-};
+import { SaleRecord, FilterState, DEFAULT_FILTERS } from "./types";
 
 export default function App() {
   const [records, setRecords] = useState<SaleRecord[]>([]);
@@ -91,15 +73,7 @@ export default function App() {
     loadSalesDataset()
       .then((cached) => {
         if (isMounted && cached && cached.records.length > 0) {
-          const enrichedRecords = cached.records.map((r) => ({
-            ...r,
-            mrpValue: Number.isFinite(r.mrpValue)
-              ? r.mrpValue
-              : r.qty < 0 || r.status === "Return"
-                ? -Math.abs(r.mrp * r.qty)
-                : r.mrp * r.qty,
-          }));
-          setRecords(enrichedRecords);
+          setRecords(cached.records);
           setFileName(cached.fileName);
         }
       })
@@ -210,7 +184,7 @@ export default function App() {
 
     for (let i = 0; i < records.length; i++) {
       const r = records[i];
-      if (r.year && !isNaN(r.year)) yearsSet.add(r.year);
+      if (r.year) yearsSet.add(r.year);
       if (isValidFilterOption(r.month)) monthsSet.add(r.month.trim());
       if (isValidFilterOption(r.week)) weeksSet.add(r.week.trim());
       if (isValidFilterOption(r.channel)) channelsSet.add(r.channel.trim());

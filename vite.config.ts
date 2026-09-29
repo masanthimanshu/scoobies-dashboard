@@ -5,19 +5,8 @@ import { defineConfig, loadEnv } from "vite";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
-  const apiKey =
-    env.GROQ_API_KEY ||
-    env.VITE_GROQ_API_KEY ||
-    process.env.GROQ_API_KEY ||
-    process.env.VITE_GROQ_API_KEY ||
-    "";
-
-  const resendApiKey =
-    env.RESEND_API_KEY ||
-    env.VITE_RESEND_API_KEY ||
-    process.env.RESEND_API_KEY ||
-    process.env.VITE_RESEND_API_KEY ||
-    "";
+  const apiKey = env.GROQ_API_KEY || env.VITE_GROQ_API_KEY || "";
+  const resendApiKey = env.RESEND_API_KEY || env.VITE_RESEND_API_KEY || "";
 
   return {
     plugins: [react(), tailwindcss()],
@@ -54,9 +43,6 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks(id: string) {
             if (id.includes("node_modules")) {
-              if (id.includes("jspdf") || id.includes("html2canvas")) {
-                return "vendor-pdf";
-              }
               if (id.includes("recharts")) {
                 return "vendor-charts";
               }

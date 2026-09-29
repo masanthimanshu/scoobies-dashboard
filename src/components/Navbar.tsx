@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, FC, memo } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   UploadCloud,
   Printer,
@@ -25,7 +25,7 @@ interface NavbarProps {
   onExportFilteredCsv: () => void;
 }
 
-export const Navbar: FC<NavbarProps> = memo(
+export const Navbar: React.FC<NavbarProps> = React.memo(
   ({
     fileName,
     totalRows,

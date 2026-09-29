@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   X,
   Mail,
@@ -76,16 +76,22 @@ export const ShareChatModal: React.FC<ShareChatModalProps> = ({
     }
   }, [isOpen, defaultSubject]);
 
-  if (!isOpen) return null;
+  const totalUserQuestions = useMemo(
+    () => messages.filter((m) => m.role === "user").length,
+    [messages],
+  );
+  const parsedEmails = useMemo(
+    () => parseEmailList(recipientEmail),
+    [recipientEmail],
+  );
 
-  const totalUserQuestions = messages.filter((m) => m.role === "user").length;
-  const parsedEmails = parseEmailList(recipientEmail);
+  if (!isOpen) return null;
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    const emailList = parseEmailList(recipientEmail);
+    const emailList = parsedEmails;
     if (emailList.length === 0) {
       setError("Please enter at least one recipient email address.");
       return;

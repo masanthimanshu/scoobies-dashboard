@@ -55,6 +55,12 @@ interface AiAdvisorDrawerProps {
 
 const CHAT_STORAGE_KEY = "scoobies_ai_chat_history";
 
+function formatRecordingDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = (seconds % 60).toString().padStart(2, "0");
+  return `${m}:${s}`;
+}
+
 export const AiAdvisorDrawer: React.FC<AiAdvisorDrawerProps> = ({
   isOpen,
   onClose,
@@ -136,9 +142,7 @@ export const AiAdvisorDrawer: React.FC<AiAdvisorDrawerProps> = ({
   }, []);
 
   // Sync API Key state from .env
-  const hasApiKey = useMemo(() => {
-    return getActiveGroqApiKey().length > 0;
-  }, []);
+  const hasApiKey = useMemo(() => Boolean(getActiveGroqApiKey()), []);
 
   // Context markdown for full chat
   const contextMarkdown = useMemo(() => {
@@ -638,7 +642,7 @@ Ensure \`GROQ_API_KEY\` is defined in your \`.env\` file to enable real-time Gro
                 rows={1}
                 placeholder={
                   isRecording
-                    ? `🎙️ Recording (${Math.floor(recordingDuration / 60)}:${(recordingDuration % 60).toString().padStart(2, "0")})... Click stop to finish`
+                    ? `🎙️ Recording (${formatRecordingDuration(recordingDuration)})... Click stop to finish`
                     : isTranscribing
                       ? "⚡ Transcribing & refining with Groq AI..."
                       : "Ask anything or specify a persona (e.g., 'Act as a performance marketer...')"
@@ -668,8 +672,7 @@ Ensure \`GROQ_API_KEY\` is defined in your \`.env\` file to enable real-time Gro
                     >
                       <Square className="w-3 h-3 fill-current" />
                       <span>
-                        Stop ({Math.floor(recordingDuration / 60)}:
-                        {(recordingDuration % 60).toString().padStart(2, "0")})
+                        Stop ({formatRecordingDuration(recordingDuration)})
                       </span>
                     </button>
                   ) : (

@@ -1,5 +1,5 @@
-import React, { useRef, useState } from "react";
-import { X, Printer, CheckCircle2, Download, Loader2 } from "lucide-react";
+import React, { useRef } from "react";
+import { X, Printer, CheckCircle2 } from "lucide-react";
 import {
   DashboardMetrics,
   ChannelMetric,
@@ -37,71 +37,11 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
   totalRecordsCount,
 }) => {
   const reportRef = useRef<HTMLDivElement>(null);
-  const [isExporting, setIsExporting] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleDownloadPdf = async () => {
-    if (!reportRef.current || isExporting) return;
-    setIsExporting(true);
-    try {
-      const element = reportRef.current;
-      const [{ jsPDF }, { default: html2canvas }] = await Promise.all([
-        import("jspdf"),
-        import("html2canvas"),
-      ]);
-
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
-      });
-
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-      });
-
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 297; // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-
-      pdf.save(
-        `Scoobies_Sales_Report_${new Date().toISOString().slice(0, 10)}.pdf`,
-      );
-    } catch (error) {
-      console.error("PDF export error:", error);
-      try {
-        window.print();
-      } catch (printErr) {
-        console.error("Print error:", printErr);
-      }
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
   const handlePrint = () => {
-    try {
-      window.print();
-    } catch {
-      handleDownloadPdf();
-    }
+    window.print();
   };
 
   const currentDate = new Date().toLocaleDateString("en-US", {
@@ -114,7 +54,7 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
     <div
       className="fixed inset-0 z-50 overflow-y-auto bg-[#2D2A26]/70 backdrop-blur-xs p-3 sm:p-6 flex justify-center items-start print:p-0 print:bg-white"
       onClick={(e) => {
-        if (e.target === e.currentTarget && !isExporting) onClose();
+        if (e.target === e.currentTarget) onClose();
       }}
     >
       <div className="bg-white rounded-[28px] sm:rounded-[32px] max-w-4xl w-full p-5 sm:p-8 shadow-2xl border border-[#EBE5D9] relative my-4 sm:my-8 print:m-0 print:p-0 print:border-none print:shadow-none print:rounded-none animate-in fade-in zoom-in-95 duration-150">
@@ -125,37 +65,17 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
               Executive Sales Report
             </span>
             <span className="text-xs text-[#8C8376] hidden sm:inline">
-              • Ready for PDF Export
+              • Ready for Print / PDF Export
             </span>
           </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={handleDownloadPdf}
-              disabled={isExporting}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#5F7161] hover:bg-[#4E5E50] text-white text-xs font-bold rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60"
-            >
-              {isExporting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Generating PDF...</span>
-                </>
-              ) : (
-                <>
-                  <Download className="w-4 h-4" />
-                  <span>Save as PDF</span>
-                </>
-              )}
-            </button>
-            <button
-              type="button"
               onClick={handlePrint}
-              disabled={isExporting}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 bg-[#F1EDE5] hover:bg-[#E5DFD3] text-[#2D2A26] text-xs font-bold rounded-xl transition-all border border-[#EBE5D9] cursor-pointer"
-              title="Open browser print dialog"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#5F7161] hover:bg-[#4E5E50] text-white text-xs font-bold rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer"
             >
-              <Printer className="w-3.5 h-3.5" />
-              <span>Print</span>
+              <Printer className="w-4 h-4" />
+              <span>Print / Save as PDF</span>
             </button>
             <button
               type="button"

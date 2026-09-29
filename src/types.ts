@@ -47,6 +47,24 @@ export interface FilterState {
   maxSaleValue?: number;
 }
 
+export const DEFAULT_FILTERS: FilterState = {
+  search: "",
+  year: "ALL",
+  years: [],
+  month: "ALL",
+  months: [],
+  week: "ALL",
+  weeks: [],
+  startDate: "",
+  endDate: "",
+  channels: [],
+  categories: [],
+  zones: [],
+  states: [],
+  status: "ALL",
+  campaign: "ALL",
+};
+
 export interface DashboardMetrics {
   totalGrossSales: number;
   totalNetSales: number;
