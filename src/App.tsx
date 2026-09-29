@@ -38,11 +38,7 @@ const AiAdvisorDrawer = lazy(() =>
   })),
 );
 
-import {
-  filterRecords,
-  computeAllAnalytics,
-  generateExecutiveInsights,
-} from "./utils/analytics";
+import { filterRecords, computeAllAnalytics } from "./utils/analytics";
 import { buildDistilledContext } from "./utils/aiContextDistiller";
 import { exportRecordsToCsv } from "./utils/csvParser";
 import {
@@ -217,19 +213,10 @@ export default function App() {
     zoneMetrics,
     stateMetrics,
     cityMetrics,
+    insights: executiveInsights,
   } = useMemo(() => {
     return computeAllAnalytics(filteredRecords, granularity);
   }, [filteredRecords, granularity]);
-
-  const executiveInsights = useMemo(() => {
-    return generateExecutiveInsights(
-      metrics,
-      channelMetrics,
-      productMetrics,
-      zoneMetrics,
-      filteredRecords,
-    );
-  }, [metrics, channelMetrics, productMetrics, zoneMetrics, filteredRecords]);
 
   // Distilled context for Groq GPT OSS 120B (deferred only when AI drawer is open)
   const distilledContext = useMemo(() => {

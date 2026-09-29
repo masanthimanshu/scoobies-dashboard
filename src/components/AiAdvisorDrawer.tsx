@@ -773,6 +773,10 @@ const MemoizedChatMessageItem: React.FC<{
   onCopy: (text: string, index: number) => void;
 }> = React.memo(({ message, index, isCopied, onCopy }) => {
   const isUser = message.role === "user";
+  const formattedContent = useMemo(
+    () => (!isUser ? renderFormattedMarkdown(message.content) : null),
+    [isUser, message.content],
+  );
 
   return (
     <div
@@ -794,7 +798,7 @@ const MemoizedChatMessageItem: React.FC<{
         {!isUser ? (
           <div className="w-full min-w-0 overflow-hidden">
             {/* Formatted Markdown Content */}
-            {renderFormattedMarkdown(message.content)}
+            {formattedContent}
 
             {/* Message Footer Controls */}
             {message.content && (

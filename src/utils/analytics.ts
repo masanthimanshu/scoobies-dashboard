@@ -171,7 +171,7 @@ export function filterRecords(
 
     // 11. Sale Value Range
     if (minSale !== undefined || maxSale !== undefined) {
-      const { val } = getRecordMetrics(r);
+      const val = Math.abs(r.mrpValue || r.saleValue || r.mrp * r.qty || 0);
       if (minSale !== undefined && val < minSale) return false;
       if (maxSale !== undefined && val > maxSale) return false;
     }
@@ -215,6 +215,7 @@ interface AllAnalyticsResult {
   zoneMetrics: GeoMetric[];
   stateMetrics: GeoMetric[];
   cityMetrics: GeoMetric[];
+  insights: ExecutiveInsight[];
 }
 
 /**
@@ -238,6 +239,8 @@ export function computeAllAnalytics(
   let b2sNetSales = 0;
 
   const ordersSet = new Set<string>();
+  const monthMap = new Map<string, PeriodAggregate>();
+  const weekMap = new Map<string, PeriodAggregate>();
 
   // TimeSeries map
   const timeSeriesMap = new Map<
@@ -319,7 +322,10 @@ export function computeAllAnalytics(
     const r = records[i];
     ordersSet.add(r.orderNumber);
 
-    const { isReturn, val, qty } = getRecordMetrics(r);
+    const isReturn =
+      r.status === "Return" || r.qty < 0 || r.mrpValue < 0 || r.saleValue < 0;
+    const val = Math.abs(r.mrpValue || r.saleValue || r.mrp * r.qty || 0);
+    const qty = Math.abs(r.qty || 1);
 
     // 1. Dashboard Metrics
     if (isReturn) {
@@ -341,6 +347,31 @@ export function computeAllAnalytics(
     if (isB2SCampaign(r.backToSchool)) {
       b2sNetSales += isReturn ? -val : val;
     }
+
+    // Profit period tracking for executive insights
+    const profitVal = r.scoobiesMargin || 0;
+    const monthName = r.month || "August";
+    const yr = r.year || 2026;
+    updatePeriodMap(
+      monthMap,
+      `${yr}-${monthName}`,
+      `${monthName} ${yr}`,
+      isReturn,
+      val,
+      profitVal,
+      r.orderNumber,
+    );
+
+    const weekName = r.week || "Week 1";
+    updatePeriodMap(
+      weekMap,
+      `${yr}-${r.month || "Aug"}-${weekName}`,
+      r.month ? `${weekName} (${r.month})` : weekName,
+      isReturn,
+      val,
+      profitVal,
+      r.orderNumber,
+    );
 
     // 2. TimeSeries
     let timeKey = r.dateStr;
@@ -659,6 +690,17 @@ export function computeAllAnalytics(
     }))
     .sort((a, b) => b.sales - a.sales);
 
+  const topMonthInsight = createPeriodInsight(monthMap, "Month");
+  const topWeekInsight = createPeriodInsight(weekMap, "Week");
+  const insights = generateExecutiveInsights(
+    metrics,
+    channelMetrics,
+    productMetrics,
+    zoneMetrics,
+    undefined,
+    [topMonthInsight, topWeekInsight],
+  );
+
   return {
     metrics,
     timeSeriesData,
@@ -668,6 +710,7 @@ export function computeAllAnalytics(
     zoneMetrics,
     stateMetrics,
     cityMetrics,
+    insights,
   };
 }
 
@@ -736,11 +779,17 @@ export function generateExecutiveInsights(
   products: ProductMetric[],
   zones: GeoMetric[],
   records?: SaleRecord[],
+  precomputedPeriodInsights?: (ExecutiveInsight | null)[],
 ): ExecutiveInsight[] {
   const insights: ExecutiveInsight[] = [];
 
   // Most Profitable Month & Most Profitable Week
-  if (records && records.length > 0) {
+  if (precomputedPeriodInsights && precomputedPeriodInsights.length > 0) {
+    for (let i = 0; i < precomputedPeriodInsights.length; i++) {
+      const p = precomputedPeriodInsights[i];
+      if (p) insights.push(p);
+    }
+  } else if (records && records.length > 0) {
     const monthMap = new Map<string, PeriodAggregate>();
     const weekMap = new Map<string, PeriodAggregate>();
     const rLen = records.length;

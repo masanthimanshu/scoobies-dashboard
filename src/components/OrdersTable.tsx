@@ -52,20 +52,21 @@ export const OrdersTable: React.FC<OrdersTableProps> = React.memo(
 
     const sortedRecords = useMemo(() => {
       if (records.length <= 1) return records;
+      const sample = records.find((r) => r[sortField] != null);
+      const isNum = typeof sample?.[sortField] === "number";
+
       return [...records].sort((a, b) => {
         const valA = a[sortField];
         const valB = b[sortField];
 
-        if (typeof valA === "number" && typeof valB === "number") {
-          return sortAsc ? valA - valB : valB - valA;
+        if (isNum) {
+          return sortAsc
+            ? (valA as number) - (valB as number)
+            : (valB as number) - (valA as number);
         }
 
-        const strA = String(valA || "").toLowerCase();
-        const strB = String(valB || "").toLowerCase();
-
-        if (strA < strB) return sortAsc ? -1 : 1;
-        if (strA > strB) return sortAsc ? 1 : -1;
-        return 0;
+        const cmp = String(valA || "").localeCompare(String(valB || ""));
+        return sortAsc ? cmp : -cmp;
       });
     }, [records, sortField, sortAsc]);
 

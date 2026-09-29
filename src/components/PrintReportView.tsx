@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React from "react";
 import { X, Printer, CheckCircle2 } from "lucide-react";
 import {
   DashboardMetrics,
@@ -36,8 +36,6 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
   fileName,
   totalRecordsCount,
 }) => {
-  const reportRef = useRef<HTMLDivElement>(null);
-
   if (!isOpen) return null;
 
   const handlePrint = () => {
@@ -88,11 +86,8 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
           </div>
         </div>
 
-        {/* Printable Report Document Ref */}
-        <div
-          ref={reportRef}
-          className="p-4 sm:p-6 bg-white text-[#2D2A26] font-sans"
-        >
+        {/* Printable Report Document */}
+        <div className="p-4 sm:p-6 bg-white text-[#2D2A26] font-sans">
           {/* Document Title Header */}
           <div className="flex items-start justify-between pb-6 border-b border-[#EBE5D9]">
             <div>
